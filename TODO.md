@@ -32,12 +32,13 @@
 
 ## 一、工程基座（P0，全部为阻塞项）
 
-### T-1.1 [P0] Vite + TypeScript + React 工程脚手架搭建
+### T-1.1 ✅ [P0] Vite + TypeScript + React 工程脚手架搭建（2026-09-05 完成）
 - 描述：创建 `src/` 生产工程（vite + react + ts 严格模式 + eslint/prettier + vitest），目录按技术方案 §3 模块划分（`core/`、`render/`、`state/`、`ui/`、`export/`）；`demo/` 保留为基线不动。
 - 依赖：无
 - 验收标准：`npm run dev` 打开空白壳页面；`npm run build` 零错误；`npm run test` 可运行。
 - 预估工时：1d
 - 关联文件：`src/`（新建）、`package.json`、`tsconfig.json`
+- 完成记录：实际工时约 0.5d。验收实测——dev 壳页面浏览器渲染正常（React 挂载、三栏布局）；`tsc --noEmit && vite build` 零错误（196KB gzip 61.8KB）；vitest 3 passed（首测：元素数据不变量）；eslint 零告警。附带交付：`src/core/elements.ts`（类型化元素库，T-1.3 数据基线）。
 
 ### T-1.2 [P0] 数据模型与 Schema 定义（含 zod 校验）
 - 描述：按技术方案 §4 实现 `Component / Document(kaolin-scene/v1) / Module` 的 TypeScript 类型 + zod schema；覆盖 PARAM_DEFS 全部素材参数类型；提供 `serialize/deserialize` 与版本字段。

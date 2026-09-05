@@ -52,3 +52,24 @@ sessions:
     commits: [c23cf97]
     blockers: []
     status: "completed"
+
+  - id: "2026-09-05-03"
+    date: "2026-09-05"
+    title: "T-1.1 Vite + TypeScript + React 工程脚手架（阶段 1 开工）"
+    summary: "创建 src/ 生产工程：React 19 + Vite 6 + TS 5.8 严格模式（verbatimModuleSyntax）+ vitest 3 + eslint 9 + prettier；目录按技术方案 §3 划分（core/render/state/ui/export）；应用壳三栏布局占位（对齐 demo 深色主题）+ 阶段1路线图；类型化元素库 src/core/elements.ts（16 元素，数据=demo 基线）+ 3 条不变量单测。四项验收全过：dev 壳页面浏览器实测渲染正常（React 挂载/三栏/状态栏）、tsc --noEmit && vite build 零错误（196KB gzip 61.8KB）、vitest 3 passed、eslint 零告警。实际工时 0.5d（预估 1d）。demo/ 基线未动。"
+    files_modified:
+      - package.json
+      - tsconfig.json
+      - vite.config.ts
+      - eslint.config.js
+      - .prettierrc
+      - index.html (根)
+      - src/main.tsx / src/index.css / src/ui/App.tsx / src/vite-env.d.ts
+      - src/core/elements.ts / src/core/elements.test.ts
+      - src/render|state|export/.gitkeep
+      - .gitignore (追加 dist/)
+      - TODO.md / PROJECT_STATE.md / .agents/session_index.yaml / DAILY_LOG/2026-09-05*.md (记忆更新)
+    decisions_made: []
+    commits: []   # 随本次会话提交
+    blockers: []
+    status: "completed"
