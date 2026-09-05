@@ -1,0 +1,54 @@
+# 会话索引 — 项目历史会话记录
+# 任何新 AI 实例进入项目时，先读此文件了解项目演进
+# 字段约定：decisions 关联 DECISIONS.md 编号；commits 关联 git 提交哈希
+
+sessions:
+  - id: "2026-09-04-01"
+    date: "2026-09-04"
+    title: "技术验证全链路：技术方案 + 几何内核 + 三维 Demo + 实测"
+    summary: "产出《技术方案设计.md》（架构/模块划分 M0-M7/切片与卷曲算法推导/半年路线图）；实现几何内核 crystal.js/builders.js（CIF 解析→对称展开→超胞切片→保弧长卷曲→键连）并通过 Node 自测；构建可离线双击的三维 Demo（素材库/参数面板/图层/模块库/300dpi 导出）；浏览器实测通过（16,097 原子实时渲染、卷曲进度动画、模块保存复用、导出 1890×1576px=16cm@300dpi）；修复 sRGB 颜色线性化与 InstancedMesh 包围盒取景两个问题。下载五种黏土矿物 CIF 种子库与 three.js r147 本地副本。"
+    files_modified:
+      - docs/技术方案设计.md
+      - demo/core/crystal.js
+      - demo/core/builders.js
+      - demo/core/test.js
+      - demo/index.html
+      - demo/data/kaolinite.cif.js
+      - demo/vendor/ (three.js r147 本地副本)
+      - data/*.cif (五种黏土矿物)
+      - README.md
+    decisions_made: [D01, D02, D03, D04]
+    commits: []
+    blockers: []
+    status: "completed"
+
+  - id: "2026-09-05-01"
+    date: "2026-09-05"
+    title: "Git 仓库初始化 + 参考项目记忆/日报体系只读学习"
+    summary: "初始化本项目 Git 仓库并完成首次提交（ef7c8e1，20 文件）；只读调研 C:/Users/ckx/Desktop/全新机器学习实验 的分层记忆体系（.agents + 五份活文档 + 一致性检查脚本）与双轨日报系统（DAILY_LOG AI版/人版），产出学习摘要与 5 条可借鉴设计点、4 条集成提案（未实现）。全程未改动参考项目。"
+    files_modified:
+      - .gitignore
+    decisions_made: []
+    commits: [ef7c8e1]
+    blockers: []
+    status: "completed"
+
+  - id: "2026-09-05-02"
+    date: "2026-09-05"
+    title: "TODO 清单生成（47 条）+ Q1–Q4 决策闭环 + 记忆系统骨架（T-8.1）"
+    summary: "基于技术方案生成 TODO.md（10 个模块区 47 条任务，含优先级/依赖/验收标准/工时）；用户确认四项决策：Q1 层间物质参数化开关 showInterlayer 默认显示（D05）、Q2 EMF 内置 Inkscape 且 PATH 优先、安装包 <110MB（D06）、Q3 记忆与日报系统立项 P2（D07）、Q4 SMILES 先行 + SDF/MOL 拆为 T-2.10（D08）；决策写回 TODO.md 并新增 T-2.10；建立记忆系统骨架（本文件、AGENTS.md、PROJECT_STATE、DECISIONS、DATA_DICT、首份双轨日报）。"
+    files_modified:
+      - TODO.md
+      - PROJECT_STATE.md
+      - DECISIONS.md
+      - DATA_DICT.md
+      - .agents/AGENTS.md
+      - .agents/session_index.yaml
+      - .agents/session_state.yaml
+      - DAILY_LOG/2026-09-05.md
+      - DAILY_LOG/2026-09-05_human.md
+      - .gitignore
+    decisions_made: [D05, D06, D07, D08]
+    commits: [c23cf97]
+    blockers: []
+    status: "completed"

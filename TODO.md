@@ -300,12 +300,13 @@
 
 > 参考来源：`C:/Users/ckx/Desktop/全新机器学习实验` 的 `.agents/` 记忆体系与 `DAILY_LOG/` 双轨日报设计。**仅借鉴设计思想，不复制代码、不改动参考项目。**
 
-### T-8.1 [P2] 五份活文档 + .agents 目录建立
-- 描述：建立 `PROJECT_STATE.md`（当前模块/阶段/阻塞）、`DECISIONS.md`（编号决策日志）、`DATA_DICT.md`（模块参数字典）、`SESSION_START.md`（会话入口清单）、`.agents/AGENTS.md` + `session_index.yaml` + `session_state.yaml`。
+### T-8.1 ✅ [P2] 五份活文档 + .agents 目录建立（2026-09-05 完成）
+- 描述：建立 `PROJECT_STATE.md`（当前模块/阶段/阻塞）、`DECISIONS.md`（编号决策日志 D01–D08）、`DATA_DICT.md`（模块参数字典）、`SESSION_START.md`（会话入口清单）、`.agents/AGENTS.md` + `session_index.yaml` + `session_state.yaml`。
 - 依赖：无
 - 验收标准：任何新 AI 会话按 AGENTS.md 清单读完即可准确复述"项目做到哪、下一步做什么"；文档互相引用编号一致。
 - 预估工时：0.5d
 - 关联文件：项目根目录 5 份 md + `.agents/`
+- 完成记录：本项目会话入口协议落在 `.agents/AGENTS.md`（SESSION_START 职能并入，必读顺序含 TODO.md）
 
 ### T-8.2 [P2] check_library_state.py 对账脚本
 - 描述：仿参考项目 `check_project_state.py` 思路：校验活文档存在性与新鲜度（PROJECT_STATE mtime vs 最新日报）、素材模块 JSON 与文档记录对账、`demo/core/test.js` 可运行。

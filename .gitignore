@@ -13,3 +13,9 @@ __pycache__/
 *.log
 
 # 注：demo/vendor/（three.js 本地副本）刻意入库，保证 Demo 离线双击可用
+
+# 会话实时状态不入库（借鉴参考项目惯例，D07）
+.agents/session_state.yaml
+
+# ZCode 工具内部产物不入库
+.zcode/
