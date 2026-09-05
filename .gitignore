@@ -1,0 +1,15 @@
+# OS / 编辑器杂项
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*~
+
+# 依赖与临时产物
+node_modules/
+__pycache__/
+*.pyc
+.tmp/
+*.log
+
+# 注：demo/vendor/（three.js 本地副本）刻意入库，保证 Demo 离线双击可用

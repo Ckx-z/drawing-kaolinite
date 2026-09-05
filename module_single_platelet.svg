@@ -1,0 +1,351 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900"
+     font-family="Microsoft YaHei, Noto Sans SC, Arial, sans-serif">
+  <!-- ============================================================
+       DEMO 03 · 高岭石单层片层结构示意（渲染档 / 宣讲版）
+       项目：Kaolin-Assets（D:\研究生\个人私活\Kaolin-Assets）
+       规范依据：00-计划方案书.md v1.1 第 4.8 / 7.2 / 7.3 / 7.6 节
+       决策：双档渲染——本图为宣讲档样品（出版档见三档对照条）
+       结构依据：高岭石 TO 型 1:1 层状硅酸盐，Al2Si2O5(OH)4，
+                 层间无其他物质，层间以氢键相连，d(001)≈0.716 nm
+       ⚠ 样品草稿，结构细节待审校（对照文献图）
+       渲染档规则：光源左上 45°；每色系三档深浅；球体径向渐变；
+                   软阴影偏右下；线帽拐角 round
+       图层 id 约定：layer_T、layer_O、layer_hydroxyl、
+                     layer_interlayer_Hbond、dim_*、label_*
+       ============================================================ -->
+
+  <defs>
+    <!-- ========== 渐变与文档级 token（渲染档） ========== -->
+    <!-- T 层族：受光 / 中间 / 背光 -->
+    <linearGradient id="gTetL" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#E3F0FC"/><stop offset="1" stop-color="#C9DDF0"/>
+    </linearGradient>
+    <linearGradient id="gTetR" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#B4CDE6"/><stop offset="1" stop-color="#9BBBD9"/>
+    </linearGradient>
+    <!-- O 层族 -->
+    <linearGradient id="gOctL" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#F9EDE2"/><stop offset="1" stop-color="#F2DDCB"/>
+    </linearGradient>
+    <linearGradient id="gOctR" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#ECD3BE"/><stop offset="1" stop-color="#DEC0A4"/>
+    </linearGradient>
+    <linearGradient id="gOctB" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#D9B89C"/><stop offset="1" stop-color="#C8A487"/>
+    </linearGradient>
+    <!-- 片晶顶面：左上受光 → 右下略暗 -->
+    <linearGradient id="gTop" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FDFEFF"/><stop offset="1" stop-color="#DEEBF6"/>
+    </linearGradient>
+    <radialGradient id="gSheen" cx="0.34" cy="0.28" r="0.78">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <!-- 软阴影：径向渐变至透明，偏右下 -->
+    <radialGradient id="gShadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#1F2A37" stop-opacity="0.20"/>
+      <stop offset="0.68" stop-color="#1F2A37" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#1F2A37" stop-opacity="0"/>
+    </radialGradient>
+    <!-- 球状原子：径向渐变，高光偏左上 -->
+    <radialGradient id="gSphOH" cx="0.35" cy="0.3" r="0.85">
+      <stop offset="0" stop-color="#F2A79B"/><stop offset="0.55" stop-color="#B03A2E"/>
+      <stop offset="1" stop-color="#8E2B21"/>
+    </radialGradient>
+    <radialGradient id="gSphO" cx="0.35" cy="0.3" r="0.85">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.55" stop-color="#CBD6E0"/>
+      <stop offset="1" stop-color="#A4B4C4"/>
+    </radialGradient>
+    <!-- 分区卡片底 -->
+    <linearGradient id="gCard" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FCFDFE"/><stop offset="1" stop-color="#F3F7FA"/>
+    </linearGradient>
+
+    <!-- ========== 零件库（几何同源 · 三档外观） ========== -->
+    <!-- 四面体 · 渲染档：两面明暗 + 共棱 -->
+    <symbol id="tetR" viewBox="0 0 44 52">
+      <polygon points="2,50 22,50 22,3"  fill="url(#gTetL)" stroke="#2E4E6E" stroke-width="1.5"/>
+      <polygon points="22,50 42,50 22,3" fill="url(#gTetR)" stroke="#2E4E6E" stroke-width="1.5"/>
+    </symbol>
+    <!-- 四面体 · 淡彩档 -->
+    <symbol id="tetFlat" viewBox="0 0 44 52">
+      <polygon points="2,50 22,50 22,3"  fill="#C9DDF2" stroke="#2E4E6E" stroke-width="1.5"/>
+      <polygon points="22,50 42,50 22,3" fill="#C9DDF2" stroke="#2E4E6E" stroke-width="1.5"/>
+    </symbol>
+    <!-- 四面体 · 线稿档 -->
+    <symbol id="tetLine" viewBox="0 0 44 52">
+      <polygon points="2,50 22,50 22,3"  fill="#FFFFFF" stroke="#1F2A37" stroke-width="1.4"/>
+      <polygon points="22,50 42,50 22,3" fill="#FFFFFF" stroke="#1F2A37" stroke-width="1.4"/>
+    </symbol>
+    <!-- 四面体 · 相邻层淡化（虚线） -->
+    <symbol id="tetDash" viewBox="0 0 44 52">
+      <polygon points="2,50 42,50 22,3" fill="#EEF4F9" fill-opacity="0.55"
+               stroke="#8FA3BC" stroke-width="1.4" stroke-dasharray="4 3"/>
+    </symbol>
+    <!-- 八面体 · 渲染档：六边形轮廓 + Y 形内棱（沿三重轴投影），三面明暗 -->
+    <symbol id="octR" viewBox="0 0 44 30">
+      <polygon points="2,7 22,1 22,15 2,23"    fill="url(#gOctL)" stroke="#9C6B4F" stroke-width="1.4"/>
+      <polygon points="22,1 42,7 42,23 22,15"  fill="url(#gOctR)" stroke="#9C6B4F" stroke-width="1.4"/>
+      <polygon points="22,15 42,23 22,29 2,23" fill="url(#gOctB)" stroke="#9C6B4F" stroke-width="1.4"/>
+    </symbol>
+    <!-- 八面体 · 淡彩档 -->
+    <symbol id="octFlat" viewBox="0 0 44 30">
+      <polygon points="2,7 22,1 22,15 2,23"    fill="#F3E0D2" stroke="#9C6B4F" stroke-width="1.4"/>
+      <polygon points="22,1 42,7 42,23 22,15"  fill="#F3E0D2" stroke="#9C6B4F" stroke-width="1.4"/>
+      <polygon points="22,15 42,23 22,29 2,23" fill="#F3E0D2" stroke="#9C6B4F" stroke-width="1.4"/>
+    </symbol>
+    <!-- 八面体 · 线稿档 -->
+    <symbol id="octLine" viewBox="0 0 44 30">
+      <polygon points="2,7 22,1 22,15 2,23"    fill="#FFFFFF" stroke="#1F2A37" stroke-width="1.3"/>
+      <polygon points="22,1 42,7 42,23 22,15"  fill="#FFFFFF" stroke="#1F2A37" stroke-width="1.3"/>
+      <polygon points="22,15 42,23 22,29 2,23" fill="#FFFFFF" stroke="#1F2A37" stroke-width="1.3"/>
+    </symbol>
+  </defs>
+
+  <!-- ================= 页面标题区 ================= -->
+  <g id="header">
+    <text x="40" y="46" font-size="13" fill="#5A6B7B">Kaolin-Assets · 模块一（M1）· 单层片层</text>
+    <text x="1560" y="46" text-anchor="end" font-size="15" fill="#B0552E" font-weight="bold">DEMO 03 · 待验收</text>
+    <text x="800" y="64" text-anchor="middle" font-size="33" fill="#1F2A37" font-weight="bold">高岭石单层片层结构示意</text>
+    <text x="800" y="96" text-anchor="middle" font-size="15" fill="#5A6B7B">Kaolinite single-layer platelet — render tier · 双档渲染（宣讲档）样品</text>
+  </g>
+
+  <!-- ================= 模块 1a：六角板状片晶（斜视 · 渲染档） ================= -->
+  <g id="module_platelet" stroke-linejoin="round" stroke-linecap="round">
+    <!-- 分区卡片 -->
+    <rect x="40" y="150" width="600" height="620" rx="14" fill="url(#gCard)" stroke="#D8E1E9" stroke-width="1"/>
+    <rect x="60" y="172" width="170" height="26" rx="13" fill="#EAF1F8" stroke="#C9D9E8" stroke-width="1"/>
+    <text x="145" y="190" text-anchor="middle" font-size="13" fill="#2E4E6E" font-weight="bold">1a · 片晶形貌（斜视）</text>
+    <!-- 光源标记（渲染档规则：左上 45°） -->
+    <g id="light_marker" stroke="#D9A441" stroke-width="1.6" fill="none">
+      <circle cx="575" cy="190" r="7" fill="#FBEFD9"/>
+      <line x1="575" y1="177" x2="575" y2="181"/><line x1="575" y1="199" x2="575" y2="203"/>
+      <line x1="562" y1="190" x2="566" y2="190"/><line x1="584" y1="190" x2="588" y2="190"/>
+      <line x1="566" y1="181" x2="569" y2="184"/><line x1="581" y1="196" x2="584" y2="199"/>
+      <line x1="584" y1="181" x2="581" y2="184"/><line x1="569" y1="196" x2="566" y2="199"/>
+    </g>
+    <text x="575" y="222" text-anchor="middle" font-size="11" fill="#5A6B7B">光源 45°</text>
+
+    <!-- 软阴影（偏右下） -->
+    <ellipse id="shadow_platelet" cx="386" cy="556" rx="235" ry="32" fill="url(#gShadow)"/>
+
+    <!-- 侧面（平顶六边形 · 纵向压缩 0.55 · 前向三个侧面可见） -->
+    <g id="side_faces">
+      <polygon points="175,400 267.5,451 267.5,497 175,446"   fill="#C9DAEB" stroke="#33546F" stroke-width="1.3"/>
+      <polygon points="267.5,451 452.5,451 452.5,497 267.5,497" fill="#B1C8DF" stroke="#33546F" stroke-width="1.3"/>
+      <polygon points="452.5,451 545,400 545,446 452.5,497"   fill="#8FACD1" stroke="#33546F" stroke-width="1.3"/>
+      <line x1="267.5" y1="451" x2="267.5" y2="497" stroke="#33546F" stroke-width="1.1"/>
+      <line x1="452.5" y1="451" x2="452.5" y2="497" stroke="#33546F" stroke-width="1.1"/>
+    </g>
+    <!-- 顶面（受光渐变 + 高光） -->
+    <polygon id="face_top"
+             points="545,400 452.5,349 267.5,349 175,400 267.5,451 452.5,451"
+             fill="url(#gTop)" stroke="#33546F" stroke-width="2"/>
+    <polygon points="545,400 452.5,349 267.5,349 175,400 267.5,451 452.5,451" fill="url(#gSheen)"/>
+    <!-- 顶面上缘高光 -->
+    <path d="M267.5,349 L175,400" stroke="#FFFFFF" stroke-width="2" opacity="0.6" fill="none"/>
+    <path d="M267.5,349 L452.5,349" stroke="#FFFFFF" stroke-width="1.2" opacity="0.35" fill="none"/>
+
+    <!-- (001) 基面标注 -->
+    <g id="label_001">
+      <text x="330" y="398" text-anchor="middle" font-size="19" font-style="italic" font-weight="bold" fill="#24455E">(001)</text>
+      <text x="330" y="418" text-anchor="middle" font-size="11" fill="#5A6B7B">基面 basal plane</text>
+    </g>
+
+    <!-- 层厚 = d(001) 尺寸标注 -->
+    <g id="dim_d001" stroke="#55697C">
+      <line x1="549" y1="400" x2="580" y2="400" stroke-width="1.1"/>
+      <line x1="549" y1="446" x2="580" y2="446" stroke-width="1.1"/>
+      <line x1="566" y1="400" x2="566" y2="446" stroke-width="1.2"/>
+      <polygon points="566,400 562.6,407 569.4,407" fill="#55697C" stroke="none"/>
+      <polygon points="566,446 562.6,439 569.4,439" fill="#55697C" stroke="none"/>
+    </g>
+    <text x="584" y="416" font-size="12" font-weight="bold" fill="#55697C">d(001)</text>
+    <text x="584" y="432" font-size="11" fill="#55697C">≈0.716 nm</text>
+
+    <!-- 放大框（引出至右图） -->
+    <rect id="zoom_box" x="428" y="312" width="112" height="76" rx="8"
+          fill="none" stroke="#7A8CA0" stroke-width="1.6" stroke-dasharray="5 4"/>
+    <line x1="540" y1="350" x2="656" y2="392" stroke="#7A8CA0" stroke-width="1.4" stroke-dasharray="5 4"/>
+
+    <!-- 形貌标注 -->
+    <g id="label_morphology">
+      <text x="360" y="640" text-anchor="middle" font-size="16" font-weight="bold" fill="#1F2A37">假六方板状片晶（platelet）</text>
+      <text x="360" y="660" text-anchor="middle" font-size="12" fill="#5A6B7B">单层厚度 = 层间距 d(001)</text>
+    </g>
+
+    <!-- 俯视小图：假六方轮廓 -->
+    <g id="inset_topview">
+      <polygon points="182,655 156,610 104,610 78,655 104,700 156,700"
+               fill="#F4F9FD" stroke="#4A6884" stroke-width="1.5"/>
+      <polygon points="166,655 148,624 112,624 94,655 112,686 148,686"
+               fill="none" stroke="#8FA3BC" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="130" y="726" text-anchor="middle" font-size="12" fill="#5A6B7B">俯视 · 假六方轮廓</text>
+    </g>
+  </g>
+
+  <!-- ================= 模块 1b：TO 型单元层放大（渲染档） ================= -->
+  <g id="module_unit_layer" stroke-linejoin="round" stroke-linecap="round">
+    <!-- 分区卡片 -->
+    <rect x="660" y="150" width="920" height="620" rx="14" fill="url(#gCard)" stroke="#D8E1E9" stroke-width="1"/>
+    <rect x="680" y="172" width="210" height="26" rx="13" fill="#EAF1F8" stroke="#C9D9E8" stroke-width="1"/>
+    <text x="785" y="190" text-anchor="middle" font-size="13" fill="#2E4E6E" font-weight="bold">1b · 单元层放大（TO 型 1:1）</text>
+    <text x="1120" y="224" text-anchor="middle" font-size="20" font-weight="bold" fill="#1F2A37">单元层结构</text>
+    <text x="1120" y="248" text-anchor="middle" font-size="12.5" fill="#5A6B7B">one 1:1 layer = tetrahedral (T) sheet + octahedral (O) sheet</text>
+
+    <!-- 相邻层（虚线淡化） -->
+    <g id="layer_T_upper">
+      <use href="#tetDash" x="950"  y="345" width="44" height="52"/>
+      <use href="#tetDash" x="1000" y="345" width="44" height="52"/>
+      <use href="#tetDash" x="1050" y="345" width="44" height="52"/>
+      <use href="#tetDash" x="1100" y="345" width="44" height="52"/>
+      <use href="#tetDash" x="1150" y="345" width="44" height="52"/>
+      <use href="#tetDash" x="1200" y="345" width="44" height="52"/>
+      <use href="#tetDash" x="1250" y="345" width="44" height="52"/>
+      <use href="#tetDash" x="1300" y="345" width="44" height="52"/>
+      <use href="#tetDash" x="1350" y="345" width="44" height="52"/>
+      <use href="#tetDash" x="1400" y="345" width="44" height="52"/>
+      <use href="#tetDash" x="1450" y="345" width="44" height="52"/>
+    </g>
+    <g id="label_upper">
+      <text x="924" y="330" text-anchor="end" font-size="15" font-weight="bold" fill="#5A6B7B">相邻层 · 硅氧面</text>
+      <text x="924" y="360" text-anchor="end" font-size="12" fill="#7A8CA0">示意淡化（虚线）</text>
+      <line x1="930" y1="342" x2="1018" y2="342" stroke="#7A8CA0" stroke-width="1.2"/>
+      <line x1="1022" y1="342" x2="1022" y2="346" stroke="#7A8CA0" stroke-width="1.2"/>
+      <circle cx="1022" cy="348" r="2.6" fill="#55697C" stroke="none"/>
+    </g>
+
+    <!-- 相邻层基面氧（球） -->
+    <g id="layer_basal_O">
+      <circle cx="972"  cy="396" r="4.2" fill="url(#gSphO)" stroke="#7E8FA0" stroke-width="0.8"/>
+      <circle cx="1072" cy="396" r="4.2" fill="url(#gSphO)" stroke="#7E8FA0" stroke-width="0.8"/>
+      <circle cx="1172" cy="396" r="4.2" fill="url(#gSphO)" stroke="#7E8FA0" stroke-width="0.8"/>
+      <circle cx="1272" cy="396" r="4.2" fill="url(#gSphO)" stroke="#7E8FA0" stroke-width="0.8"/>
+      <circle cx="1372" cy="396" r="4.2" fill="url(#gSphO)" stroke="#7E8FA0" stroke-width="0.8"/>
+      <circle cx="1472" cy="396" r="4.2" fill="url(#gSphO)" stroke="#7E8FA0" stroke-width="0.8"/>
+    </g>
+
+    <!-- 层间氢键（虚线） -->
+    <g id="layer_interlayer_Hbond" stroke="#B03A2E" stroke-width="1.4" stroke-dasharray="3 3">
+      <line x1="1072" y1="401" x2="1072" y2="441"/>
+      <line x1="1272" y1="401" x2="1272" y2="441"/>
+      <line x1="1472" y1="401" x2="1472" y2="441"/>
+    </g>
+    <g id="label_hbond">
+      <text x="924" y="398" text-anchor="end" font-size="15" font-weight="bold" fill="#B03A2E">层间氢键 ·O···H–O</text>
+      <text x="924" y="420" text-anchor="end" font-size="12" fill="#5A6B7B">无层间可交换阳离子</text>
+      <line x1="930" y1="424" x2="1058" y2="424" stroke="#8C3A3A" stroke-width="1.2"/>
+      <circle cx="1072" cy="424" r="2.6" fill="#55697C" stroke="none"/>
+    </g>
+    <!-- O 层色带 + 铝氧八面体（11 个密排） -->
+    <rect x="940" y="443" width="558" height="42" rx="6" fill="#F3E0D2" fill-opacity="0.18"/>
+    <g id="layer_O">
+      <use href="#octR" x="950"  y="449" width="44" height="30"/>
+      <use href="#octR" x="1000" y="449" width="44" height="30"/>
+      <use href="#octR" x="1050" y="449" width="44" height="30"/>
+      <use href="#octR" x="1100" y="449" width="44" height="30"/>
+      <use href="#octR" x="1150" y="449" width="44" height="30"/>
+      <use href="#octR" x="1200" y="449" width="44" height="30"/>
+      <use href="#octR" x="1250" y="449" width="44" height="30"/>
+      <use href="#octR" x="1300" y="449" width="44" height="30"/>
+      <use href="#octR" x="1350" y="449" width="44" height="30"/>
+      <use href="#octR" x="1400" y="449" width="44" height="30"/>
+      <use href="#octR" x="1450" y="449" width="44" height="30"/>
+    </g>
+    <g id="label_o">
+      <text x="924" y="468" text-anchor="end" font-size="15" font-weight="bold" fill="#445">O 层 · 铝氧八面体（AlO₆）</text>
+      <text x="924" y="490" text-anchor="end" font-size="12" fill="#5A6B7B">外表面为铝氧面（–OH）</text>
+      <line x1="930" y1="472" x2="945" y2="472" stroke="#5A6B7B" stroke-width="1.2"/>
+      <circle cx="950" cy="472" r="2.6" fill="#55697C" stroke="none"/>
+    </g>
+
+    <!-- 表面羟基（铝氧面外侧，红球） -->
+    <g id="layer_hydroxyl">
+      <circle cx="1072" cy="446" r="5" fill="url(#gSphOH)" stroke="#8E2B21" stroke-width="0.8"/>
+      <circle cx="1272" cy="446" r="5" fill="url(#gSphOH)" stroke="#8E2B21" stroke-width="0.8"/>
+      <circle cx="1472" cy="446" r="5" fill="url(#gSphOH)" stroke="#8E2B21" stroke-width="0.8"/>
+    </g>
+    <g id="label_oh">
+      <text x="924" y="441" text-anchor="end" font-size="13" fill="#B03A2E">表面羟基 –OH（铝氧面外侧）</text>
+      <line x1="930" y1="445" x2="1063" y2="445" stroke="#B03A2E" stroke-width="1.1"/>
+      <circle cx="1067" cy="445" r="2.4" fill="#55697C" stroke="none"/>
+    </g>
+
+    <!-- T 层色带 + 硅氧四面体（11 个，顶氧插入 O 层） -->
+    <rect x="940" y="475" width="558" height="58" rx="6" fill="#C9DDF2" fill-opacity="0.14"/>
+    <g id="layer_T">
+      <use href="#tetR" x="950"  y="477" width="44" height="52"/>
+      <use href="#tetR" x="1000" y="477" width="44" height="52"/>
+      <use href="#tetR" x="1050" y="477" width="44" height="52"/>
+      <use href="#tetR" x="1100" y="477" width="44" height="52"/>
+      <use href="#tetR" x="1150" y="477" width="44" height="52"/>
+      <use href="#tetR" x="1200" y="477" width="44" height="52"/>
+      <use href="#tetR" x="1250" y="477" width="44" height="52"/>
+      <use href="#tetR" x="1300" y="477" width="44" height="52"/>
+      <use href="#tetR" x="1350" y="477" width="44" height="52"/>
+      <use href="#tetR" x="1400" y="477" width="44" height="52"/>
+      <use href="#tetR" x="1450" y="477" width="44" height="52"/>
+    </g>
+    <g id="label_t">
+      <circle cx="972" cy="528" r="2.6" fill="#55697C" stroke="none"/>
+      <line x1="972" y1="531" x2="972" y2="560" stroke="#5A6B7B" stroke-width="1.2"/>
+      <text x="940" y="578" font-size="15" font-weight="bold" fill="#445">T 层 · 硅氧四面体（SiO₄）</text>
+      <text x="940" y="596" font-size="12" fill="#5A6B7B">顶氧指向 O 层 · 外表面为硅氧面</text>
+    </g>
+
+    <!-- 最小重复单元框 -->
+    <g id="layer_unit_repeat">
+      <rect x="1194" y="441" width="64" height="92" rx="6" fill="none"
+            stroke="#5A6B7B" stroke-width="1.3" stroke-dasharray="5 3"/>
+      <text x="1270" y="472" font-size="13" fill="#445">最小重复单元</text>
+      <text x="1270" y="490" font-size="11" fill="#5A6B7B">（T + O）1:1</text>
+    </g>
+
+    <!-- 单元层厚度尺寸线 -->
+    <g id="dim_unit" stroke="#55697C">
+      <line x1="1498" y1="443" x2="1522" y2="443" stroke-width="1.1"/>
+      <line x1="1498" y1="533" x2="1522" y2="533" stroke-width="1.1"/>
+      <line x1="1514" y1="443" x2="1514" y2="533" stroke-width="1.2"/>
+      <polygon points="1514,443 1510.6,450 1517.4,450" fill="#55697C" stroke="none"/>
+      <polygon points="1514,533 1510.6,526 1517.4,526" fill="#55697C" stroke="none"/>
+    </g>
+    <text transform="rotate(-90 1536 488)" x="1536" y="488" text-anchor="middle"
+          font-size="13" fill="#55697C">单元层 ≈ 0.72 nm</text>
+
+    <!-- 零件渲染三档对照条（双档决策的直观展示） -->
+    <g id="tier_compare">
+      <text x="700" y="622" font-size="15" font-weight="bold" fill="#1F2A37">零件渲染三档对照（几何同源 · 仅质感不同）</text>
+      <line x1="950"  y1="638" x2="950"  y2="745" stroke="#D8E1E9" stroke-width="1" stroke-dasharray="4 4"/>
+      <line x1="1230" y1="638" x2="1230" y2="745" stroke="#D8E1E9" stroke-width="1" stroke-dasharray="4 4"/>
+      <!-- 线稿档 -->
+      <use href="#tetLine" x="746" y="642" width="50" height="59"/>
+      <use href="#octLine" x="818" y="666" width="50" height="34"/>
+      <text x="820" y="738" text-anchor="middle" font-size="13.5" fill="#445">线稿档（出版 · 投稿）</text>
+      <!-- 淡彩档 -->
+      <use href="#tetFlat" x="1016" y="642" width="50" height="59"/>
+      <use href="#octFlat" x="1088" y="666" width="50" height="34"/>
+      <text x="1090" y="738" text-anchor="middle" font-size="13.5" fill="#445">淡彩档（默认 · 组会）</text>
+      <!-- 渲染档 -->
+      <use href="#tetR" x="1306" y="642" width="50" height="59"/>
+      <use href="#octR" x="1378" y="666" width="50" height="34"/>
+      <text x="1380" y="738" text-anchor="middle" font-size="13.5" fill="#445">渲染档（宣讲 · 会议）</text>
+    </g>
+  </g>
+
+  <!-- ================= 图例与图注 ================= -->
+  <g id="legend_caption">
+    <line x1="40" y1="782" x2="1560" y2="782" stroke="#D5DFE8" stroke-width="1"/>
+    <rect x="60" y="806" width="22" height="18" rx="3" fill="#B4CDE6" stroke="#2E4E6E" stroke-width="1.4"/>
+    <text x="90" y="820" font-size="14" fill="#1F2A37">硅氧四面体片（T）</text>
+    <rect x="270" y="806" width="22" height="18" rx="3" fill="#E8CFBA" stroke="#9C6B4F" stroke-width="1.4"/>
+    <text x="300" y="820" font-size="14" fill="#1F2A37">铝氧八面体片（O）</text>
+    <line x1="480" y1="815" x2="512" y2="815" stroke="#B03A2E" stroke-width="1.6" stroke-dasharray="3 3"/>
+    <text x="520" y="820" font-size="14" fill="#1F2A37">氢键 / 羟基</text>
+    <circle cx="652" cy="815" r="6" fill="url(#gSphO)" stroke="#7E8FA0" stroke-width="0.9"/>
+    <text x="666" y="820" font-size="14" fill="#1F2A37">基面氧 O（相邻层）</text>
+    <circle cx="836" cy="815" r="6" fill="url(#gSphOH)" stroke="#8E2B21" stroke-width="0.9"/>
+    <text x="850" y="820" font-size="14" fill="#1F2A37">表面羟基 –OH</text>
+    <text x="1560" y="822" text-anchor="end" font-size="17" font-weight="bold" fill="#1F2A37">高岭石 Al₂Si₂O₅(OH)₄ · TO 型 1:1 层状硅酸盐</text>
+    <text x="60" y="862" font-size="13.5" fill="#5A6B7B">图 1　高岭石单层片层形貌与 TO 型单元层结构示意 · DEMO 03（双档渲染 · 宣讲档样品，待验收；结构细节待审校；d(001) ≈ 0.716 nm，层间以氢键相连，无层间可交换阳离子）</text>
+  </g>
+</svg>

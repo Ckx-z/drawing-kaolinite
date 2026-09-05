@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaolin-Assets · 高岭土机理图绘制 — 技术验证 Demo</title>
+<style>
+  :root {
+    --bg: #14171C; --panel: #1C2128; --panel2: #232A33; --line: #2C333D;
+    --txt: #C9D1D9; --dim: #8792A0; --acc: #E08A4E; --acc-soft: rgba(224,138,78,.16);
+    --blue: #5B93E8;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; overflow: hidden; color: var(--txt);
+    font: 13px/1.55 "Segoe UI", system-ui, "Microsoft YaHei", sans-serif;
+    background: var(--bg); user-select: none;
+  }
+
+  /* ---------- 顶栏 ---------- */
+  #topbar {
+    display: flex; align-items: center; gap: 14px; height: 46px; padding: 0 14px;
+    background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  .brand { font-weight: 600; letter-spacing: .3px; white-space: nowrap; }
+  .brand .logo { color: var(--acc); margin-right: 6px; }
+  .brand em { font-style: normal; font-weight: 400; color: var(--dim); font-size: 11px; margin-left: 8px; }
+  .tb-group { display: flex; align-items: center; gap: 6px; }
+  .tb-sep { width: 1px; height: 20px; background: var(--line); }
+  .spacer { flex: 1; }
+  button {
+    background: var(--panel2); color: var(--txt); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 12px; font: inherit; cursor: pointer; white-space: nowrap;
+  }
+  button:hover { border-color: var(--acc); color: #fff; }
+  button.primary { background: var(--acc); border-color: var(--acc); color: #fff; }
+  button.primary:hover { filter: brightness(1.1); }
+  button.mini { padding: 2px 8px; font-size: 12px; }
+  select, input[type=number] {
+    background: var(--panel2); color: var(--txt); border: 1px solid var(--line);
+    border-radius: 6px; padding: 4px 8px; font: inherit;
+  }
+  label.chk { display: inline-flex; align-items: center; gap: 5px; color: var(--dim); white-space: nowrap; }
+
+  /* ---------- 三栏布局 ---------- */
+  main { display: grid; grid-template-columns: 216px 1fr 300px; height: calc(100% - 46px); }
+  #left, #right { background: var(--panel); overflow-y: auto; }
+  #left { border-right: 1px solid var(--line); }
+  #right { border-left: 1px solid var(--line); padding: 10px; }
+  h3 {
+    margin: 12px 12px 6px; font-size: 12px; color: var(--dim); font-weight: 600;
+    letter-spacing: 1px; display: flex; justify-content: space-between; align-items: baseline;
+  }
+  h3 .tip { font-size: 11px; font-weight: 400; letter-spacing: 0; }
+  h3:first-child { margin-top: 10px; }
+
+  /* 素材库 */
+  .lib-card {
+    margin: 0 10px 8px; padding: 9px 10px; background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 8px; cursor: pointer; transition: border-color .12s;
+  }
+  .lib-card:hover { border-color: var(--acc); }
+  .lib-card .t { font-weight: 600; }
+  .lib-card .t .ic { color: var(--acc); margin-right: 7px; }
+  .lib-card .d { color: var(--dim); font-size: 11.5px; margin-top: 2px; }
+
+  /* 我的模块 */
+  #modList { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 10px; }
+  .mod-card {
+    position: relative; background: var(--panel2); border: 1px solid var(--line);
+    border-radius: 8px; overflow: hidden; cursor: pointer;
+  }
+  .mod-card:hover { border-color: var(--acc); }
+  .mod-card img { width: 100%; height: 72px; object-fit: cover; display: block; background: #F4F5F7; }
+  .mod-card .n { font-size: 11px; padding: 3px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mod-card .x {
+    position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; line-height: 16px;
+    text-align: center; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff;
+    font-size: 11px; display: none;
+  }
+  .mod-card:hover .x { display: block; }
+  .empty { color: var(--dim); font-size: 12px; margin: 4px 12px; }
+
+  /* 画布 */
+  #center { position: relative; }
+  #canvasWrap { position: absolute; inset: 0; }
+  #canvasWrap canvas { display: block; }
+  #hint {
+    position: absolute; left: 12px; bottom: 10px; color: #7b838d; font-size: 11.5px;
+    pointer-events: none; text-shadow: 0 1px 2px rgba(255,255,255,.6);
+  }
+  #stat {
+    position: absolute; right: 12px; top: 10px; color: #7b838d; font-size: 11.5px;
+    background: rgba(255,255,255,.72); border: 1px solid rgba(0,0,0,.06);
+    padding: 3px 10px; border-radius: 20px; pointer-events: none;
+  }
+
+  /* 参数面板 */
+  .ctl { margin: 0 0 9px; }
+  .ctl .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+  .ctl label { color: var(--txt); font-size: 12.5px; }
+  .ctl label .star { color: var(--acc); }
+  .ctl .val { color: var(--dim); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .ctl input[type=range] { width: 100%; accent-color: var(--acc); height: 22px; margin: 0; }
+  .ctl select { width: 100%; }
+  .ctl input[type=checkbox] { accent-color: var(--acc); }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .grid3 .cell label { display: block; font-size: 11px; color: var(--dim); margin-bottom: 1px; }
+  .grid3 input[type=number] { width: 100%; padding: 3px 6px; font-size: 12px; }
+  .subhead {
+    margin: 14px 0 8px; padding-top: 10px; border-top: 1px solid var(--line);
+    font-size: 11.5px; color: var(--dim); letter-spacing: 1px;
+  }
+  .btnrow { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .btnrow button.on { border-color: var(--acc); color: var(--acc); background: var(--acc-soft); }
+
+  /* 图层 */
+  .layer-row {
+    display: flex; align-items: center; gap: 7px; padding: 6px 8px; margin: 0 2px 2px;
+    border-left: 3px solid transparent; border-radius: 6px; cursor: pointer;
+  }
+  .layer-row:hover { background: var(--panel2); }
+  .layer-row.sel { background: var(--acc-soft); border-left-color: var(--acc); }
+  .layer-row .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .layer-row .cnt { color: var(--dim); font-size: 11px; }
+  .layer-row .eye, .layer-row .del {
+    background: none; border: none; color: var(--dim); cursor: pointer; padding: 0 3px; font-size: 13px;
+  }
+  .layer-row .eye:hover, .layer-row .del:hover { color: #fff; }
+  .layer-row.hid .nm { color: var(--dim); text-decoration: line-through; }
+
+  /* toast */
+  #toast {
+    position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%) translateY(20px);
+    background: rgba(20,23,28,.92); color: #fff; padding: 8px 18px; border-radius: 20px;
+    border: 1px solid var(--line); opacity: 0; transition: all .25s; pointer-events: none; z-index: 99;
+    max-width: 70vw;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  ::-webkit-scrollbar { width: 9px; }
+  ::-webkit-scrollbar-thumb { background: #333B46; border-radius: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand"><span class="logo">◈</span>Kaolin-Assets<em>高岭土机理图绘制 · 技术验证 Demo v0.1</em></div>
+  <div class="spacer"></div>
+  <div class="tb-group">
+    <button id="btnPreset" title="一键组合：埃洛石@CeO₂ 复合材料场景">示例场景</button>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-group">
+    <button id="btnSaveScene">保存场景</button>
+    <button id="btnLoadScene">打开场景</button>
+    <input type="file" id="fileScene" accept=".json,application/json" hidden>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-group">
+    <select id="selDpi" title="导出分辨率（按 16cm 版面宽度折算像素）">
+      <option value="96">96 dpi 预览</option>
+      <option value="300" selected>300 dpi 期刊</option>
+      <option value="600">600 dpi 高清</option>
+    </select>
+    <label class="chk"><input type="checkbox" id="chkAlpha">透明底</label>
+    <button id="btnExport" class="primary">导出 PNG</button>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-group">
+    <button id="btnSaveModule" title="把选中的组件存入下方“我的模块”，可反复复用">★ 存为模块</button>
+    <button id="btnClear">清空</button>
+  </div>
+</header>
+
+<main>
+  <aside id="left">
+    <h3>素材库 <span class="tip">点击添加到画布</span></h3>
+    <div id="libList"></div>
+    <h3>我的模块 <span class="tip">本地保存 · 点击复用</span></h3>
+    <div id="modList"></div>
+    <div class="empty" id="modEmpty">暂无模块。选中组件后点“★ 存为模块”，半年即可积累 8–10 个常用模块。</div>
+  </aside>
+
+  <section id="center">
+    <div id="canvasWrap"></div>
+    <div id="stat">—</div>
+    <div id="hint">左键旋转 · 右键平移 · 滚轮缩放 · 点击选中组件 · Delete 删除 · Esc 取消</div>
+  </section>
+
+  <aside id="right">
+    <h3>参数 <span class="tip" id="paramName">（未选中）</span></h3>
+    <div id="paramPanel"></div>
+    <h3>图层 <span class="tip">异步组合 · 互不影响</span></h3>
+    <div id="layerList"></div>
+    <div class="empty" id="layerEmpty">画布为空，请从左侧素材库添加。</div>
+  </aside>
+</main>
+
+<div id="toast"></div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="vendor/TransformControls.js"></script>
+<script src="vendor/RoomEnvironment.js"></script>
+<script src="data/kaolinite.cif.js"></script>
+<script src="core/crystal.js"></script>
+<script src="core/builders.js"></script>
+<script>
+'use strict';
+/* ============================================================
+ * Kaolin-Assets Demo · 应用层（场景图 / 交互 / 面板 / 导出）
+ * 架构对应技术方案：
+ *   M4 场景图与图层系统  → comps[] + THREE.Group
+ *   M2 参数化几何内核    → core/*.js（纯函数，参数改动即重建）
+ *   M5 模块库            → localStorage 成品模块（含缩略图）
+ *   M6 导出引擎          → 高分辨率位图导出（300/600dpi，可透明底）
+ * ============================================================ */
+
+/* ---------- 渲染器 / 场景 / 相机 ---------- */
+const wrap = document.getElementById('canvasWrap');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+wrap.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xF4F5F7).convertSRGBToLinear();
+
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 6000);
+camera.position.set(150, 110, 190);
+
+const orbit = new THREE.OrbitControls(camera, renderer.domElement);
+orbit.enableDamping = true;
+orbit.dampingFactor = 0.08;
+
+const tc = new THREE.TransformControls(camera, renderer.domElement);
+tc.setSize(0.85);
+scene.add(tc);
+tc.addEventListener('dragging-changed', (e) => { orbit.enabled = !e.value; });
+tc.addEventListener('objectChange', () => { applyGizmoToState(); });
+
+/* 环境光照：PMREM 室内环境 + 主光/补光 —— 期刊柔和质感 */
+try {
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new THREE.RoomEnvironment(), 0.04).texture;
+} catch (err) { console.warn('环境贴图初始化失败：', err); }
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+dirLight.position.set(140, 230, 170);
+scene.add(dirLight);
+const fillLight = new THREE.DirectionalLight(0xdfe8ff, 0.25);
+fillLight.position.set(-170, 90, -130);
+scene.add(fillLight);
+scene.add(new THREE.AmbientLight(0xffffff, 0.28));
+
+function resize() {
+  const w = Math.max(1, wrap.clientWidth), h = Math.max(1, wrap.clientHeight);
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+
+(function loop() {
+  requestAnimationFrame(loop);
+  orbit.update();
+  renderer.render(scene, camera);
+})();
+
+/* ---------- 共享材质 ---------- */
+const atomMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0xffffff, roughness: 0.42, metalness: 0.0,
+  clearcoat: 0.4, clearcoatRoughness: 0.5, envMapIntensity: 0.9,
+});
+const bondMaterial = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(0x8F959C).convertSRGBToLinear(), roughness: 0.55, clearcoat: 0.2 });
+const substrateMaterial = new THREE.MeshPhysicalMaterial({
+  color: new THREE.Color(0xC9D2DC).convertSRGBToLinear(), roughness: 0.88, metalness: 0, clearcoat: 0.15, envMapIntensity: 0.6,
+});
+
+/* ---------- 素材定义（类型 / 默认参数 / 参数面板描述） ---------- */
+const TYPE_NAMES = {
+  kaolinite_sheet: '高岭土片层', halloysite_tube: '埃洛石管',
+  nanoparticle: '纳米颗粒', molecule: '分子', rubber_substrate: '橡胶基底',
+};
+const DEFAULTS = {
+  kaolinite_sheet: { Lx: 70, Ly: 60, layers: 1, d001: 7.4, shape: '矩形', edgeH: false, style: '空间填充' },
+  halloysite_tube: { innerR: 14, length: 90, walls: 1, d001: 7.4, progress: 1, taperDeg: 0, style: '空间填充' },
+  nanoparticle: { radius: 9, grains: 160, seed: 7, mode: '簇装' },
+  molecule: { kind: 'H₂O' },
+  rubber_substrate: { Lx: 140, Ly: 90, thickness: 5 },
+};
+const DEFAULT_SCALE = { molecule: 4 };
+const PARAM_DEFS = {
+  kaolinite_sheet: [
+    { key: 'Lx', label: '横向尺寸', unit: 'Å', min: 20, max: 150, step: 2 },
+    { key: 'Ly', label: '纵向尺寸', unit: 'Å', min: 20, max: 150, step: 2 },
+    { key: 'layers', label: '堆叠层数', min: 1, max: 3, step: 1 },
+    { key: 'd001', label: '层间距 d₀₀₁', unit: 'Å', min: 7.2, max: 12, step: 0.1 },
+    { key: 'shape', label: '片层轮廓', type: 'select', options: ['矩形', '六角'] },
+    { key: 'style', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
+    { key: 'edgeH', label: '边缘羟基饱和（实验）', type: 'checkbox' },
+  ],
+  halloysite_tube: [
+    { key: 'innerR', label: '内半径', unit: 'Å', min: 8, max: 40, step: 1 },
+    { key: 'length', label: '管长', unit: 'Å', min: 30, max: 200, step: 5 },
+    { key: 'walls', label: '管壁层数', min: 1, max: 3, step: 1 },
+    { key: 'd001', label: '壁间距（水合）', unit: 'Å', min: 7.4, max: 11, step: 0.1 },
+    { key: 'progress', label: '★ 卷曲进度（片→管）', min: 0.02, max: 1, step: 0.01, disp: (v) => Math.round(v * 100) + '%' },
+    { key: 'taperDeg', label: '锥角', unit: '°', min: -20, max: 20, step: 1 },
+    { key: 'style', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
+  ],
+  nanoparticle: [
+    { key: 'radius', label: '颗粒半径', unit: 'Å', min: 4, max: 20, step: 0.5 },
+    { key: 'grains', label: '晶粒数量', min: 40, max: 400, step: 10 },
+    { key: 'seed', label: '随机种子', min: 1, max: 99, step: 1 },
+    { key: 'mode', label: '形态', type: 'select', options: ['簇装', '光滑'] },
+  ],
+  molecule: [
+    { key: 'kind', label: '分子种类', type: 'select', options: Object.keys(Builders.MOLECULES) },
+  ],
+  rubber_substrate: [
+    { key: 'Lx', label: '长', unit: 'Å', min: 40, max: 240, step: 10 },
+    { key: 'Ly', label: '宽', unit: 'Å', min: 30, max: 200, step: 10 },
+    { key: 'thickness', label: '厚度', unit: 'Å', min: 2, max: 20, step: 1 },
+  ],
+};
+const LIB = [
+  { type: 'kaolinite_sheet', icon: '▬', name: '高岭土片层', desc: '1–3 层堆叠 · CIF 驱动 · 矩形/六角' },
+  { type: 'halloysite_tube', icon: '◯', name: '埃洛石纳米管', desc: '片层卷曲生成 · 卷曲进度可动画' },
+  { type: 'nanoparticle', icon: '⬤', name: '纳米颗粒 CeO₂', desc: '簇装小晶粒 / 光滑球 · 尺寸可调' },
+  { type: 'molecule', icon: '✦', name: '小分子 / 离子', desc: 'H₂O · O₂ · CO₂ · N₂ · 阳离子' },
+  { type: 'rubber_substrate', icon: '▭', name: '橡胶基底', desc: '圆角软质平板' },
+];
+
+/* ---------- 组件状态与场景图 ---------- */
+let comps = [];
+let selId = null;
+let uidc = 1;
+const uid = () => 'c' + (uidc++);
+const selectedComp = () => comps.find((c) => c.id === selId) || null;
+
+function geomFor(comp) {
+  switch (comp.type) {
+    case 'kaolinite_sheet': return Builders.buildKaoliniteSheet(window.KAOLINITE_CIF, comp.params);
+    case 'halloysite_tube': return Builders.buildHalloysiteTube(window.KAOLINITE_CIF, comp.params);
+    case 'nanoparticle': return Builders.buildParticle(comp.params);
+    case 'molecule': return Builders.buildMolecule(comp.params.kind);
+  }
+  return { atoms: [], bonds: [] };
+}
+
+function addAtoms(g, atoms, ballstick) {
+  const byEl = {};
+  for (const a of atoms) (byEl[a.el] = byEl[a.el] || []).push(a);
+  // 大场景自动降网格精度（LOD）
+  const seg = atoms.length > 15000 ? 8 : atoms.length > 6000 ? 12 : 18;
+  const sph = new THREE.SphereGeometry(1, seg, Math.max(6, Math.round(seg * 0.7)));
+  const mtx = new THREE.Matrix4();
+  const col = new THREE.Color();
+  for (const el in byEl) {
+    const info = Crystal.ELEMENTS[el] || { cov: 1, vdw: 1.6, color: '#9AA0A6' };
+    const baseR = ballstick ? info.cov * 0.95 : info.vdw * 0.92;
+    const arr = byEl[el];
+    const m = new THREE.InstancedMesh(sph, atomMaterial, arr.length);
+    for (let k = 0; k < arr.length; k++) {
+      const a = arr[k];
+      const r = a.r || baseR;
+      mtx.makeScale(r, r, r);
+      mtx.setPosition(a.x, a.y, a.z);
+      m.setMatrixAt(k, mtx);
+      col.set(a.colorOverride || info.color).convertSRGBToLinear();   // sRGB → 线性，保证输出色相
+      col.offsetHSL(0, 0, (Math.random() - 0.5) * 0.05);   // 轻微明度抖动，增加“手作”质感
+      m.setColorAt(k, col);
+    }
+    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+    g.add(m);
+  }
+}
+
+function addBonds(g, atoms, bonds, rad) {
+  const cyl = new THREE.CylinderGeometry(1, 1, 1, 10, 1, true);
+  const m = new THREE.InstancedMesh(cyl, bondMaterial, bonds.length);
+  const v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), dir = new THREE.Vector3();
+  const mid = new THREE.Vector3(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
+  const mtx = new THREE.Matrix4(), s = new THREE.Vector3();
+  for (let k = 0; k < bonds.length; k++) {
+    const a = atoms[bonds[k][0]], b = atoms[bonds[k][1]];
+    v1.set(a.x, a.y, a.z); v2.set(b.x, b.y, b.z);
+    dir.subVectors(v2, v1);
+    const len = dir.length() || 1e-4;
+    mid.addVectors(v1, v2).multiplyScalar(0.5);
+    q.setFromUnitVectors(up, dir.normalize());
+    s.set(rad, len, rad);
+    mtx.compose(mid, q, s);
+    m.setMatrixAt(k, mtx);
+  }
+  g.add(m);
+}
+
+function fillGroup(comp) {
+  const g = comp._group;
+  if (comp.type === 'rubber_substrate') {
+    const geo = Builders.buildSubstrate(comp.params, THREE);
+    g.add(new THREE.Mesh(geo, substrateMaterial));
+    comp._data = null;
+  } else {
+    const data = geomFor(comp);
+    comp._data = data;
+    const ballstick = comp.params.style === '球棍' || comp.type === 'molecule';
+    addAtoms(g, data.atoms, ballstick);
+    if (ballstick && data.bonds && data.bonds.length) addBonds(g, data.atoms, data.bonds, 0.16);
+  }
+}
+
+function buildGroup(comp) {
+  const g = new THREE.Group();
+  g.userData.componentId = comp.id;
+  comp._group = g;
+  fillGroup(comp);
+  applyTransform(comp);
+  return g;
+}
+
+function applyTransform(comp) {
+  const t = comp.transform, g = comp._group;
+  g.position.fromArray(t.position);
+  g.rotation.set(t.rotation[0] * Math.PI / 180, t.rotation[1] * Math.PI / 180, t.rotation[2] * Math.PI / 180);
+  g.scale.setScalar(t.scale);
+}
+
+function clearGroup(g) {
+  g.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+  while (g.children.length) g.remove(g.children[0]);
+}
+
+function rebuild(comp) {
+  clearGroup(comp._group);
+  fillGroup(comp);
+  renderStat();
+}
+
+/* 重建节流：滑块连续拖动时合并到帧 */
+const pendingRebuild = new Set();
+function scheduleRebuild(comp) {
+  pendingRebuild.add(comp);
+  requestAnimationFrame(() => {
+    if (pendingRebuild.delete(comp)) rebuild(comp);
+  });
+}
+
+function addComponent(type, opt) {
+  opt = opt || {};
+  const same = comps.filter((c) => c.type === type).length;
+  const comp = {
+    id: uid(),
+    name: opt.name || TYPE_NAMES[type] + ' ' + (same + 1),
+    type: type,
+    params: Object.assign({}, DEFAULTS[type], opt.params || {}),
+    transform: Object.assign(
+      { position: [0, 0, 0], rotation: [0, 0, 0], scale: DEFAULT_SCALE[type] || 1 },
+      opt.transform || {}
+    ),
+    visible: opt.visible !== false,
+  };
+  buildGroup(comp);
+  comp._group.visible = comp.visible;
+  scene.add(comp._group);
+  comps.push(comp);
+  if (opt.select !== false) select(comp.id);
+  renderLayers(); renderStat();
+  return comp;
+}
+
+function deleteComp(id) {
+  const i = comps.findIndex((c) => c.id === id);
+  if (i < 0) return;
+  const c = comps[i];
+  clearGroup(c._group);
+  scene.remove(c._group);
+  comps.splice(i, 1);
+  if (selId === id) select(null);
+  renderLayers(); renderStat();
+}
+
+function clearAll() {
+  select(null);
+  comps.slice().forEach((c) => deleteComp(c.id));
+}
+
+function select(id) {
+  selId = id;
+  const c = selectedComp();
+  if (c && c.visible) tc.attach(c._group); else tc.detach();
+  renderParams(); renderLayers();
+}
+
+/* ---------- 拾取 ---------- */
+const raycaster = new THREE.Raycaster();
+const mouseNDC = new THREE.Vector2();
+let downXY = null;
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  downXY = tc.axis ? null : [e.clientX, e.clientY];   // 点在 gizmo 手柄上则不参与拾取
+});
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!downXY) { downXY = null; return; }
+  const moved = Math.hypot(e.clientX - downXY[0], e.clientY - downXY[1]);
+  downXY = null;
+  if (moved > 5 || e.button !== 0) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouseNDC, camera);
+  const targets = comps.filter((c) => c.visible).map((c) => c._group);
+  const hits = raycaster.intersectObjects(targets, true);
+  if (hits.length) {
+    let o = hits[0].object;
+    while (o && !o.userData.componentId) o = o.parent;
+    select(o ? o.userData.componentId : null);
+  } else select(null);
+});
+window.addEventListener('keydown', (e) => {
+  const tag = (document.activeElement || {}).tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { if (selId) deleteComp(selId); }
+  if (e.key === 'Escape') select(null);
+});
+
+/* ---------- 相机构图 ----------
+ * 注意：InstancedMesh 的 geometry.boundingBox 只是单位球，
+ * 必须按原子坐标 + 组件变换精确求包围盒，否则取景过近/偏移。 */
+const _bv = new THREE.Vector3();
+function compBox(comp, box) {
+  box = box || new THREE.Box3();
+  const g = comp._group;
+  if (comp._data && comp._data.atoms.length) {
+    const min = new THREE.Vector3(1e9, 1e9, 1e9), max = new THREE.Vector3(-1e9, -1e9, -1e9);
+    for (const a of comp._data.atoms) {
+      _bv.set(a.x * g.scale.x, a.y * g.scale.y, a.z * g.scale.z).applyQuaternion(g.quaternion).add(g.position);
+      min.min(_bv); max.max(_bv);
+    }
+    box.expandByPoint(min);
+    box.expandByPoint(max);
+  } else {
+    box.setFromObject(g);
+  }
+  return box;
+}
+function frameBox(box, fill) {
+  if (box.isEmpty()) return;
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const radius = Math.max(size.x, size.y, size.z) * 0.62 + 8;
+  const dir = new THREE.Vector3(1, 0.7, 1.05).normalize();
+  camera.position.copy(center).addScaledVector(dir, radius * (fill || 2.9));
+  orbit.target.copy(center);
+}
+function frameObject(obj) {
+  const c = comps.find((x) => x._group === obj);
+  const box = c ? compBox(c) : new THREE.Box3().setFromObject(obj);
+  frameBox(box);
+}
+function frameAll() {
+  const box = new THREE.Box3();
+  comps.forEach((c) => { if (c.visible) compBox(c, box); });
+  box.expandByScalar(2.5);
+  frameBox(box);
+}
+
+/* ---------- 左侧：素材库 ---------- */
+const libList = document.getElementById('libList');
+LIB.forEach((item) => {
+  const d = document.createElement('div');
+  d.className = 'lib-card';
+  d.innerHTML = '<div class="t"><span class="ic">' + item.icon + '</span>' + item.name + '</div><div class="d">' + item.desc + '</div>';
+  d.onclick = () => {
+    const c = addComponent(item.type);
+    frameObject(c._group);
+    toast('已添加「' + item.name + '」，右侧面板可调参数');
+  };
+  libList.appendChild(d);
+});
+
+/* ---------- 右侧：参数面板 ---------- */
+const paramPanel = document.getElementById('paramPanel');
+const paramName = document.getElementById('paramName');
+let transformInputs = null;
+
+function mkEl(tag, cls, html) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  return e;
+}
+
+function makeControl(comp, def) {
+  const box = mkEl('div', 'ctl');
+  if (def.type === 'select') {
+    box.appendChild(mkEl('div', 'row', '<label>' + def.label + '</label>'));
+    const sel = document.createElement('select');
+    def.options.forEach((op) => {
+      const o = document.createElement('option');
+      o.value = op; o.textContent = op;
+      if (comp.params[def.key] === op) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.onchange = () => { comp.params[def.key] = sel.value; scheduleRebuild(comp); };
+    box.appendChild(sel);
+  } else if (def.type === 'checkbox') {
+    box.appendChild(mkEl('div', 'row'));
+    const lab = mkEl('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = !!comp.params[def.key];
+    cb.onchange = () => { comp.params[def.key] = cb.checked; scheduleRebuild(comp); };
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(' ' + def.label));
+    box.appendChild(lab);
+  } else {
+    const disp = def.disp || ((v) => v + (def.unit || ''));
+    box.appendChild(mkEl('div', 'row',
+      '<label>' + (def.label.startsWith('★') ? '<span class="star">★</span>' + def.label.slice(1) : def.label) + '</label>' +
+      '<span class="val">' + disp(comp.params[def.key]) + '</span>'));
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = def.min; input.max = def.max; input.step = def.step;
+    input.value = comp.params[def.key];
+    const val = box.querySelector('.val');
+    input.oninput = () => {
+      comp.params[def.key] = parseFloat(input.value);
+      val.textContent = disp(comp.params[def.key]);
+      scheduleRebuild(comp);
+    };
+    box.appendChild(input);
+  }
+  return box;
+}
+
+function renderParams() {
+  const c = selectedComp();
+  paramPanel.innerHTML = '';
+  transformInputs = null;
+  paramName.textContent = c ? c.name : '（未选中）';
+  if (!c) {
+    paramPanel.appendChild(mkEl('div', 'empty', '点击画布中的组件，<br>或从左侧素材库添加新组件。<br><br>组件之间相互独立，<br>可分层、分步自由组合。'));
+    return;
+  }
+  (PARAM_DEFS[c.type] || []).forEach((def) => paramPanel.appendChild(makeControl(c, def)));
+
+  /* —— 变换区 —— */
+  paramPanel.appendChild(mkEl('div', 'subhead', '变 换'));
+  const grid = mkEl('div', 'grid3');
+  transformInputs = { px: null, py: null, pz: null, rx: null, ry: null, rz: null, s: null };
+  const num = (labelTxt, get, set, step) => {
+    const cell = mkEl('div', 'cell');
+    cell.appendChild(mkEl('label', null, labelTxt));
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.step = step || 1;
+    inp.value = (Math.round(get() * 100) / 100);
+    inp.oninput = () => {
+      const v = parseFloat(inp.value);
+      if (isFinite(v)) { set(v); applyTransform(c); }
+    };
+    cell.appendChild(inp);
+    return inp;
+  };
+  transformInputs.px = num('位置 X', () => c.transform.position[0], (v) => c.transform.position[0] = v, 1);
+  transformInputs.py = num('位置 Y', () => c.transform.position[1], (v) => c.transform.position[1] = v, 1);
+  transformInputs.pz = num('位置 Z', () => c.transform.position[2], (v) => c.transform.position[2] = v, 1);
+  grid.appendChild(transformInputs.px.parentNode);
+  grid.appendChild(transformInputs.py.parentNode);
+  grid.appendChild(transformInputs.pz.parentNode);
+  const grid2 = mkEl('div', 'grid3');
+  grid2.style.marginTop = '6px';
+  transformInputs.rx = num('旋转 X°', () => c.transform.rotation[0], (v) => c.transform.rotation[0] = v, 5);
+  transformInputs.ry = num('旋转 Y°', () => c.transform.rotation[1], (v) => c.transform.rotation[1] = v, 5);
+  transformInputs.rz = num('旋转 Z°', () => c.transform.rotation[2], (v) => c.transform.rotation[2] = v, 5);
+  grid2.appendChild(transformInputs.rx.parentNode);
+  grid2.appendChild(transformInputs.ry.parentNode);
+  grid2.appendChild(transformInputs.rz.parentNode);
+  const grid3 = mkEl('div', 'grid3');
+  grid3.style.marginTop = '6px';
+  transformInputs.s = num('整体缩放', () => c.transform.scale, (v) => c.transform.scale = Math.max(0.05, v), 0.1);
+  grid3.appendChild(transformInputs.s.parentNode);
+  paramPanel.appendChild(grid); paramPanel.appendChild(grid2); paramPanel.appendChild(grid3);
+
+  /* —— gizmo 模式 —— */
+  const row = mkEl('div', 'btnrow');
+  row.style.marginTop = '10px';
+  const modes = [['translate', '移动'], ['rotate', '旋转']];
+  modes.forEach((m) => {
+    const b = mkEl('button', 'mini' + (tc.mode === m[0] ? ' on' : ''), m[1]);
+    b.onclick = () => { tc.setMode(m[0]); renderParams(); };
+    row.appendChild(b);
+  });
+  const bFit = mkEl('button', 'mini', '适配视角');
+  bFit.onclick = () => frameObject(c._group);
+  row.appendChild(bFit);
+  paramPanel.appendChild(row);
+}
+
+function applyGizmoToState() {
+  const c = selectedComp();
+  if (!c || !transformInputs) return;
+  const g = c._group;
+  c.transform.position = [g.position.x, g.position.y, g.position.z];
+  c.transform.rotation = [
+    g.rotation.x * 180 / Math.PI, g.rotation.y * 180 / Math.PI, g.rotation.z * 180 / Math.PI,
+  ];
+  c.transform.scale = g.scale.x;
+  const set = (inp, v) => { if (inp) inp.value = Math.round(v * 100) / 100; };
+  set(transformInputs.px, c.transform.position[0]);
+  set(transformInputs.py, c.transform.position[1]);
+  set(transformInputs.pz, c.transform.position[2]);
+  set(transformInputs.rx, c.transform.rotation[0]);
+  set(transformInputs.ry, c.transform.rotation[1]);
+  set(transformInputs.rz, c.transform.rotation[2]);
+  set(transformInputs.s, c.transform.scale);
+}
+
+/* ---------- 右侧：图层面板 ---------- */
+const layerList = document.getElementById('layerList');
+const layerEmpty = document.getElementById('layerEmpty');
+
+function renderLayers() {
+  layerList.innerHTML = '';
+  layerEmpty.style.display = comps.length ? 'none' : 'block';
+  comps.forEach((c) => {
+    const row = mkEl('div', 'layer-row' + (c.id === selId ? ' sel' : '') + (c.visible ? '' : ' hid'));
+    const n = c._data ? c._data.atoms.length : '';
+    row.innerHTML =
+      '<span class="nm">' + c.name + '</span>' +
+      (n !== '' ? '<span class="cnt">' + n + '原子</span>' : '') +
+      '<button class="eye" title="显示/隐藏">' + (c.visible ? '👁' : '—') + '</button>' +
+      '<button class="del" title="删除">✕</button>';
+    row.onclick = (e) => {
+      if (e.target.classList.contains('eye')) {
+        c.visible = !c.visible; c._group.visible = c.visible;
+        if (!c.visible && selId === c.id) select(null); else renderLayers();
+        return;
+      }
+      if (e.target.classList.contains('del')) { deleteComp(c.id); return; }
+      select(c.id);
+    };
+    layerList.appendChild(row);
+  });
+}
+
+function renderStat() {
+  let atoms = 0;
+  comps.forEach((c) => { if (c._data) atoms += c._data.atoms.length; });
+  document.getElementById('stat').textContent =
+    '组件 ' + comps.length + ' · 原子 ' + atoms.toLocaleString() + ' · CIF 实时驱动';
+}
+
+/* ---------- 模块库（localStorage，含缩略图） ---------- */
+const MOD_KEY = 'kaolin_modules_v1';
+const modList = document.getElementById('modList');
+const modEmpty = document.getElementById('modEmpty');
+
+function loadModules() {
+  try { return JSON.parse(localStorage.getItem(MOD_KEY) || '[]'); } catch (e) { return []; }
+}
+function persistModules(list) {
+  try { localStorage.setItem(MOD_KEY, JSON.stringify(list)); }
+  catch (e) { toast('模块保存失败（本地存储空间不足）'); }
+}
+function snapshot(comp) {
+  const olds = comps.map((c) => [c, c._group.visible]);
+  comps.forEach((c) => { c._group.visible = (c === comp && c.visible); });
+  const tv = tc.visible; tc.visible = false;
+  renderer.render(scene, camera);
+  const oc = document.createElement('canvas');
+  oc.width = 150; oc.height = 110;
+  const ctx = oc.getContext('2d');
+  ctx.fillStyle = '#F4F5F7';
+  ctx.fillRect(0, 0, oc.width, oc.height);
+  try { ctx.drawImage(renderer.domElement, 0, 0, oc.width, oc.height); } catch (e) {}
+  tc.visible = tv;
+  olds.forEach((p) => { p[0]._group.visible = p[1]; });
+  return oc.toDataURL('image/jpeg', 0.8);
+}
+function saveCurrentAsModule() {
+  const c = selectedComp();
+  if (!c) { toast('请先在画布中点选一个组件，再保存为模块'); return; }
+  const list = loadModules();
+  list.unshift({
+    id: 'm' + Date.now(),
+    name: c.name,
+    type: c.type,
+    params: JSON.parse(JSON.stringify(c.params)),
+    transform: JSON.parse(JSON.stringify(c.transform)),
+    thumb: snapshot(c),
+  });
+  persistModules(list);
+  renderModules();
+  toast('已存为模块「' + c.name + '」，以后一键复用');
+}
+function renderModules() {
+  const list = loadModules();
+  modList.innerHTML = '';
+  modEmpty.style.display = list.length ? 'none' : 'block';
+  list.forEach((m) => {
+    const card = mkEl('div', 'mod-card');
+    card.innerHTML = '<img src="' + m.thumb + '" alt=""><div class="n">' + m.name + '</div><div class="x" title="删除">✕</div>';
+    card.onclick = (e) => {
+      if (e.target.classList.contains('x')) {
+        persistModules(loadModules().filter((x) => x.id !== m.id));
+        renderModules();
+        return;
+      }
+      const c = addComponent(m.type, {
+        name: m.name + ' 副本',
+        params: JSON.parse(JSON.stringify(m.params)),
+        transform: JSON.parse(JSON.stringify(m.transform)),
+      });
+      frameObject(c._group);
+      toast('已从模块库调取「' + m.name + '」，所有参数均可继续修改');
+    };
+    modList.appendChild(card);
+  });
+}
+
+/* ---------- 场景保存 / 载入 ---------- */
+function download(text, filename, mime) {
+  const blob = new Blob([text], { type: mime || 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+document.getElementById('btnSaveScene').onclick = () => {
+  const data = {
+    format: 'kaolin-scene/v1',
+    saved: new Date().toISOString(),
+    components: comps.map((c) => ({
+      name: c.name, type: c.type,
+      params: JSON.parse(JSON.stringify(c.params)),
+      transform: JSON.parse(JSON.stringify(c.transform)),
+      visible: c.visible,
+    })),
+  };
+  download(JSON.stringify(data, null, 2), 'kaolin-scene.json');
+  toast('场景已保存（JSON 只存“参数 + 变换”，随时无损再编辑）');
+};
+document.getElementById('btnLoadScene').onclick = () => document.getElementById('fileScene').click();
+document.getElementById('fileScene').onchange = (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const data = JSON.parse(r.result);
+      clearAll();
+      (data.components || []).forEach((s) => addComponent(s.type, {
+        name: s.name, params: s.params, transform: s.transform, visible: s.visible, select: false,
+      }));
+      frameAll();
+      toast('已载入场景：' + (data.components || []).length + ' 个组件');
+    } catch (err) { toast('文件解析失败：' + err.message); }
+  };
+  r.readAsText(f);
+  e.target.value = '';
+};
+
+/* ---------- 导出 PNG（16cm 版面宽 × 所选 dpi，可透明底） ---------- */
+document.getElementById('btnExport').onclick = () => {
+  const dpi = +document.getElementById('selDpi').value;
+  const alpha = document.getElementById('chkAlpha').checked;
+  const wCM = 16;
+  const w = Math.round(wCM * dpi / 2.54);
+  const h = Math.round(w * wrap.clientHeight / Math.max(1, wrap.clientWidth));
+  const prevSize = renderer.getSize(new THREE.Vector2());
+  const prevPR = renderer.getPixelRatio();
+  const prevBg = scene.background;
+  renderer.setPixelRatio(1);
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  if (alpha) scene.background = null;
+  renderer.render(scene, camera);
+  const url = renderer.domElement.toDataURL('image/png');
+  scene.background = prevBg;
+  renderer.setPixelRatio(prevPR);
+  renderer.setSize(prevSize.x, prevSize.y, false);
+  camera.aspect = prevSize.x / Math.max(1, prevSize.y);
+  camera.updateProjectionMatrix();
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'kaolin-' + wCM + 'cm-' + dpi + 'dpi.png';
+  a.click();
+  toast('已导出 ' + w + ' × ' + h + ' px（' + wCM + 'cm @ ' + dpi + 'dpi' + (alpha ? '，透明底' : '') + '）');
+};
+
+/* ---------- 顶栏其他 ---------- */
+document.getElementById('btnSaveModule').onclick = saveCurrentAsModule;
+document.getElementById('btnClear').onclick = () => { clearAll(); toast('画布已清空'); };
+
+let toastTimer = null;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ---------- 示例场景：埃洛石@CeO₂（对齐参考文献样图） ---------- */
+document.getElementById('btnPreset').onclick = loadPreset;
+function loadPreset() {
+  clearAll();
+  addComponent('halloysite_tube', {
+    name: '埃洛石管（双层壁）', select: false,
+    params: { innerR: 14, length: 100, walls: 2, d001: 10, progress: 1, taperDeg: 5, style: '空间填充' },
+    transform: { position: [10, -6, 0], rotation: [0, 0, 90], scale: 1 },
+  });
+  addComponent('nanoparticle', {
+    name: 'CeO₂ 颗粒 A', select: false,
+    params: { radius: 9, grains: 170, seed: 11, mode: '簇装' },
+    transform: { position: [58, 6, 2], scale: 1 },
+  });
+  addComponent('nanoparticle', {
+    name: 'CeO₂ 颗粒 B', select: false,
+    params: { radius: 6.5, grains: 110, seed: 4, mode: '簇装' },
+    transform: { position: [-32, 14, -6], scale: 1 },
+  });
+  addComponent('molecule', {
+    name: 'H₂O ×1', select: false,
+    params: { kind: 'H₂O' },
+    transform: { position: [-8, 26, 10], rotation: [0, 0, 25], scale: 4 },
+  });
+  addComponent('molecule', {
+    name: 'O₂ ×1', select: false,
+    params: { kind: 'O₂' },
+    transform: { position: [22, 30, -8], scale: 4 },
+  });
+  addComponent('molecule', {
+    name: 'Ca²⁺ ×1', select: false,
+    params: { kind: 'Ca²⁺' },
+    transform: { position: [-52, -4, 14], scale: 3 },
+  });
+  frameAll();
+  select(null);
+  toast('已载入示例：埃洛石@CeO₂ —— 试试选中管子，拖动“卷曲进度”滑块');
+}
+
+/* ---------- 启动：默认摆一组演示，展示三类素材 ---------- */
+resize();
+renderParams();
+renderLayers();
+renderModules();
+loadPreset();
+
+/* 调试 / 二次开发接口（也可在控制台里 play） */
+window.APP = { comps, select, addComponent, deleteComp, clearAll, loadPreset, frameAll, Crystal, Builders };
+</script>
+</body>
+</html>
