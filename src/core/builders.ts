@@ -49,11 +49,25 @@ export function buildKaoliniteSheet(cifText: string, p: SheetParams): GeometryDa
  * ============================================================ */
 export function buildHalloysiteTube(cifText: string, p: TubeParams): GeometryData {
   const parsed = C.parseCIF(cifText);
-  // 圆周方向用 a 轴：na 个晶胞 ≈ 2π·(内半径 + 半层厚)；层厚近似 7.2Å 的一半
-  const na = Math.max(6, Math.round((2 * Math.PI * (p.innerR + 3.6)) / parsed.cell.a));
-  const nb = Math.max(2, Math.round(p.length / parsed.cell.b));
+  // 卷曲方向（T-2.6）：'a' = 周向沿 a 轴（默认，与基线一致）；'b' = 周向沿 b 轴
+  //（真实埃洛石轴向近 [110]，作图取美观）。'b' 实现：按 b 周向/a 轴向铺板后交换 x↔y，
+  // 使卷曲方向仍落在 x 上（rollToTube 沿 x 卷曲）。
+  const curlAxis = p.curlAxis ?? 'a';
+  const circumferenceCells = (cellLen: number): number =>
+    Math.max(6, Math.round((2 * Math.PI * (p.innerR + 3.6)) / cellLen));
+  const lengthCells = (cellLen: number): number => Math.max(2, Math.round(p.length / cellLen));
+  const na = curlAxis === 'b' ? lengthCells(parsed.cell.a) : circumferenceCells(parsed.cell.a);
+  const nb = curlAxis === 'b' ? circumferenceCells(parsed.cell.b) : lengthCells(parsed.cell.b);
   const slab = C.buildSlab(parsed, { na, nb, nc: p.walls, d001: p.d001 || 7.4 });
   let atoms = C.addHydroxylHydrogens(slab.atoms);
+
+  if (curlAxis === 'b') {
+    for (const a of atoms) {
+      const t = a.x;
+      a.x = a.y;
+      a.y = t;
+    }
+  }
 
   // 去掉卷曲方向末端一列原子（x = xMax），避免 progress=1 时首尾重叠
   let x0 = 1e9;
@@ -66,6 +80,29 @@ export function buildHalloysiteTube(cifText: string, p: TubeParams): GeometryDat
   atoms = atoms.filter((a) => a.x < x1 - eps);
 
   const rolled = rollToTube(atoms, { progress: p.progress, taperDeg: p.taperDeg });
+
+  // 端口噪声（T-2.6）：管两端 3Å 内原子小幅确定性扰动，模拟天然不规则端口。
+  // 在 computeBonds 之前施加——键连随新位置重判，小幅噪声键数变化 <5%。
+  const portNoise = p.portNoise ?? 0;
+  if (portNoise > 0) {
+    const rng = mulberry32(1337);
+    let y0 = 1e9;
+    let y1 = -1e9;
+    for (const a of rolled) {
+      if (a.y < y0) y0 = a.y;
+      if (a.y > y1) y1 = a.y;
+    }
+    const falloff = 3; // 端口向内衰减宽度（Å）
+    for (const a of rolled) {
+      const edge = Math.min(a.y - y0, y1 - a.y);
+      if (edge >= falloff) continue;
+      const w = 1 - edge / falloff;
+      a.y += (rng() * 2 - 1) * portNoise * w;
+      a.x += (rng() * 2 - 1) * portNoise * w * 0.35;
+      a.z += (rng() * 2 - 1) * portNoise * w * 0.35;
+    }
+  }
+
   const bonds = C.computeBonds(rolled);
   return { atoms: rolled, bonds, meta: { na, nb } };
 }

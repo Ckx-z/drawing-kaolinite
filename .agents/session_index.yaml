@@ -421,3 +421,19 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-20"
+    date: "2026-09-06"
+    title: "T-2.6 卷曲方向选项 + 端口噪声修饰（P2 第 11 条）"
+    summary: "builders.buildHalloysiteTube 增 curlAxis（'a' 基线 / 'b' = 按 b 周向晶胞数铺板后交换 x↔y，卷曲仍沿 x——两轴半径校验一致：内≈11.4A 外≈23A 同容差）与 portNoise（mulberry32(1337) 确定性：管两端 3A 内扰动，轴向全幅/径向 0.35x，随端口线性衰减；computeBonds 前施加键连自适应）。schema tubeParams 增 curlAxis enum default 'a' + portNoise 0-2 default 0（旧场景兼容）；DEFAULT_PARAMS/paramDefs（卷曲方向下拉+端口噪声滑块）同步；预烘焙清单补新字段、标记升 kaolin_prebake_v2。验收 7 条测试（双轴半径一致/构型不同/缺省兼容/键数变化<5%/确定性/幅值有界/零噪声逐位一致）；浏览器实测 b 轴双层管 15,502 原子竖立渲染、端口天然不规则、控件正常（截图归档）。vitest 191 passed（+7）、build/lint 全绿。实际 1d。"
+    files_modified:
+      - src/core/builders.ts（curlAxis/portNoise）
+      - src/core/schema.ts（tubeParams 两字段 + DEFAULT_PARAMS）
+      - src/core/tubeOptions.test.ts（新建，7 条）
+      - src/core/cache.ts / src/ui/SceneCanvas.tsx（预烘焙清单与标记 v2）
+      - src/ui/paramDefs.ts / DATA_DICT.md
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

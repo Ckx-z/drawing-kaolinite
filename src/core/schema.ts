@@ -55,6 +55,9 @@ export const tubeParamsSchema = z.strictObject({
   progress: z.number().min(0.02).max(1),
   taperDeg: z.number().min(-20).max(20),
   style: renderStyle,
+  // T-2.6：卷曲方向（'a' 基线 / 'b' 真实轴向美感）与端口噪声幅度（0 = 关）
+  curlAxis: z.enum(['a', 'b']).default('a'),
+  portNoise: z.number().min(0).max(2).default(0),
 });
 
 export const particleParamsSchema = z.strictObject({
@@ -214,6 +217,8 @@ export const DEFAULT_PARAMS = {
     progress: 1,
     taperDeg: 0,
     style: '空间填充',
+    curlAxis: 'a' as const,
+    portNoise: 0,
   },
   nanoparticle: { radius: 9, grains: 160, seed: 7, mode: '簇装' },
   molecule: { kind: 'H₂O' },

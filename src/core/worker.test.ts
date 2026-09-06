@@ -27,7 +27,7 @@ const CIF = readFileSync(new URL('../../data/kaolinite.cif', import.meta.url), '
 const DOUBLE_WALL_TUBE: GeometryRequest = {
   kind: 'halloysite_tube',
   cifText: CIF,
-  params: { innerR: 14, length: 100, walls: 2, d001: 10, progress: 1, taperDeg: 5, style: '空间填充' },
+  params: { innerR: 14, length: 100, walls: 2, d001: 10, progress: 1, taperDeg: 5, style: '空间填充', curlAxis: 'a' as const, portNoise: 0 },
 };
 
 describe('协议一致性：computeGeometry 与 builders 直调逐位一致', () => {

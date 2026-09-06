@@ -77,7 +77,7 @@ describe('片层切片（基线：60×50Å 单层 = 2448 原子 / 3372 键）', 
 });
 
 describe('卷曲成管（基线：闭合 7259 键 > 60% 半卷 6930 键，开口端自动断键）', () => {
-  const TUBE_PARAMS = { innerR: 14, length: 60, walls: 1, d001: 7.4, progress: 1, taperDeg: 0, style: '空间填充' } as const;
+  const TUBE_PARAMS = { innerR: 14, length: 60, walls: 1, d001: 7.4, progress: 1, taperDeg: 0, style: '空间填充', curlAxis: 'a', portNoise: 0 } as const;
 
   it('闭合管原子与键数', () => {
     const tube = buildHalloysiteTube(CIF, TUBE_PARAMS);

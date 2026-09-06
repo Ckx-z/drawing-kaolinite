@@ -147,7 +147,17 @@ export function defaultTubePrebakeRequests(cifText: string): GeometryRequest[] {
       requests.push({
         kind: 'halloysite_tube',
         cifText,
-        params: { innerR, length: 100, walls, d001: 10, progress: 1, taperDeg: 0, style: '空间填充' },
+        params: {
+          innerR,
+          length: 100,
+          walls,
+          d001: 10,
+          progress: 1,
+          taperDeg: 0,
+          style: '空间填充',
+          curlAxis: 'a',
+          portNoise: 0,
+        },
       });
     }
   }

@@ -34,6 +34,8 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     { key: 'd001', label: '壁间距（水合）', unit: 'Å', min: 7.4, max: 11, step: 0.1 },
     { key: 'progress', label: '★ 卷曲进度（片→管）', min: 0.02, max: 1, step: 0.01, disp: (v) => `${Math.round(v * 100)}%` },
     { key: 'taperDeg', label: '锥角', unit: '°', min: -20, max: 20, step: 1 },
+    { key: 'curlAxis', label: '卷曲方向', type: 'select', options: ['a', 'b'] },
+    { key: 'portNoise', label: '端口噪声', unit: 'Å', min: 0, max: 2, step: 0.1 },
     { key: 'style', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
   ],
   nanoparticle: [
