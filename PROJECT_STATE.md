@@ -1,7 +1,7 @@
 # PROJECT_STATE — 项目当前状态
 
 > ⭐ **这是每次会话的第一份必读文件**。会话开头读它进入状态，结尾更新它。
-> 最后更新：2026-09-06（阶段 2 开工：T-2.3 模块库 + T-9.1/T-9.2 首批素材模块完成，素材积累正式开始）
+> 最后更新：2026-09-06（T-2.1 撤销/重做完成，阶段 2 已完成 4 条；下一步 T-3.1 组合模块）
 
 ---
 
@@ -23,16 +23,16 @@
 | **阶段 0** | 技术验证：方案文档 + 几何内核（CIF/切片/卷曲）+ 三维 Demo 全链路实测 | ✅ **已完成**（2026-09-04） |
 | **阶段 0.5** | 工程治理：Git 仓库、TODO 清单（47 条）、Q1–Q4 决策闭环、记忆系统骨架（T-8.1） | ✅ **已完成**（2026-09-05） |
 | **阶段 1** | P0 工程基座：T-1.1 ~ T-1.7（Vite+TS+React 脚手架 → Schema → 内核 TS 移植 → 渲染服务 → 状态管理 → UI 迁移 → 回归验收） | ✅ **已完成**（2026-09-05，7/7，对峙验收全过） |
-| **阶段 2（当前）** | P1：T-2.1 撤销重做 / T-2.2 Worker 化 / T-2.3 IndexedDB 模块库 / T-3.1 组合模块 / T-9.x 素材积累 | 🔶 **进行中**（T-2.3 ✅、T-9.1 ✅、T-9.2 ✅ 2026-09-06；素材库已有 3 个模块） |
+| **阶段 2（当前）** | P1：T-2.1 撤销重做 / T-2.2 Worker 化 / T-2.3 IndexedDB 模块库 / T-3.1 组合模块 / T-9.x 素材积累 | 🔶 **进行中**（T-2.1 ✅、T-2.3 ✅、T-9.1 ✅、T-9.2 ✅；素材库已有 3 个模块） |
 | 阶段 3+ | P2–P3：双轨渲染 / 矢量导出 / 桌面端 / 素材积累至 8–10 个模块 | ⬜ 未开始 |
 
 ---
 
 ## 三、下一步（按优先级）
 
-1. **T-2.1 撤销/重做命令栈**（依赖 T-1.5 ✅，约 1–2d）——包装 store 写操作为可逆 Command（UI 单向流架构下全局生效）；Ctrl+Z / Ctrl+Shift+Z
-2. **T-3.1 组合模块存取**（依赖 T-2.3 ✅，约 1d）——模块 schema 扩展 components[]，一次存选区/整场景
-3. **T-2.2 Web Worker 化几何生成**（依赖 T-1.3 ✅，约 1d）——大场景参数拖动不卡 UI
+1. **T-3.1 组合模块存取**（依赖 T-2.3 ✅，约 1d）——模块 schema 扩展 components[]，一次存选区/整场景（M6 组合模块前置）
+2. **T-2.2 Web Worker 化几何生成**（依赖 T-1.3 ✅，约 1d）——大场景参数拖动不卡 UI
+3. **T-9.3 / T-9.4 素材模块**（M4 CeO₂ 颗粒组 / M5 橡胶基底，各 0.5d）
 4. T-8.2 `check_library_state.py` 对账脚本（P2，可并行）
 
 完整任务清单见 `TODO.md`（47 条，含依赖关系与验收标准）。
@@ -64,6 +64,7 @@
 | 状态管理 | `src/state/sceneStore.ts` + `rendererBinding.ts` | T-1.5：zustand 5 vanilla 工厂化 store（写操作全 schema 校验）；绑定层差异同步 + rAF 重建节流（调度器可注入）；远端仓库 github.com/Ckx-z/drawing-kaolinite（SSH，master） |
 | 冒烟回归 | `e2e/smoke.spec.ts` + `e2e/fixtures/demo-scene.json` | T-1.7：8 条 Playwright 冒烟（@playwright/test 未装，已用 IAB 浏览器逐条人工实测）；fixture=demo 原生保存输出 |
 | 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移（原 key 保留）+ .kaolin-modules.json 导入导出；★存为模块（snapshotComponent 快照） |
+| 撤销/重做 | `src/state/history.ts` + `commands.ts` | T-2.1：attachHistory 实例包装（UI 零改动）；全量快照命令 + 800ms 合并窗口；栈深可配（默认 100）；Ctrl/Cmd+Z、+Shift/Y（App.tsx）；sceneStore 单例已挂接（sceneHistory） |
 | 素材模块 | 模块库内 M2/M3 | T-9.1 M2 三层堆叠片层（六角/d001=10Å）、T-9.2 M3 埃洛石管 7Å、另有埃洛石管（双层壁）——**素材积累已启动（3/8-10）** |
 | 三维 Demo | `demo/index.html` | 双击可用；生产版功能对照基准 |
 | CIF 种子库 | `data/*.cif` | 高岭石/地开石/珍珠石/蒙脱石/伊利石 |

@@ -92,12 +92,13 @@
 
 ## 二、几何内核增强
 
-### T-2.1 [P1] 撤销/重做命令栈（Command Pattern）
+### T-2.1 ✅ [P1] 撤销/重做命令栈（Command Pattern）（2026-09-06 完成）
 - 描述：所有状态变更（加删组件、参数、变换、显隐）封装为可逆 Command；快捷键 Ctrl+Z / Ctrl+Shift+Z；栈深上限可配。
 - 依赖：T-1.5
 - 验收标准：连续任意操作后撤销到底再重做到顶，场景状态与操作前逐字段一致（快照对比测试）。
 - 预估工时：1–2d
 - 关联文件：`src/state/commands.ts`、`src/state/history.ts`
+- 完成记录：命令 = 执行前后全量快照（状态仅参数/变换，快照 ~KB 级，天然满足逐字段一致）；`attachHistory(store)` 实例方法包装实现 UI 调用点零改动（方法签名不变）。覆盖 9 类写操作（add/remove/visibility/lock/params/transform/rename/loadScene/clear），select 为视图状态不入栈。合并窗口 800ms：滑块/gizmo 连续拖动合并为一条（一次 Ctrl+Z 撤销整个拖动）；失败操作（zod 抛错/目标缺失）不入栈；栈深默认 100 可配；undo/redo 自动触发 rendererBinding 差异同步。快捷键 Ctrl/Cmd+Z、Ctrl/Cmd+Shift+Z、Ctrl/Cmd+Y（App.tsx）。验收测试 12 条全过（含混合序列撤销到底/重做到顶 JSON 逐字段一致、id 稳定性、合并窗口时钟注入）。vitest 78 passed、build/lint 全绿。实际 0.5d。
 
 ### T-2.2 [P1] Web Worker 化几何生成
 - 描述：几何内核调用迁入 Worker（Comlink 或原生 postMessage），主线程仅收 `{atoms, bonds}`；大场景（>15k 原子）参数拖动不卡 UI。

@@ -173,3 +173,17 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-03"
+    date: "2026-09-06"
+    title: "T-2.1 撤销/重做命令栈（阶段 2 第 4 条完成）"
+    summary: "commands.ts（快照命令：执行前后全量 components+selection 深拷贝，状态仅参数/变换故成本可忽略）+ history.ts（attachHistory 实例方法包装：UI 调用点零改动，9 类写操作入栈，select 不入栈）。合并窗口 800ms——滑块/gizmo 连续拖动合并为一条命令（时钟可注入便于确定性单测）；失败操作（zod 抛错/目标缺失）不入栈；栈深默认 100 可配；undo/redo 经 applySnapshot 走普通 setState，rendererBinding 自动差异同步渲染。App.tsx 快捷键 Ctrl/Cmd+Z、Ctrl/Cmd+Shift+Z、Ctrl/Cmd+Y + 状态栏提示；sceneStore 单例挂接并导出 sceneHistory。验收 12 条测试全过（核心：混合操作序列撤销到底/重做到顶与两端状态 JSON 逐字段一致；id 稳定性；合并/过期/换组件分步；limit=3 丢最旧；重做分支失效）。test 78 passed（+10）、build/lint 全绿。实际 0.5d（预估 1–2d）。"
+    files_modified:
+      - src/state/commands.ts / history.ts / history.test.ts（新建）
+      - src/state/sceneStore.ts（单例挂接 + 导出 sceneHistory）
+      - src/ui/App.tsx（快捷键 + 状态栏）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

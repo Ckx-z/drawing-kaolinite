@@ -1,11 +1,12 @@
 /**
  * 应用壳 —— T-1.6 版：真实交互界面（素材库 / 画布 / 参数+图层）
- * 键盘：Delete/Backspace 删除选中、Esc 取消选中（输入框聚焦时跳过）。
+ * 键盘：Delete/Backspace 删除选中、Esc 取消选中、Ctrl/Cmd+Z 撤销、
+ *       Ctrl/Cmd+Shift+Z 或 Ctrl/Cmd+Y 重做（T-2.1；输入框聚焦时跳过）。
  * 首次进入自动载入示例场景（对齐 demo 启动行为）。
  */
 import { useEffect } from 'react';
 import { rendererRef } from '../state/rendererRef';
-import { sceneStore } from '../state/sceneStore';
+import { sceneHistory, sceneStore } from '../state/sceneStore';
 import LayerPanel from './LayerPanel';
 import LibraryPanel from './LibraryPanel';
 import ParamPanel from './ParamPanel';
@@ -29,6 +30,18 @@ export default function App() {
         if (s.selectionId) s.removeComponent(s.selectionId);
       }
       if (e.key === 'Escape') s.select(null);
+      // T-2.1：撤销/重做（macOS 的 Cmd 与 Windows 的 Ctrl 均支持）
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && !e.altKey) {
+        const k = e.key.toLowerCase();
+        if (k === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          sceneHistory.undo();
+        } else if ((k === 'z' && e.shiftKey) || k === 'y') {
+          e.preventDefault();
+          sceneHistory.redo();
+        }
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -48,7 +61,7 @@ export default function App() {
         </aside>
       </main>
       <footer className="statusbar">
-        <span>左键旋转 · 右键平移 · 滚轮缩放 · 点击选中 · Delete 删除 · Esc 取消</span>
+        <span>左键旋转 · 右键平移 · 滚轮缩放 · 点击选中 · Delete 删除 · Esc 取消 · Ctrl+Z 撤销 / Ctrl+Shift+Z 重做</span>
         <span>记忆系统：AGENTS.md 会话协议已生效</span>
       </footer>
     </div>

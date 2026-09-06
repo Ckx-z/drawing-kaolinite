@@ -10,6 +10,7 @@
  *  - 渲染同步不在 store 内：bindRenderer（rendererBinding.ts）订阅差异后调渲染服务。
  */
 import { createStore, type StoreApi } from 'zustand/vanilla';
+import { attachHistory } from './history';
 import {
   DEFAULT_PARAMS,
   SCENE_FORMAT,
@@ -157,5 +158,8 @@ export function createSceneStore(): SceneStore {
   }));
 }
 
-/** 应用默认单例（T-1.6 React 侧使用） */
+/** 应用默认单例（T-1.6 React 侧使用）；T-2.1 起全部写操作自动入撤销/重做历史栈 */
 export const sceneStore = createSceneStore();
+
+/** 单例历史栈：UI 快捷键（Ctrl/Cmd+Z / Ctrl+Shift+Z）与撤销重做入口 */
+export const sceneHistory = attachHistory(sceneStore);
