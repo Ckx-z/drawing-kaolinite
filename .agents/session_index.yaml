@@ -274,3 +274,16 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-10"
+    date: "2026-09-06"
+    title: "素材收官：M7 多壁埃洛石 + M8 复合场景入库（目标 9/8-10 达成）"
+    summary: "浏览器实测：M7 多壁埃洛石管 10Å（walls=2/d001=10/innerR=14/length=100，15,686 原子与 T-0.2 基线一致，端口断键=卷曲后重判键）经「★ 存为模块」入库；M8 埃洛石@CeO₂ 复合场景（示例场景 6 组件整体经「★ 存组合」入库）复用验收 allOk——清空→实例化后逐组件 type/position/rotation/params 与示例场景构图完全一致（原子数 15686/246/159/3/3/1）。附带修复 preset.ts 既有 bug：O₂ ×1 漏传 kind 参数实际渲染为 H₂O，补 params kind O₂。种子库备份更新至 9 条（33KB，经应用「导出」真实下载链路落盘）。**素材积累目标达成（M1~M8 共 9 个，目标 8–10）**。vitest 114 passed、build/lint 全绿。"
+    files_modified:
+      - src/ui/preset.ts（修复 O₂ kind 缺失）
+      - data/seed-modules.json（更新至 9 条）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

@@ -29,6 +29,7 @@ export function loadPresetScene(): void {
   });
   s.addComponent('molecule', {
     name: 'O₂ ×1',
+    params: { kind: 'O₂' },
     transform: { position: [22, 30, -8] },
   });
   s.addComponent('molecule', {

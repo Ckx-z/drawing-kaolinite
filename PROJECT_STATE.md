@@ -1,7 +1,7 @@
 # PROJECT_STATE — 项目当前状态
 
 > ⭐ **这是每次会话的第一份必读文件**。会话开头读它进入状态，结尾更新它。
-> 最后更新：2026-09-06（**T-5.1 TIFF 导出完成，P1 全部收官**；素材积累 6/8-10）
+> 最后更新：2026-09-06（**P1 全部收官 + 素材积累目标达成：M1~M8 共 9 个成品模块**，半年目标 8–10 完成）
 
 ---
 
@@ -30,8 +30,8 @@
 
 ## 三、下一步（按优先级）
 
-1. **T-9.6 M7 多壁埃洛石 10Å**（依赖 T-9.2 ✅，0.5d）→ T-9.7 M8 复合模块（依赖 T-3.1 ✅ + T-9.6，素材收官 8/8-10）
-2. **T-4.1 线稿档 / 渲染档双轨切换**（P2，依赖 T-1.4 ✅，约 2d）——出版审美主升级；其后 T-4.2 色板 / T-5.3 分组 SVG
+1. **T-4.1 线稿档 / 渲染档双轨切换**（P2，依赖 T-1.4 ✅，约 2d）——出版审美主升级；其后 T-4.2 色板 / T-5.3 分组 SVG（→PPT 矢量编辑核心卖点）
+2. **T-5.4 分层透明 PNG 导出**（P2，依赖 T-1.4 ✅，约 1d）——PPT 叠放编辑第二路径
 3. **T-7.1 拾取高亮 / 悬停反馈**（P2，依赖 T-1.6 ✅，约 1d）
 4. T-8.2 `check_library_state.py` 对账脚本（P2，可并行）
 
@@ -66,8 +66,8 @@
 | TIFF 导出 | `src/export/tiff.ts` | T-5.1：内置无压缩 RGBA TIFF 编码器（dpi 物理分辨率标签 + 透明底，零依赖 Node 可测）；resolveExportSize 按 maxTextureSize 降级；浏览器实测 sips 读出 300×300dpi ✓ |
 | 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移 + 导入导出；T-3.2：filterModules 检索/类型筛选/收藏排序 + toggleFavorite（favorite 字段向后兼容） |
 | 撤销/重做 | `src/state/history.ts` + `commands.ts` | T-2.1：attachHistory 实例包装（UI 零改动）；全量快照命令 + 800ms 合并窗口；栈深可配（默认 100）；Ctrl/Cmd+Z、+Shift/Y（App.tsx）；sceneStore 单例已挂接（sceneHistory） |
-| 素材模块 | 模块库内 7 个条目 | M2 三层片层、M3 埃洛石管 7Å、M4 颗粒 S/M/L、M5 橡胶基底、M6 片层+颗粒组合（首个组合模块）——**素材积累 6/8-10（M1 样图另计）** |
-| 种子模块库 | `data/seed-modules.json` | kaolin-modules/v1 全量备份（含缩略图，21KB）；模块面板「导入」即可整套恢复/分发 |
+| 素材模块 | 模块库内 9 个条目 | M2 三层片层、M3 埃洛石管 7Å、M4 颗粒 S/M/L、M5 橡胶基底、M6 片层+颗粒组合、M7 多壁埃洛石 10Å、M8 埃洛石@CeO₂ 复合场景——**素材积累目标达成（9/8-10，M1 样图另计）** |
+| 种子模块库 | `data/seed-modules.json` | kaolin-modules/v1 全量备份（M2~M8 共 9 条含缩略图，33KB）；模块面板「导入」即可整套恢复/分发 |
 | 三维 Demo | `demo/index.html` | 双击可用；生产版功能对照基准 |
 | CIF 种子库 | `data/*.cif` | 高岭石/地开石/珍珠石/蒙脱石/伊利石 |
 | 决策日志 | `DECISIONS.md` | D01–D08 |
