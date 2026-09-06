@@ -227,12 +227,13 @@
 
 ## 五、导出引擎
 
-### T-5.1 [P1] TIFF 导出（期刊 300dpi+ 硬要求）
+### T-5.1 ✅ [P1] TIFF 导出（期刊 300dpi+ 硬要求）（2026-09-06 完成）
 - 描述：画布 `getImageData` → UTIF.encodeImage 编码 TIFF；保留现有分辨率公式（px = cm×dpi/2.54）与透明底选项。
 - 依赖：T-1.4
 - 验收标准：16cm@300dpi 导出的 TIFF 在 Photoshop/GIMP 中显示正确物理尺寸与 300dpi 元数据；600dpi 不超 WebGL 纹理上限（自动降级提示）。
 - 预估工时：0.5–1d
 - 关联文件：`src/export/tiff.ts`（新建）、`src/export/index.ts`
+- 完成记录：**P1 收官**。实现取舍——UTIF.encodeImage 不写 XResolution/YResolution 物理分辨率标签（验收硬要求），改为内置无压缩 RGBA TIFF 编码器（~100 行、零依赖、Node 可单测）：13 标签完整（282/283 dpi RATIONAL + 296 inch + 338 unassociated alpha 透明底）。`resolveExportSize` 纯函数按 WebGL maxTextureSize 钳制最大边（降级返回 effectiveDpi 供 UI 提示）；RendererService 抽取 beginOffscreen/endOffscreen 与 exportPNG 共用，exportTIFF 经 2D 画布取像素（自动处理 WebGL 上下翻转）；TopBar 增「导出 TIFF」。验收：**浏览器实测（真实场景）导出 1890×1591px，macOS sips 读出 dpiWidth/dpiHeight=300×300、format=tiff**；600dpi 超限降级路径单测覆盖（保持宽高比、effectiveDpi 同步）。编码器二进制逐字段解析回读 5 条测试。vitest 114 passed（+5）、build/lint 全绿。实际 0.5d。
 
 ### T-5.2 [P2] PDF 导出
 - 描述：jsPDF 按物理尺寸嵌入位图（先位图版）；预留 svg2pdf 矢量嵌入接口。

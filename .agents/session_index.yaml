@@ -260,3 +260,17 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-09"
+    date: "2026-09-06"
+    title: "T-5.1 TIFF 导出 —— P1 全部收官"
+    summary: "实现取舍：UTIF.encodeImage 不写 XResolution/YResolution（验收硬要求），改为内置无压缩 RGBA TIFF 编码器（~100 行零依赖 Node 可测）：13 标签（282/283 dpi RATIONAL、296 inch、338 unassociated alpha 透明底、259 无压缩）。resolveExportSize 纯函数按 renderer.capabilities.maxTextureSize 钳制最大边（降级返回 effectiveDpi）；RendererService 抽 beginOffscreen/endOffscreen 与 exportPNG 共用离屏逻辑，exportTIFF 经 2D 画布 drawImage 取像素（自动处理 WebGL 上下翻转）；TopBar 增「导出 TIFF」。验收：浏览器实测真实场景 16cm@300dpi 导出 1890×1591px，macOS sips 读出 dpiWidth/dpiHeight=300.000/300.000、format=tiff（物理尺寸元数据系统级验证）；600dpi 降级路径（保持宽高比）与编码器二进制逐字段解析回读共 5 条单测。vitest 114 passed（+5）、build/lint 全绿、demo 基线 ALL OK。实际 0.5d（预估 0.5-1d）。**P1 全部完成。**"
+    files_modified:
+      - src/export/tiff.ts / tiff.test.ts（新建）
+      - src/render/RendererService.ts（beginOffscreen/endOffscreen 抽取 + exportTIFF）
+      - src/ui/TopBar.tsx（+导出 TIFF）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

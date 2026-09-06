@@ -1,7 +1,7 @@
 # PROJECT_STATE — 项目当前状态
 
 > ⭐ **这是每次会话的第一份必读文件**。会话开头读它进入状态，结尾更新它。
-> 最后更新：2026-09-06（T-3.3 锁定与分组完成，P1 仅剩 T-5.1 TIFF 导出；素材积累 6/8-10）
+> 最后更新：2026-09-06（**T-5.1 TIFF 导出完成，P1 全部收官**；素材积累 6/8-10）
 
 ---
 
@@ -30,9 +30,9 @@
 
 ## 三、下一步（按优先级）
 
-1. **T-5.1 TIFF 导出**（P1 收官项，依赖 T-1.4 ✅，约 0.5-1d）——期刊 300dpi+ 硬要求
-2. **T-9.6 M7 多壁埃洛石 10Å**（依赖 T-9.2 ✅，0.5d）→ T-9.7 M8 复合模块（依赖 T-3.1 ✅ + T-9.6，素材收官 8/8-10）
-3. **T-4.1 线稿档 / 渲染档双轨切换**（P2，依赖 T-1.4 ✅，约 2d）——出版审美主升级
+1. **T-9.6 M7 多壁埃洛石 10Å**（依赖 T-9.2 ✅，0.5d）→ T-9.7 M8 复合模块（依赖 T-3.1 ✅ + T-9.6，素材收官 8/8-10）
+2. **T-4.1 线稿档 / 渲染档双轨切换**（P2，依赖 T-1.4 ✅，约 2d）——出版审美主升级；其后 T-4.2 色板 / T-5.3 分组 SVG
+3. **T-7.1 拾取高亮 / 悬停反馈**（P2，依赖 T-1.6 ✅，约 1d）
 4. T-8.2 `check_library_state.py` 对账脚本（P2，可并行）
 
 完整任务清单见 `TODO.md`（47 条，含依赖关系与验收标准）。
@@ -63,6 +63,7 @@
 | 渲染服务 | `src/render/RendererService.ts` + materials/instanced/substrate | T-1.4：组件装载/重建/选择/取景；`?preview=1` 浏览器预览（16,097 原子与 demo 一致）；three r147 |
 | 状态管理 | `src/state/sceneStore.ts` + `rendererBinding.ts` | T-1.5：zustand 5 vanilla 工厂化 store（写操作全 schema 校验）；绑定层差异同步 + rAF 重建节流（调度器可注入）；远端仓库 github.com/Ckx-z/drawing-kaolinite（SSH，master） |
 | 冒烟回归 | `e2e/smoke.spec.ts` + `e2e/fixtures/demo-scene.json` | T-1.7：8 条 Playwright 冒烟（@playwright/test 未装，已用 IAB 浏览器逐条人工实测）；fixture=demo 原生保存输出 |
+| TIFF 导出 | `src/export/tiff.ts` | T-5.1：内置无压缩 RGBA TIFF 编码器（dpi 物理分辨率标签 + 透明底，零依赖 Node 可测）；resolveExportSize 按 maxTextureSize 降级；浏览器实测 sips 读出 300×300dpi ✓ |
 | 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移 + 导入导出；T-3.2：filterModules 检索/类型筛选/收藏排序 + toggleFavorite（favorite 字段向后兼容） |
 | 撤销/重做 | `src/state/history.ts` + `commands.ts` | T-2.1：attachHistory 实例包装（UI 零改动）；全量快照命令 + 800ms 合并窗口；栈深可配（默认 100）；Ctrl/Cmd+Z、+Shift/Y（App.tsx）；sceneStore 单例已挂接（sceneHistory） |
 | 素材模块 | 模块库内 7 个条目 | M2 三层片层、M3 埃洛石管 7Å、M4 颗粒 S/M/L、M5 橡胶基底、M6 片层+颗粒组合（首个组合模块）——**素材积累 6/8-10（M1 样图另计）** |

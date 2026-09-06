@@ -25,6 +25,7 @@ import {
   type GeometryEngine,
   type GeometryRequest,
 } from '../core/worker';
+import { encodeTIFF, resolveExportSize } from '../export/tiff';
 import { addAtoms, addBonds } from './instanced';
 import { substrateMaterial } from './materials';
 import { buildSubstrateGeometry } from './substrate';
@@ -284,25 +285,61 @@ export class RendererService {
    * 离屏改尺寸渲染一帧 → toDataURL → 恢复原尺寸。返回尺寸供 UI 提示。
    */
   exportPNG(opts: ExportOptions): { dataUrl: string; width: number; height: number } {
-    const wCM = opts.widthCM ?? 16;
-    const w = Math.round((wCM * opts.dpi) / 2.54);
-    const h = Math.round((w * this.container.clientHeight) / Math.max(1, this.container.clientWidth));
-    const prevSize = this.renderer.getSize(new THREE.Vector2());
-    const prevPR = this.renderer.getPixelRatio();
-    const prevBg = this.scene.background;
-    this.renderer.setPixelRatio(1);
-    this.renderer.setSize(w, h, false);
-    this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
-    if (opts.alpha) this.scene.background = null;
-    this.renderer.render(this.scene, this.camera);
-    const dataUrl = this.renderer.domElement.toDataURL('image/png');
-    this.scene.background = prevBg;
-    this.renderer.setPixelRatio(prevPR);
-    this.renderer.setSize(prevSize.x, prevSize.y, false);
-    this.camera.aspect = prevSize.x / Math.max(1, prevSize.y);
-    this.camera.updateProjectionMatrix();
-    return { dataUrl, width: w, height: h };
+    const { w, h } = resolveExportSize(
+      opts.dpi,
+      opts.widthCM ?? 16,
+      this.container.clientWidth,
+      this.container.clientHeight,
+      this.renderer.capabilities.maxTextureSize,
+    );
+    const st = this.beginOffscreen(w, h, opts.alpha ?? false);
+    try {
+      const dataUrl = this.renderer.domElement.toDataURL('image/png');
+      return { dataUrl, width: w, height: h };
+    } finally {
+      this.endOffscreen(st);
+    }
+  }
+
+  /**
+   * 高分辨率 TIFF 导出（T-5.1，期刊 300dpi+ 硬要求）：
+   * 离屏渲染 → 2D 画布取像素（drawImage 自动处理 WebGL 上下翻转）→ 无压缩编码，
+   * dpi 写入物理分辨率标签，透明底保留 alpha。超设备纹理上限自动按比例降级。
+   */
+  exportTIFF(opts: ExportOptions): {
+    blob: Blob;
+    width: number;
+    height: number;
+    degraded: boolean;
+    effectiveDpi: number;
+  } {
+    const plan = resolveExportSize(
+      opts.dpi,
+      opts.widthCM ?? 16,
+      this.container.clientWidth,
+      this.container.clientHeight,
+      this.renderer.capabilities.maxTextureSize,
+    );
+    const st = this.beginOffscreen(plan.w, plan.h, opts.alpha ?? false);
+    try {
+      const oc = document.createElement('canvas');
+      oc.width = plan.w;
+      oc.height = plan.h;
+      const ctx = oc.getContext('2d');
+      if (!ctx) throw new Error('无法创建 2D 画布（TIFF 导出）');
+      ctx.drawImage(this.renderer.domElement, 0, 0, plan.w, plan.h);
+      const img = ctx.getImageData(0, 0, plan.w, plan.h);
+      const buf = encodeTIFF(new Uint8Array(img.data), plan.w, plan.h, plan.effectiveDpi);
+      return {
+        blob: new Blob([buf], { type: 'image/tiff' }),
+        width: plan.w,
+        height: plan.h,
+        degraded: plan.degraded,
+        effectiveDpi: plan.effectiveDpi,
+      };
+    } finally {
+      this.endOffscreen(st);
+    }
   }
 
   stats(): ServiceStats {
@@ -344,6 +381,36 @@ export class RendererService {
   }
 
   /* ---------- 内部实现 ---------- */
+
+  /** 离屏渲染会话：改尺寸/透明底渲染一帧，返回现场供 endOffscreen 恢复（PNG/TIFF 共用） */
+  private beginOffscreen(
+    w: number,
+    h: number,
+    alpha: boolean,
+  ): { prevSize: THREE.Vector2; prevPR: number; prevBg: THREE.Color | THREE.Texture | null } {
+    const prevSize = this.renderer.getSize(new THREE.Vector2());
+    const prevPR = this.renderer.getPixelRatio();
+    const prevBg = this.scene.background;
+    this.renderer.setPixelRatio(1);
+    this.renderer.setSize(w, h, false);
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+    if (alpha) this.scene.background = null;
+    this.renderer.render(this.scene, this.camera);
+    return { prevSize, prevPR, prevBg };
+  }
+
+  private endOffscreen(st: {
+    prevSize: THREE.Vector2;
+    prevPR: number;
+    prevBg: THREE.Color | THREE.Texture | null;
+  }): void {
+    this.scene.background = st.prevBg;
+    this.renderer.setPixelRatio(st.prevPR);
+    this.renderer.setSize(st.prevSize.x, st.prevSize.y, false);
+    this.camera.aspect = st.prevSize.x / Math.max(1, st.prevSize.y);
+    this.camera.updateProjectionMatrix();
+  }
 
   /**
    * 发起几何构建（T-2.2）：基底走主线程挤出几何，其余经引擎（默认 Worker 子线程）。

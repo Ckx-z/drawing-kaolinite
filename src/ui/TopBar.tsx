@@ -61,6 +61,21 @@ export default function TopBar() {
     flash(`已导出 ${width} × ${height} px（16cm @ ${dpi}dpi${alpha ? '，透明底' : ''}）`);
   };
 
+  /** T-5.1：期刊 TIFF（300dpi+ 硬要求，带物理分辨率元数据；超上限自动降级提示） */
+  const onExportTIFF = (): void => {
+    const svc = rendererRef.current;
+    if (!svc) return;
+    const { blob, width, height, degraded, effectiveDpi } = svc.exportTIFF({ dpi, alpha });
+    const url = URL.createObjectURL(blob);
+    download(url, `kaolin-16cm-${Math.round(effectiveDpi)}dpi.tiff`);
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    flash(
+      degraded
+        ? `分辨率超 GPU 上限，已降级 ${width} × ${height} px（有效 ${Math.round(effectiveDpi)}dpi）`
+        : `已导出 TIFF ${width} × ${height} px（16cm @ ${dpi}dpi${alpha ? '，透明底' : ''}）`,
+    );
+  };
+
   const onSaveModule = async (): Promise<void> => {
     const s = sceneStore.getState();
     if (!s.selectionId) {
@@ -139,6 +154,9 @@ export default function TopBar() {
         </label>
         <button className="primary" onClick={onExportPNG}>
           导出 PNG
+        </button>
+        <button onClick={onExportTIFF} title="期刊投稿格式（300dpi+ 硬要求，含物理分辨率元数据）">
+          导出 TIFF
         </button>
       </div>
       <div className="tb-group">
