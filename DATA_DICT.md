@@ -1,7 +1,7 @@
 # DATA_DICT — 素材参数字典与数据格式
 
 > 五类组件的可调参数、范围与默认值（当前基线：`demo/index.html` 的 PARAM_DEFS）；场景 JSON 与模块库格式。
-> 生产版迁移 T-1.2 时，本字典是 zod Schema 的直接依据。最后更新：2026-09-05
+> 生产版迁移 T-1.2 时，本字典是 zod Schema 的直接依据。最后更新：2026-09-06（+色板/SMILES/双轨渲染）
 
 ---
 
@@ -17,7 +17,8 @@
 | `params` | object | 按类型见下表；**改参数即全量重建几何** |
 | `transform` | object | `{ position:[x,y,z], rotation:[degX,degY,degZ], scale:number }` |
 | `visible` | bool | 图层显隐 |
-| `locked` | bool | 锁定（预留，T-3.3） |
+| `locked` | bool | 锁定（T-3.3：点击不选中、gizmo 不吸附） |
+| `group` | string? | 分组 id（T-3.3：同组成员整体变换；缺省 = 独立） |
 
 ## 二、kaolinite_sheet 高岭土片层
 
@@ -56,12 +57,14 @@
 
 ## 五、molecule 小分子/离子
 
+| `smiles` | string? | — | — | — | **T-2.8**：SMILES 导入（设置后几何 = smilesTo3D(smiles) 确定性重建；kind 保留回退）。解析支持有机子集/方括号/芳香/环闭合/分支/断键 |
+
 | 参数 | 取值 | 说明 |
 |---|---|---|
 | `kind` | `H₂O` / `O₂` / `CO₂` / `N₂` / `Ca²⁺` / `Ce³⁺` / `·OH (羟基自由基)` | 内置库（标准键长键角）；默认渲染恒为球棍（cov×0.95 + 键） |
 | （默认 scale） | 4 | 分子默认整体缩放 4 倍（DEFAULT_SCALE.molecule），否则相对片层太小 |
 
-扩展（T-2.8/T-2.10，已决策 D08）：`smiles`（SMILES 文本 → RDKit WASM 3D）→ `sdf`（文件导入）。
+扩展（已实现 T-2.8，见 §五 smiles）：`sdf`（文件导入，T-2.10 待做）。
 
 ## 六、rubber_substrate 橡胶基底
 
@@ -112,6 +115,12 @@
 ```
 - 实例化：逐组件 `addComponent`（变换原样还原 → **相对位置一致**），实例化后各组件仍独立可选中/调参/删除。
 - 校验：`combinedModuleSchema`（`components` ≥ 1；strictObject）；与五类单组件变体共存于 `moduleSchema` 判别联合。
+**场景文档全局字段**（T-4.2）：
+
+```jsonc
+"palette": { "id": "default|warm|cool|contrast", "overrides": { "O": "#RRGGBB" } }  // 可选；随场景保存/恢复
+```
+
 - 浏览器期存储：localStorage `kaolin_modules_v1`（基线）→ IndexedDB/Dexie（T-2.3）。
 - 已实现字段：`tags[]`、`createdAt`、`moduleVersion`（T-3.2 检索/版本规划使用）。
 
@@ -119,3 +128,15 @@
 
 共价半径/范德华半径（Å）与色板：H(0.31/1.20/#ECECEC)、C(0.76/1.70/#4B4B55)、N(0.71/1.55/#3F66C4)、O(0.66/1.52/#D64550)、Na(1.66/2.27/#E8A33D)、Mg(1.41/1.73/#7FA96B)、Al(1.21/1.84/#C9A2A2)、Si(1.11/2.10/#E2C47E)、K(2.03/2.75/#8E6FB8)、Ca(1.76/2.31/#93B3A5)、Ti(1.60/2.11/#B7C0CA)、Fe(1.32/2.04/#C4744F)、Ce(1.86/2.40/#C77E8E)、Zn(1.22/1.39/#9BA8B5)、S(1.05/1.80/#D9B23A)、P(1.07/1.80/#D97E4A)。
 键连判据：`d < r_cov(i)+r_cov(j)+0.45Å`，H–H 不成键。空间填充半径 = vdw×0.92；球棍 = cov×0.95。完整定义见 `demo/core/crystal.js`。
+
+## 十、双轨渲染与色板（T-4.1/T-4.2）
+
+| 档位 | 材质 | 用途 |
+|---|---|---|
+| 🎨 渲染档 | MeshPhysicalMaterial（roughness 0.42 + clearcoat 0.4）+ PMREM | 宣讲/PPT |
+| ✏️ 线稿档 | MeshToonMaterial + 3 阶 gradientMap（110/190/255）+ 原子描边外壳（1.07） | 期刊示意/矢量导出 |
+
+- 切换 = 材质引用热替换（不重建几何，实测 10.7ms）；`mesh.userData.matKind` ∈ atom/bond/substrate。
+- 色板：`palette.ts` 4 套（期刊柔和/暖调/冷调/高对比），暖调/冷调/高对比由默认色板确定性 HSL 变换生成；
+  场景文档 `palette.overrides` 逐元素覆盖（#RRGGBB），优先级 overrides > 色板 > 默认。
+- 元素色 sRGB → 线性（convertSRGBToLinear）全链路统一，导出与画布一致。
