@@ -76,6 +76,8 @@ export const MOLECULE_KINDS = [
 
 export const moleculeParamsSchema = z.strictObject({
   kind: z.enum(MOLECULE_KINDS),
+  // T-2.8：SMILES 导入的分子（kind 保留为回退显示）；几何 = smilesTo3D(smiles) 确定性重建
+  smiles: z.string().min(1).optional(),
 });
 
 export const substrateParamsSchema = z.strictObject({

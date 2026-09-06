@@ -19,13 +19,14 @@ import {
   buildParticle,
 } from '../core/builders';
 import type { GeometryData } from '../core/geometry';
-import type { SceneComponent, Transform } from '../core/types';
+import type { MoleculeParams, SceneComponent, Transform } from '../core/types';
 import {
   createGeometryEngine,
   type GeometryEngine,
   type GeometryRequest,
 } from '../core/worker';
 import { encodeTIFF, resolveExportSize } from '../export/tiff';
+import { smilesTo3D } from '../core/molecules/smiles';
 import { sceneToSVG, type SvgAtom, type SvgComponentInput } from '../export/svg';
 import { getElement } from '../core/elements';
 import { activeColorFor } from './palette';
@@ -753,8 +754,14 @@ export class RendererService {
         return buildHalloysiteTube(this.cifText, comp.params);
       case 'nanoparticle':
         return buildParticle(comp.params);
-      case 'molecule':
-        return buildMolecule(comp.params.kind);
+      case 'molecule': {
+        const mp = comp.params as MoleculeParams;
+        if (mp.smiles) {
+          const mol = smilesTo3D(mp.smiles); // T-2.8：确定性重建（存参数不存网格）
+          return { atoms: mol.atoms, bonds: mol.bonds.map(([i, j]) => [i, j]) };
+        }
+        return buildMolecule(mp.kind);
+      }
       case 'rubber_substrate':
         return null; // 基底走 THREE 挤出几何（substrate.ts）
     }

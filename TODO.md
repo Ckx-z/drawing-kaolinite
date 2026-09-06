@@ -143,12 +143,13 @@
 - 预估工时：1d
 - 关联文件：`src/core/crystal.ts`（latticeVectors 已有实现，接 UI 开关）
 
-### T-2.8 [P2] 分子导入 v1.0：SMILES 文本输入 —— 已决策（Q4）：SMILES 先行
+### T-2.8 ✅ [P2] 分子导入 v1.0：SMILES 文本输入（2026-09-06 完成）—— 决策（Q4）实现偏差：内置构象器替代 RDKit WASM
 - 描述：内置分子库之外，支持用户输入 SMILES，经 RDKit WASM 转 3D 构象后进入"分子"组件类型（球棍/空间填充可切换）。
 - 依赖：T-1.2
 - 验收标准：输入乙醇/苯甲酸等 10 个测试 SMILES 生成合理 3D 结构并可渲染；非法 SMILES 给出明确报错不崩溃；单次转换 < 1s。
 - 预估工时：2d
 - 关联文件：`src/core/molecules/`（新建）
+- 完成记录：**实现偏差（对 D08 实现细节）**——不引入 RDKit WASM（~10MB 依赖 + 懒加载复杂度 + minimal-lib 3D API 可用性存疑），改为内置 `smiles.ts`：SMILES 解析器（有机子集/方括号/芳香/环闭合 digit 与 %nn/分支/断键）+ 规则式 3D 构象（环系平面正多边形、稠环共面延展含 ± 转向择优防折叠、sp3/sp2/lin/bent 模板 BFS 生长、槽位碰撞规避、非键斥力+键长校正弛豫）。**示意级精度**，接口已抽象（smilesTo3D），后续可换装 RDKit 增强。schema 增 molecule.smiles optional（存参数不存网格，几何确定性重建）；Worker 路径（computeGeometry）与主线程回退（RendererService.buildData）双路接入；LibraryPanel SMILES 输入框+导入按钮（本地预校验，非法即报错不入库）。验收：**10 个测试 SMILES 全过**（乙醇/苯/苯甲酸/乙酸/甲苯/咖啡因/多巴胺/阿司匹林/[Na+].[Cl-] 等——原子数按分子式逐一对账、键长 0.9–1.9Å、非键间距 >1Å、苯环共面、确定性）、非法 8 类明确报错（含位置）、转换实测 1–3ms（<1s）；浏览器端到端：UI 导入 CCO → 9 原子渲染 ✓、非法显示「环编号未闭合」不崩溃 ✓。**本任务由两个并行会话协作完成**（一方 core 解析/构象/渲染接入，一方 Worker 路径+导入 UI，git 工作区互补合并）。vitest 168 passed（+28）、build/lint 全绿。实际合计约 1.5d（预估 2d）。
 
 ### T-2.10 [P2] 分子导入 v1.1：SDF/MOL 文件导入（自 T-2.8 拆分）
 - 描述：支持导入 SDF/MOL 文件（多构象文件取首个构象），与 SMILES 链路共用渲染通道；提供文件选择器 + 拖拽双入口。

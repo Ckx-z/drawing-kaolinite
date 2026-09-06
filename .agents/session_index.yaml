@@ -363,3 +363,19 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-16"
+    date: "2026-09-06"
+    title: "T-2.8 SMILES 分子导入 v1.0（双会话协作完成）"
+    summary: "实现偏差（对 D08 实现细节，本质不变）：不引入 RDKit WASM（10MB 依赖/懒加载复杂度/minimal-lib 3D API 存疑），内置 smiles.ts——解析器（有机子集/方括号/芳香/环闭合 digit+%nn/分支/断键）+ 规则式 3D 构象（环系平面正多边形、稠环共面延展 ± 转向择优、sp3/sp2/lin/bent 模板 BFS、槽位碰撞规避——修复了绕键轴旋转候选重合的无效规避、非键斥力+键长校正弛豫）。关键修复：全原子表先建全再建邻接（索引稳定）、芳香小写规范化大写、连通分量感知起根（断键分子错位摆放）。schema molecule.smiles optional；Worker computeGeometry + 主线程 buildData 双路；LibraryPanel 输入框+导入按钮（另一并行会话实现，git 工作区互补合并）。验收：10 SMILES（乙醇/苯/苯甲酸/乙酸/甲苯/咖啡因/多巴胺/阿司匹林/NaCl 等）原子数按分子式对账/键长 0.9-1.9/非键>1A/苯环共面/确定性；非法 8 类报错含位置；转换 1-3ms；浏览器端到端 UI 导入 CCO=9 原子渲染、非法显示报错不崩溃。vitest 168 passed（+28）、build/lint 全绿。实际合计约 1.5d。"
+    files_modified:
+      - src/core/molecules/smiles.ts / smiles.test.ts（新建）
+      - src/core/schema.ts（molecule.smiles）
+      - src/core/worker.ts（computeGeometry smiles 分支，并行会话）
+      - src/render/RendererService.ts（buildData smiles 回退分支）
+      - src/ui/LibraryPanel.tsx（SMILES 输入 UI，并行会话）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: ["D08 实现细节偏差：内置构象器替代 RDKit WASM（v1.0），接口已抽象可后换装"]
+    commits: []
+    blockers: []
+    status: "completed"

@@ -1,7 +1,7 @@
 # PROJECT_STATE — 项目当前状态
 
 > ⭐ **这是每次会话的第一份必读文件**。会话开头读它进入状态，结尾更新它。
-> 最后更新：2026-09-06（T-7.1 拾取高亮/悬停反馈完成；P0+P1 收官、素材 9/8-10、P2 进行中）
+> 最后更新：2026-09-06（T-7.1 + T-2.8 SMILES 导入完成；P0+P1 收官、素材 9/8-10、P2 进行中）
 
 ---
 
@@ -69,6 +69,7 @@
 | SVG 导出 | `src/export/svg.ts` | T-5.3：分组 SVG（原子→circle/键→line，透视投影+画家排序，g id=图层名）；弃用 THREE.SVGRenderer（不支持 InstancedMesh）；浏览器实测 16,097 circle/xmllint VALID |
 | 分层 PNG | `src/export/layers.ts` | T-5.4：逐层透明 PNG（exportComponentPNG 隔离渲染 + 画家序）；实测叠层合成 vs 整图像素差 0.04%（验收 <1%） |
 | 拾取高亮 | `src/render/highlight.ts` | T-7.1：悬停/选中反转法线外壳（1.10/1.14 橙系）+ hoverStore 双向联动（画布 BBox 轻量拾取 80ms 节流 ↔ 面板行悬停） |
+| SMILES 导入 | `src/core/molecules/smiles.ts` | T-2.8：内置解析器+规则式 3D 构象（替代 RDKit WASM 的零依赖方案，示意级精度、确定性）；molecule.smiles 参数随场景持久化；Worker+主线程双路接入；UI 在素材库面板 |
 | 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移 + 导入导出；T-3.2：filterModules 检索/类型筛选/收藏排序 + toggleFavorite（favorite 字段向后兼容） |
 | 撤销/重做 | `src/state/history.ts` + `commands.ts` | T-2.1：attachHistory 实例包装（UI 零改动）；全量快照命令 + 800ms 合并窗口；栈深可配（默认 100）；Ctrl/Cmd+Z、+Shift/Y（App.tsx）；sceneStore 单例已挂接（sceneHistory） |
 | 素材模块 | 模块库内 9 个条目 | M2 三层片层、M3 埃洛石管 7Å、M4 颗粒 S/M/L、M5 橡胶基底、M6 片层+颗粒组合、M7 多壁埃洛石 10Å、M8 埃洛石@CeO₂ 复合场景——**素材积累目标达成（9/8-10，M1 样图另计）** |

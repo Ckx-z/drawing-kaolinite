@@ -18,6 +18,7 @@ import {
   buildParticle,
 } from './builders';
 import type { GeometryData } from './geometry';
+import { smilesTo3D } from './molecules/smiles';
 import type { MoleculeParams, ParticleParams, SheetParams, TubeParams } from './types';
 
 export type GeometryKind = 'kaolinite_sheet' | 'halloysite_tube' | 'nanoparticle' | 'molecule';
@@ -56,8 +57,14 @@ export function computeGeometry(req: GeometryRequest): GeometryResult {
       return buildHalloysiteTube(req.cifText, req.params as TubeParams);
     case 'nanoparticle':
       return buildParticle(req.params as ParticleParams);
-    case 'molecule':
-      return buildMolecule((req.params as MoleculeParams).kind);
+    case 'molecule': {
+      const mp = req.params as MoleculeParams;
+      if (mp.smiles) {
+        const mol = smilesTo3D(mp.smiles); // T-2.8：SMILES 分子在 Worker 内确定性构建
+        return { atoms: mol.atoms, bonds: mol.bonds.map(([i, j]) => [i, j]) };
+      }
+      return buildMolecule(mp.kind);
+    }
   }
 }
 
