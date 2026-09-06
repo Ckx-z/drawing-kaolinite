@@ -243,12 +243,13 @@
 - 关联文件：`src/export/tiff.ts`（新建）、`src/export/index.ts`
 - 完成记录：**P1 收官**。实现取舍——UTIF.encodeImage 不写 XResolution/YResolution 物理分辨率标签（验收硬要求），改为内置无压缩 RGBA TIFF 编码器（~100 行、零依赖、Node 可单测）：13 标签完整（282/283 dpi RATIONAL + 296 inch + 338 unassociated alpha 透明底）。`resolveExportSize` 纯函数按 WebGL maxTextureSize 钳制最大边（降级返回 effectiveDpi 供 UI 提示）；RendererService 抽取 beginOffscreen/endOffscreen 与 exportPNG 共用，exportTIFF 经 2D 画布取像素（自动处理 WebGL 上下翻转）；TopBar 增「导出 TIFF」。验收：**浏览器实测（真实场景）导出 1890×1591px，macOS sips 读出 dpiWidth/dpiHeight=300×300、format=tiff**；600dpi 超限降级路径单测覆盖（保持宽高比、effectiveDpi 同步）。编码器二进制逐字段解析回读 5 条测试。vitest 114 passed（+5）、build/lint 全绿。实际 0.5d。
 
-### T-5.2 [P2] PDF 导出
+### T-5.2 ✅ [P2] PDF 导出（2026-09-06 完成）
 - 描述：jsPDF 按物理尺寸嵌入位图（先位图版）；预留 svg2pdf 矢量嵌入接口。
 - 依赖：T-1.4
 - 验收标准：导出 PDF 页面尺寸=设定 cm 数，嵌入图像 ≥ 300dpi 有效分辨率；Acrobat/浏览器打开正常。
 - 预估工时：1d
 - 关联文件：`src/export/pdf.ts`（新建）
+- 完成记录：`pdf.ts` pngToPdf——jsPDF（unit:'cm' + 显式 orientation 防宽高互换）页面物理尺寸 = 设定 cm 数，PNG 满幅嵌入（有效分辨率 = 位图 dpi）；RendererService.exportPDF（复用 beginOffscreen + resolveExportSize 降级）；TopBar「导出 PDF」。验收单测 3 条：输出 %PDF 合法（/Type /Catalog）、横版 MediaBox = 453.54×283.46pt（16×10cm 精确换算）、竖版不互换。浏览器实测留待使用复核。新增依赖 jspdf（TODO/技术方案 §7 既定选型）。vitest 202 passed（+3）、build/lint 全绿。实际 0.5d。
 
 ### T-5.3 ✅ [P2] 分组 SVG 矢量导出（→ PPT 转形状）（2026-09-06 完成）
 - 描述：SVGRenderer 输出，每组件包裹 `<g id="组件名">`；矢量模式自动切线稿档代理几何（逼真光照不可矢量化的诚实取舍）；色板/线宽可配。
@@ -331,12 +332,13 @@
 - 关联文件：项目根目录 5 份 md + `.agents/`
 - 完成记录：本项目会话入口协议落在 `.agents/AGENTS.md`（SESSION_START 职能并入，必读顺序含 TODO.md）
 
-### T-8.2 [P2] check_library_state.py 对账脚本
+### T-8.2 ✅ [P2] check_library_state.py 对账脚本（2026-09-06 完成）
 - 描述：仿参考项目 `check_project_state.py` 思路：校验活文档存在性与新鲜度（PROJECT_STATE mtime vs 最新日报）、素材模块 JSON 与文档记录对账、`demo/core/test.js` 可运行。
 - 依赖：T-8.1
 - 验收标准：人为制造"最新日报比 PROJECT_STATE 新"与"模块库有未记录模块"两种不一致，脚本均告警。
 - 预估工时：1d
 - 关联文件：`scripts/check_library_state.py`（新建）
+- 完成记录：python3 纯标准库；五组检查——必需文件 9 项 / 文档新鲜度（最新日报比 PROJECT_STATE 新 5 分钟以上告警 + 双轨人版在位）/ 种子模块库格式对账（kaolin-modules/v1 标记 + 每条 id/name/thumb 完整性）/ git 工作区未提交提醒 / 内核基线运行（--with-tests 可选）。退出码 0/1 便于 CI。本仓实测：13 项通过、正确检出"7 项未提交变更"告警（提交后转绿）；修复开发中的 and/or 短路 bug。实际 0.5d（预估 1d）。
 
 ### T-8.3 [P2] 双轨日报流程模板
 - 描述：`DAILY_LOG/YYYY-MM-DD.md`（AI 版：改了哪些模块参数/算法/文件）+ `YYYY-MM-DD_human.md`（人版：素材库新增了什么、怎么用、下一步建议）模板与 AGENTS.md 会话结尾清单绑定。

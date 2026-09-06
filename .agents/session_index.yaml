@@ -453,3 +453,18 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-22"
+    date: "2026-09-06"
+    title: "T-2.5 + T-5.2 PDF + T-8.2 对账脚本（三连，P2 收尾）"
+    summary: "T-2.5：saturateEdges 重写——1 配位桥氧末端按逆键方向补 1H（消除旧版 2D 径向向心方向畸变，与既有键成 ≈180°）、0 配位悬空 O 补 2H（径向+正交确定性对）；验收无 <0.9A 碰撞/边缘 O 配位数全 >=2/方向逆键点积<0/确定性/H 数=1 配位 O 数（4 条单测）。T-5.2：jspdf 依赖（技术方案 §7 既定选型），pdf.ts pngToPdf（unit cm + 显式 orientation 防互换，MediaBox pt 精确换算 16cm=453.54pt）；RendererService.exportPDF 复用离屏渲染；TopBar 导出 PDF；单测 3 条（%PDF 头/Catalog/MediaBox 横竖版）。T-8.2：scripts/check_library_state.py 纯标准库五组检查（必需文件 9 项/文档新鲜度/双轨人版/种子库 9 条完整性/git 状态/内核基线 --with-tests），退出码 0/1；本仓实测 13 通过 + 正确检出未提交变更告警；修复开发中 and/or 短路 bug。vitest 202 passed（+7）、build/lint 全绿。三项合计约 1.5d。"
+    files_modified:
+      - src/core/crystal.ts（saturateEdges 重写）/ saturateEdges.test.ts（新建）
+      - src/export/pdf.ts / pdf.test.ts（新建）/ package.json（+jspdf）
+      - src/render/RendererService.ts（exportPDF）/ src/ui/TopBar.tsx（+导出 PDF）
+      - scripts/check_library_state.py（新建）
+      - TODO.md / PROJECT_STATE.md / DATA_DICT.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

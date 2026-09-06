@@ -26,6 +26,7 @@ import {
   type GeometryEngine,
   type GeometryRequest,
 } from '../core/worker';
+import { pngToPdf } from '../export/pdf';
 import { encodeTIFF, resolveExportSize } from '../export/tiff';
 import { smilesTo3D } from '../core/molecules/smiles';
 import { presetPosition, type CameraPreset } from './postfx';
@@ -311,8 +312,6 @@ export class RendererService {
     this.orbit.update();
   }
 
-  /* ---------- 色板（T-4.2） ---------- */
-
   /** 设置悬停组件（hoverStore 驱动； null 清除）。帧率无感：外壳可见性切换，O(1) */
   setHover(id: string | null): void {
     if (id === this.hoverId) return;
@@ -372,8 +371,6 @@ export class RendererService {
     }
     return best?.id ?? null;
   }
-
-  /* ---------- 色板（T-4.2） ---------- */
 
   getSelectedId(): string | null {
     return this.selectedId;
@@ -664,6 +661,29 @@ export class RendererService {
     return layers
       .sort((a, b) => a.depth - b.depth) // 视空间 z 越小越远
       .map(({ id, name }) => ({ id, name }));
+  }
+
+  /**
+   * PDF 导出（T-5.2，先位图版）：离屏渲染 → PNG dataURL → jsPDF 按物理尺寸满幅嵌入。
+   * 页面尺寸 = 设定 cm 数；有效分辨率 = 位图 dpi。
+   */
+  exportPDF(opts: ExportOptions): { blob: Blob; widthCM: number; heightCM: number } {
+    const wCM = opts.widthCM ?? 16;
+    const { w, h } = resolveExportSize(
+      opts.dpi,
+      wCM,
+      this.container.clientWidth,
+      this.container.clientHeight,
+      this.renderer.capabilities.maxTextureSize,
+    );
+    const hCM = (wCM * h) / w;
+    const st = this.beginOffscreen(w, h, opts.alpha ?? false);
+    try {
+      const dataUrl = this.renderer.domElement.toDataURL('image/png');
+      return { blob: pngToPdf(dataUrl, wCM, hCM), widthCM: wCM, heightCM: hCM };
+    } finally {
+      this.endOffscreen(st);
+    }
   }
 
   /* ---------- 色板（T-4.2） ---------- */

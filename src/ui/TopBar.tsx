@@ -91,6 +91,17 @@ export default function TopBar() {
     flash('已导出分组 SVG（每组件一个分组，PPT 转形状后可逐组件编辑）');
   };
 
+  /** T-5.2：PDF 导出（页面物理尺寸 = 设定 cm 数，位图满幅嵌入） */
+  const onExportPDF = (): void => {
+    const svc = rendererRef.current;
+    if (!svc) return;
+    const { blob, widthCM, heightCM } = svc.exportPDF({ dpi, alpha });
+    const url = URL.createObjectURL(blob);
+    download(url, `kaolin-${widthCM}x${heightCM}cm.pdf`);
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    flash(`已导出 PDF（页面 ${widthCM} × ${heightCM} cm @ ${dpi}dpi 位图${alpha ? '，透明底' : ''}）`);
+  };
+
   /** T-5.1：期刊 TIFF（300dpi+ 硬要求，带物理分辨率元数据；超上限自动降级提示） */
   const onExportTIFF = (): void => {
     const svc = rendererRef.current;
@@ -187,6 +198,9 @@ export default function TopBar() {
         </button>
         <button onClick={onExportTIFF} title="期刊投稿格式（300dpi+ 硬要求，含物理分辨率元数据）">
           导出 TIFF
+        </button>
+        <button onClick={onExportPDF} title="PDF：页面物理尺寸 = 设定 cm 数（位图满幅嵌入）">
+          导出 PDF
         </button>
         <button
           onClick={onExportSVG}
