@@ -217,3 +217,15 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-06"
+    date: "2026-09-06"
+    title: "素材模块三连入库：M4 颗粒组 / M5 橡胶基底 / M6 组合（阶段 2 第 9 条完成）"
+    summary: "浏览器实测（IAB + dev server）：M4 三个尺寸预设（S r5/seed21、M r9/seed11、L r15/seed33，确定性种子复现颗粒形）、M5 橡胶基底（140×90×5）经「★ 存为模块」入库；M6 片层+颗粒组合经「★ 存组合」入库（片层 70×60 + 颗粒 r9@[0,25,18]/rot[0,15,0]）。复用验收：清空→实例化组合模块后相对位置差 [0,25,18] 逐分量一致、组件 id 全新生成、颗粒改 seed=77 片层参数不变（独立可调）、几何经 Worker 异步构建（3332+246 原子）。另重建 M2/M3 使本机模块库达 7 条。产出 data/seed-modules.json 种子备份（kaolin-modules/v1，21KB 含缩略图，模块面板「导入」整套恢复）。测试不变 93 passed、build/lint 全绿。"
+    files_modified:
+      - data/seed-modules.json（新建，种子模块库备份）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"
