@@ -131,3 +131,17 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-05-08"
+    date: "2026-09-05"
+    title: "T-1.7 基座回归验收 —— 阶段 1 收官"
+    summary: "导出功能落地（exportPNG 离屏高分辨率 + TopBar dpi/透明底 UI）；从 demo 页面拦截「保存场景」真实输出为 e2e/fixtures/demo-scene.json；三步对峙验收全过：①demo 原生 JSON 载入生产工程 6 组件 16,097 原子逐位一致 ②保存→清空→载入往返无损 ③300dpi 导出 1890×1581px PNG；e2e/smoke.spec.ts 8 条 Playwright 冒烟入库（@playwright/test 未装，断言当日 IAB 逐条人工实测）。**阶段 1 全部 7 条 P0 完成，总实际约 4d（预估 9d）**。"
+    files_modified:
+      - src/render/RendererService.ts (+exportPNG)
+      - src/ui/TopBar.tsx / index.css / App.tsx
+      - e2e/smoke.spec.ts / e2e/fixtures/demo-scene.json（新建）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-05*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

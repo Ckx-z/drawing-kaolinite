@@ -43,6 +43,15 @@ export interface ServiceStats {
  */
 export type RenderComponent = SceneComponent & { id: string };
 
+export interface ExportOptions {
+  /** 目标 dpi（96/300/600） */
+  dpi: number;
+  /** 版面宽度（cm），默认 16 */
+  widthCM?: number;
+  /** 透明底 */
+  alpha?: boolean;
+}
+
 export class RendererService {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene: THREE.Scene;
@@ -201,6 +210,34 @@ export class RendererService {
   /** 组件原子数（图层面板显示用） */
   atomCountOf(id: string): number {
     return this.records.get(id)?.atomCount ?? 0;
+  }
+
+  /* ---------- 导出（T-1.7，逻辑对齐 demo exportPNG） ---------- */
+
+  /**
+   * 高分辨率 PNG 导出：px = cm × dpi / 2.54（16cm@300dpi → 1890px 宽）。
+   * 离屏改尺寸渲染一帧 → toDataURL → 恢复原尺寸。返回尺寸供 UI 提示。
+   */
+  exportPNG(opts: ExportOptions): { dataUrl: string; width: number; height: number } {
+    const wCM = opts.widthCM ?? 16;
+    const w = Math.round((wCM * opts.dpi) / 2.54);
+    const h = Math.round((w * this.container.clientHeight) / Math.max(1, this.container.clientWidth));
+    const prevSize = this.renderer.getSize(new THREE.Vector2());
+    const prevPR = this.renderer.getPixelRatio();
+    const prevBg = this.scene.background;
+    this.renderer.setPixelRatio(1);
+    this.renderer.setSize(w, h, false);
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+    if (opts.alpha) this.scene.background = null;
+    this.renderer.render(this.scene, this.camera);
+    const dataUrl = this.renderer.domElement.toDataURL('image/png');
+    this.scene.background = prevBg;
+    this.renderer.setPixelRatio(prevPR);
+    this.renderer.setSize(prevSize.x, prevSize.y, false);
+    this.camera.aspect = prevSize.x / Math.max(1, prevSize.y);
+    this.camera.updateProjectionMatrix();
+    return { dataUrl, width: w, height: h };
   }
 
   stats(): ServiceStats {

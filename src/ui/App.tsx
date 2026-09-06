@@ -4,6 +4,7 @@
  * 首次进入自动载入示例场景（对齐 demo 启动行为）。
  */
 import { useEffect } from 'react';
+import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
 import LayerPanel from './LayerPanel';
 import LibraryPanel from './LibraryPanel';
@@ -16,7 +17,7 @@ export default function App() {
   useEffect(() => {
     if (sceneStore.getState().components.length === 0) loadPresetScene();
     // 调试/二次开发入口
-    (window as unknown as Record<string, unknown>).__KAOLIN = { store: sceneStore };
+    (window as unknown as Record<string, unknown>).__KAOLIN = { store: sceneStore, renderer: rendererRef };
   }, []);
 
   useEffect(() => {

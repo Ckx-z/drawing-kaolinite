@@ -1,7 +1,7 @@
 # PROJECT_STATE — 项目当前状态
 
 > ⭐ **这是每次会话的第一份必读文件**。会话开头读它进入状态，结尾更新它。
-> 最后更新：2026-09-05（T-1.6 UI 迁移完成，P0 仅余 T-1.7 回归验收）
+> 最后更新：2026-09-05（**阶段 1 收官**：T-1.1~T-1.7 全部完成，基座回归验收通过；下一步阶段 2）
 
 ---
 
@@ -22,17 +22,18 @@
 |---|---|---|
 | **阶段 0** | 技术验证：方案文档 + 几何内核（CIF/切片/卷曲）+ 三维 Demo 全链路实测 | ✅ **已完成**（2026-09-04） |
 | **阶段 0.5** | 工程治理：Git 仓库、TODO 清单（47 条）、Q1–Q4 决策闭环、记忆系统骨架（T-8.1） | ✅ **已完成**（2026-09-05） |
-| **阶段 1（当前）** | P0 工程基座：T-1.1 ~ T-1.7（Vite+TS+React 脚手架 → Schema → 内核 TS 移植 → 渲染服务 → 状态管理 → UI 迁移 → 回归验收） | 🔶 **进行中**（T-1.1~T-1.6 ✅ 2026-09-05，余 T-1.7） |
-| 阶段 2 | P1：撤销重做 / Worker 化 / IndexedDB 模块库 / 组合模块 / 首批素材模块（T-9.1~9.2） | ⬜ 未开始 |
+| **阶段 1** | P0 工程基座：T-1.1 ~ T-1.7（Vite+TS+React 脚手架 → Schema → 内核 TS 移植 → 渲染服务 → 状态管理 → UI 迁移 → 回归验收） | ✅ **已完成**（2026-09-05，7/7，对峙验收全过） |
+| **阶段 2（当前）** | P1：T-2.1 撤销重做 / T-2.2 Worker 化 / T-2.3 IndexedDB 模块库 / T-3.1 组合模块 / T-9.1~9.2 首批素材模块 | ⬜ **下一步** |
 | 阶段 3+ | P2–P3：双轨渲染 / 矢量导出 / 桌面端 / 素材积累至 8–10 个模块 | ⬜ 未开始 |
 
 ---
 
 ## 三、下一步（按优先级）
 
-1. **T-1.7 基座回归验收**（依赖 T-1.6 ✅，约 1d，收官阶段 1）——全流程"添加→调参→组合→保存→载入→导出"；demo 场景 JSON 互导渲染一致；300dpi PNG 导出（16cm@300dpi→1890px 宽）；Playwright/浏览器冒烟记录
-2. 阶段 2 立即开工：T-2.1 撤销重做 / T-2.3 IndexedDB 模块库 / T-9.1~T-9.2 首批素材模块（并行）
-3. T-8.2 `check_library_state.py` 对账脚本（P2，可并行）
+1. **T-2.1 撤销/重做命令栈**（依赖 T-1.5 ✅，约 1–2d）——包装 store 写操作为可逆 Command（UI 单向流架构下全局生效）；Ctrl+Z / Ctrl+Shift+Z
+2. **T-2.3 模块库迁移 IndexedDB（Dexie）**（依赖 T-1.2 ✅，约 1d）——模块条目含缩略图入库 + 批量备份；此后 T-3.1 组合模块
+3. **T-9.1 / T-9.2 首批素材模块**（阶段 1 收官即可开始）——M2 三层堆叠片层、M3 埃洛石管 7Å
+4. T-8.2 `check_library_state.py` 对账脚本（P2，可并行）
 
 完整任务清单见 `TODO.md`（47 条，含依赖关系与验收标准）。
 
@@ -61,6 +62,7 @@
 | 几何内核（TS） | `src/core/crystal.ts` `builders.ts` `geometry.ts` | T-1.3：逻辑=demo 基线逐位复现；`npm run test` 35 条回归（kernel.test.ts 基线断言） |
 | 渲染服务 | `src/render/RendererService.ts` + materials/instanced/substrate | T-1.4：组件装载/重建/选择/取景；`?preview=1` 浏览器预览（16,097 原子与 demo 一致）；three r147 |
 | 状态管理 | `src/state/sceneStore.ts` + `rendererBinding.ts` | T-1.5：zustand 5 vanilla 工厂化 store（写操作全 schema 校验）；绑定层差异同步 + rAF 重建节流（调度器可注入）；远端仓库 github.com/Ckx-z/drawing-kaolinite（SSH，master） |
+| 冒烟回归 | `e2e/smoke.spec.ts` + `e2e/fixtures/demo-scene.json` | T-1.7：8 条 Playwright 冒烟（@playwright/test 未装，已用 IAB 浏览器逐条人工实测）；fixture=demo 原生保存输出 |
 | 三维 Demo | `demo/index.html` | 双击可用；生产版功能对照基准 |
 | CIF 种子库 | `data/*.cif` | 高岭石/地开石/珍珠石/蒙脱石/伊利石 |
 | 决策日志 | `DECISIONS.md` | D01–D08 |

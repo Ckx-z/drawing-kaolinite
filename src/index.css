@@ -65,6 +65,29 @@ body {
 .tb-group:first-of-type {
   margin-left: auto;
 }
+button.primary {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: #fff;
+}
+button.primary:hover {
+  filter: brightness(1.1);
+}
+.tb-group label.chk {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--dim);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.tb-group select {
+  padding: 4px 6px;
+  font-size: 12px;
+}
+.tb-group .badge {
+  margin-left: 4px;
+}
 .badge {
   font-size: 12px;
   color: var(--acc);

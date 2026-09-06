@@ -80,12 +80,13 @@
 - 关联文件：`src/ui/LibraryPanel.tsx`、`src/ui/ParamPanel.tsx`、`src/ui/LayerPanel.tsx`、`src/ui/Viewport.tsx`（实为 SceneCanvas）、`src/ui/TopBar.tsx`
 - 完成记录：实际 0.5d。SceneCanvas 挂载渲染服务 + bindRenderer 正向同步 + onSelect/onTransformChange 回写 store；ParamPanel（滑块/下拉/勾选 + 变换数字输入 + gizmo 模式/适配视角）；LayerPanel（选择/显隐/删除/原子数）；TopBar（示例场景/保存/打开场景/清空）；App（Delete/Backspace/Esc 快捷键，输入框聚焦跳过；首启自动载示例场景）；paramDefs 防呆单测（默认值必落在面板 min/max 内，防面板与 schema 漂移）。浏览器实测全过：添加片层自动选中命名自增、卷曲进度滑块拖至 45% 实时半卷重建（store 0.45 ↔ 面板 45%）、隐藏颗粒/删除片层、gizmo 附着、Esc 取消选中、Delete 删除并清选择。
 
-### T-1.7 [P0] 基座回归验收（对照 Demo 基线）
+### T-1.7 ✅ [P0] 基座回归验收（对照 Demo 基线）（2026-09-05 完成，阶段 1 收官）
 - 描述：端到端跑通"添加→调参→组合→保存场景→载入→导出 300dpi PNG"全流程；场景 JSON 与 demo 互导兼容。
 - 依赖：T-1.6
 - 验收标准：demo 保存的 `kaolin-scene.json` 在新工程载入渲染一致；新工程导出 PNG 分辨率公式正确（16cm@300dpi→1890px 宽）；Playwright 冒烟脚本入库。
 - 预估工时：1d
 - 关联文件：`src/ui/`、`e2e/smoke.spec.ts`
+- 完成记录：实际 0.5d。导出功能落地（`RendererService.exportPNG` 离屏高分辨率 + TopBar dpi/透明底 UI，逻辑对齐 demo exportPNG）；demo 原生「保存场景」输出捕获为 `e2e/fixtures/demo-scene.json`（未经改动的 fixture）；三步对峙验收全过——①demo JSON 载入 6 组件 **16,097 原子与 demo 逐位一致** ②保存→清空→载入往返无损（params/transform 快照相等）③300dpi 导出 **1890×1581px** PNG（高随画布宽高比，公式正确）；`e2e/smoke.spec.ts` 8 条 Playwright 冒烟脚本入库（@playwright/test 未装，断言已于当日 IAB 浏览器逐条人工实测，记录归档日报）。
 
 ---
 

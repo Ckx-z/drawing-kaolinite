@@ -1,26 +1,36 @@
 /**
- * 顶部工具栏 —— T-1.6（对齐 demo：示例场景 / 保存场景 / 打开场景 / 清空）
- * 导出 PNG 与模块库按钮由 T-1.7 / 阶段 2 接入。
+ * 顶部工具栏 —— T-1.6/T-1.7（对齐 demo：示例场景 / 保存场景 / 打开场景 / 导出 PNG / 清空）
  */
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
 import { loadPresetScene } from './preset';
 
-function download(text: string, filename: string): void {
-  const blob = new Blob([text], { type: 'application/json' });
+function download(href: string, filename: string): void {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  a.href = href;
   a.download = filename;
   a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 }
 
 export default function TopBar() {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [dpi, setDpi] = useState(300);
+  const [alpha, setAlpha] = useState(false);
+  const [toast, setToast] = useState('');
+
+  const flash = (msg: string): void => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2600);
+  };
 
   const onSaveScene = (): void => {
-    download(JSON.stringify(sceneStore.getState().toSceneDocument(), null, 2), 'kaolin-scene.json');
+    const blob = new Blob([JSON.stringify(sceneStore.getState().toSceneDocument(), null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    download(url, 'kaolin-scene.json');
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
   };
 
   const onOpenScene = (): void => fileRef.current?.click();
@@ -33,12 +43,21 @@ export default function TopBar() {
       try {
         sceneStore.getState().loadScene(String(reader.result));
         rendererRef.current?.frameAll();
+        flash('场景已载入，所有参数均可继续修改');
       } catch (err) {
         alert(`场景文件解析失败：${(err as Error).message}`);
       }
     };
     reader.readAsText(f);
     e.target.value = '';
+  };
+
+  const onExportPNG = (): void => {
+    const svc = rendererRef.current;
+    if (!svc) return;
+    const { dataUrl, width, height } = svc.exportPNG({ dpi, alpha });
+    download(dataUrl, `kaolin-16cm-${dpi}dpi.png`);
+    flash(`已导出 ${width} × ${height} px（16cm @ ${dpi}dpi${alpha ? '，透明底' : ''}）`);
   };
 
   return (
@@ -58,6 +77,24 @@ export default function TopBar() {
         <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={onFile} />
       </div>
       <div className="tb-group">
+        <select
+          value={dpi}
+          onChange={(e) => setDpi(Number(e.target.value))}
+          title="导出分辨率（按 16cm 版面宽度折算像素）"
+        >
+          <option value={96}>96 dpi 预览</option>
+          <option value={300}>300 dpi 期刊</option>
+          <option value={600}>600 dpi 高清</option>
+        </select>
+        <label className="chk" title="透明底便于 PPT 叠放">
+          <input type="checkbox" checked={alpha} onChange={(e) => setAlpha(e.target.checked)} />
+          透明底
+        </label>
+        <button className="primary" onClick={onExportPNG}>
+          导出 PNG
+        </button>
+      </div>
+      <div className="tb-group">
         <button
           onClick={() => {
             sceneStore.getState().clear();
@@ -67,7 +104,7 @@ export default function TopBar() {
           清空
         </button>
       </div>
-      <div className="badge">T-1.6 交互面板就绪</div>
+      {toast ? <div className="badge">{toast}</div> : null}
     </header>
   );
 }
