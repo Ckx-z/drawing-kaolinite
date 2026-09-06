@@ -6,6 +6,8 @@
  */
 import { useEffect, useRef } from 'react';
 import kaoliniteCif from '../../data/kaolinite.cif?raw';
+import { createCachedEngine, defaultTubePrebakeRequests, prebake } from '../core/cache';
+import { createWorkerEngine } from '../core/worker';
 import { RendererService } from '../render/RendererService';
 import { hoverStore } from '../render/highlight';
 import { bindRenderer } from '../state/rendererBinding';
@@ -44,7 +46,20 @@ export default function SceneCanvas() {
     const unhover = hoverStore.subscribe(({ id }) => svc.setHover(id));
     hoverStore.getState().setHover(null);
 
+    // T-2.9 预烘焙：空闲 4s 后后台预生成常用埃洛石管参数组合进 IndexedDB
+    // （每浏览器一次；独立 Worker 引擎，与画布引擎共享磁盘缓存）
+    const prebakeTimer = setTimeout(() => {
+      if (localStorage.getItem('kaolin_prebake_v1')) return;
+      const engine = createCachedEngine(createWorkerEngine());
+      void prebake(engine, defaultTubePrebakeRequests(kaoliniteCif))
+        .then((n) => {
+          if (n > 0) localStorage.setItem('kaolin_prebake_v1', String(n));
+        })
+        .finally(() => engine.dispose());
+    }, 4000);
+
     return () => {
+      clearTimeout(prebakeTimer);
       unbind();
       unhover();
       dom.removeEventListener('pointermove', onMove);

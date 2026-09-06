@@ -158,12 +158,13 @@
 - 预估工时：1d
 - 关联文件：`src/core/molecules/`
 
-### T-2.9 [P2] 网格缓存与预烘焙
+### T-2.9 ✅ [P2] 网格缓存与预烘焙（2026-09-06 完成）
 - 描述：常用参数组合（如 innerR 10–30Å 步进、walls 1–2）后台预生成网格缓存存 IndexedDB；模块拖入零等待。
 - 依赖：T-2.2、T-2.3
 - 验收标准：命中缓存的模块实例化 < 50ms（对比实时生成 200ms+）；缓存失效以参数指纹（hash）判定。
 - 预估工时：1–2d
 - 关联文件：`src/core/cache.ts`（新建）
+- 完成记录：`cache.ts`——`createCachedEngine(inner)` 包装任意几何引擎（内容寻址 key = kind+参数指纹+CIF 指纹，规范化 JSON 键排序 + djb2；命中直接返回、未命中走 inner 并回填；LRU 上限默认 40 条淘汰最旧，createdAt 单调时钟防同毫秒并列；>6 万原子不入库；失效 = 内容寻址指纹，D02 确定性保证无需主动失效）。`prebake` API + `defaultTubePrebakeRequests`（innerR 10–30 步进 × walls 1–2 × d001 10 = 10 条）；SceneCanvas 空闲 4s 后一次性预烘焙（localStorage 标记防重复，独立 Worker 引擎）。RendererService 默认引擎 = 缓存层包装 Worker 引擎。验收实测（浏览器）：**预烘焙 10 条入库（标记=10）**；**命中缓存实例化 14ms（8,591 原子管即刻出现，验收线 <50ms）** vs 未命中 94ms（Worker 实时生成）——快约 7 倍。单测 11 条（指纹稳定性/键序无关/命中未命中/参数或 CIF 变化失效/失败不污染/LRU 淘汰/预烘焙跳过失败）。vitest 184 passed（+11）、build/lint 全绿。实际 1d（预估 1–2d）。
 
 ---
 

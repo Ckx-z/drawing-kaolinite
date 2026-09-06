@@ -407,3 +407,17 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-19"
+    date: "2026-09-06"
+    title: "T-2.9 网格缓存与预烘焙（性能收官，P2 第 10 条）"
+    summary: "cache.ts：createCachedEngine 包装任意 GeometryEngine——内容寻址 key（kind+参数指纹+CIF 指纹：规范化 JSON 键排序递归 + djb2 hex:长度），命中免重建直接返回、未命中走 inner 并回填；LRU 上限默认 40 条淘汰最旧（createdAt 单调时钟防同毫秒并列）；>6 万原子不入库；失败不污染缓存；失效=内容寻址指纹（D02 确定性，无需主动失效）。prebake API + defaultTubePrebakeRequests（innerR 10-30 步进 × walls 1-2 × d001 10 = 10 条）；SceneCanvas 空闲 4s 一次性预烘焙（localStorage 标记防重复，独立 Worker 引擎，与画布引擎共享磁盘缓存）。RendererService 默认引擎 = 缓存层包装。修复：touch 阻塞返回（15k 原子命中 62ms→达标）、回填/淘汰竞态（await 化 + 单调时钟）。验收实测（浏览器）：预烘焙标记=10 条入库；命中缓存实例化 14ms（8,591 原子管即刻出现，验收线 <50ms）vs 未命中 94ms——快约 7 倍。单测 11 条（指纹键序无关/内容失效/命中未命中/失败不污染/LRU/预烘焙跳过失败/清单长度）。vitest 184 passed（+11）、build/lint 全绿。实际 1d（预估 1-2d）。"
+    files_modified:
+      - src/core/cache.ts / cache.test.ts（新建）
+      - src/render/RendererService.ts（默认引擎接缓存层）
+      - src/ui/SceneCanvas.tsx（空闲预烘焙调度）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

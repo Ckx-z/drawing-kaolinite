@@ -1,7 +1,7 @@
 # PROJECT_STATE — 项目当前状态
 
 > ⭐ **这是每次会话的第一份必读文件**。会话开头读它进入状态，结尾更新它。
-> 最后更新：2026-09-06（T-4.3 接触阴影+构图预设完成；P2 已完成 9 条，剩余 T-2.9 缓存 / T-2.5~2.7 内核精度 / T-5.2 PDF / T-8.2 对账）
+> 最后更新：2026-09-06（T-2.9 网格缓存完成——命中 14ms；P2 已完成 10 条，剩余内核精度三件套 / PDF / 对账脚本）
 
 ---
 
@@ -71,6 +71,7 @@
 | 拾取高亮 | `src/render/highlight.ts` | T-7.1：悬停/选中反转法线外壳（1.10/1.14 橙系）+ hoverStore 双向联动（画布 BBox 轻量拾取 80ms 节流 ↔ 面板行悬停） |
 | SMILES 导入 | `src/core/molecules/smiles.ts` | T-2.8：内置解析器+规则式 3D 构象（替代 RDKit WASM 的零依赖方案，示意级精度、确定性）；molecule.smiles 参数随场景持久化；Worker+主线程双路接入；UI 在素材库面板 |
 | 阴影与构图 | `src/render/postfx.ts` | T-4.3：接触阴影（shadow map + ShadowMaterial 地板，62fps@16k 原子）+ 构图预设（等距/正视/俯视/水平吸附，同视距可复现） |
+| 网格缓存 | `src/core/cache.ts` | T-2.9：内容寻址缓存引擎（kind+参数指纹+CIF 指纹，LRU 40 条）+ 预烘焙 10 管组合；实测命中实例化 14ms（验收 <50ms） vs 未命中 94ms |
 | 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移 + 导入导出；T-3.2：filterModules 检索/类型筛选/收藏排序 + toggleFavorite（favorite 字段向后兼容） |
 | 撤销/重做 | `src/state/history.ts` + `commands.ts` | T-2.1：attachHistory 实例包装（UI 零改动）；全量快照命令 + 800ms 合并窗口；栈深可配（默认 100）；Ctrl/Cmd+Z、+Shift/Y（App.tsx）；sceneStore 单例已挂接（sceneHistory） |
 | 素材模块 | 模块库内 9 个条目 | M2 三层片层、M3 埃洛石管 7Å、M4 颗粒 S/M/L、M5 橡胶基底、M6 片层+颗粒组合、M7 多壁埃洛石 10Å、M8 埃洛石@CeO₂ 复合场景——**素材积累目标达成（9/8-10，M1 样图另计）** |

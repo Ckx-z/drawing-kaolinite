@@ -20,6 +20,7 @@ import {
 } from '../core/builders';
 import type { GeometryData } from '../core/geometry';
 import type { MoleculeParams, SceneComponent, Transform } from '../core/types';
+import { createCachedEngine } from '../core/cache';
 import {
   createGeometryEngine,
   type GeometryEngine,
@@ -102,7 +103,8 @@ export class RendererService {
   onTransformChange: ((id: string) => void) | null = null;
 
   constructor(private container: HTMLElement, opts?: { engine?: GeometryEngine }) {
-    this.engine = opts?.engine ?? createGeometryEngine();
+    // T-2.9：默认引擎外包缓存层（内容寻址，命中即免 Worker 重建）
+    this.engine = opts?.engine ?? createCachedEngine(createGeometryEngine());
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.outputEncoding = THREE.sRGBEncoding;
