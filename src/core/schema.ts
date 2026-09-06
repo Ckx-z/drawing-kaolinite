@@ -92,6 +92,8 @@ const componentCommon = {
   transform: transformSchema,
   visible: z.boolean().default(true),
   locked: z.boolean().optional(),
+  // T-3.3：分组标记（同 groupId 的成员整体变换）；缺省 = 独立组件，向后兼容
+  group: z.string().optional(),
 };
 
 export const sheetComponentSchema = z.strictObject({

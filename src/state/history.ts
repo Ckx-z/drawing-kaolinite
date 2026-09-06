@@ -42,6 +42,8 @@ const TRACKED = [
   'removeComponent',
   'setVisibility',
   'toggleLock',
+  'groupComponents',
+  'ungroupComponents',
   'updateParams',
   'setTransform',
   'renameComponent',

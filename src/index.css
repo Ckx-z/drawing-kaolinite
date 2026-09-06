@@ -318,6 +318,7 @@ input[type='checkbox'] {
   white-space: nowrap;
 }
 .layer-row .eye,
+.layer-row .op,
 .layer-row .del {
   background: none;
   border: none;
@@ -327,6 +328,7 @@ input[type='checkbox'] {
   font-size: 13px;
 }
 .layer-row .eye:hover,
+.layer-row .op:hover,
 .layer-row .del:hover {
   color: #fff;
 }
@@ -427,4 +429,9 @@ input[type='checkbox'] {
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* T-3.3：锁定行提示 */
+.layer-row.lock .nm {
+  opacity: 0.55;
 }

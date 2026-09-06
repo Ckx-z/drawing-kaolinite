@@ -49,11 +49,18 @@ export interface SceneState {
   removeComponent: (id: string) => void;
   select: (id: string | null) => void;
   setVisibility: (id: string, visible: boolean) => void;
-  /** 锁定占位（T-3.3 实现交互屏蔽） */
+  /** 锁定/解锁（T-3.3：锁定后点击不选中、gizmo 不吸附；锁定选中组件会取消其选中） */
   toggleLock: (id: string) => void;
+  /** 把若干组件编为一组（T-3.3），返回组 id */
+  groupComponents: (ids: string[]) => string;
+  /** 解散指定组件所在组（移除 group 标记） */
+  ungroupComponents: (ids: string[]) => void;
   /** 合并参数（整体经 componentSchema 校验，非法抛错且状态不变） */
   updateParams: (id: string, patch: Partial<AnyParams>) => void;
-  /** 整体替换 transform（经 transformSchema 校验） */
+  /**
+   * 整体替换 transform（经 transformSchema 校验）。
+   * T-3.3 组感知：组件属于某组时，位置/旋转取增量、缩放取比值同步到同组全部成员。
+   */
   setTransform: (id: string, transform: Transform) => void;
   renameComponent: (id: string, name: string) => void;
   /** 导出为合法场景文档（kaolin-scene/v1） */
@@ -67,6 +74,7 @@ export type SceneStore = StoreApi<SceneState>;
 
 export function createSceneStore(): SceneStore {
   let seq = 0;
+  let groupSeq = 0;
   const uid = (): string => `c${++seq}`;
 
   return createStore<SceneState>()((set, get) => ({
@@ -100,7 +108,11 @@ export function createSceneStore(): SceneStore {
     },
 
     select: (id) => {
-      if (id !== null && !get().components.some((c) => c.id === id)) return;
+      if (id !== null) {
+        // T-3.3：锁定组件点击不选中（画布拾取与图层面板统一屏蔽）
+        const comp = get().components.find((c) => c.id === id);
+        if (!comp || comp.locked) return;
+      }
       set({ selectionId: id });
     },
 
@@ -111,8 +123,38 @@ export function createSceneStore(): SceneStore {
     },
 
     toggleLock: (id) => {
+      const target = get().components.find((c) => c.id === id);
+      if (!target) return;
+      const locked = !(target.locked ?? false);
       set({
-        components: get().components.map((c) => (c.id === id ? { ...c, locked: !(c.locked ?? false) } : c)),
+        components: get().components.map((c) => (c.id === id ? { ...c, locked } : c)),
+        // 锁定当前选中组件 → 取消选中（gizmo 随之脱附）
+        selectionId: locked && get().selectionId === id ? null : get().selectionId,
+      });
+    },
+
+    groupComponents: (ids) => {
+      const gid = `g${++groupSeq}`;
+      const wanted = new Set(ids);
+      let any = false;
+      const components = get().components.map((c) => {
+        if (!wanted.has(c.id)) return c;
+        any = true;
+        return { ...c, group: gid };
+      });
+      if (any) set({ components });
+      return gid;
+    },
+
+    ungroupComponents: (ids) => {
+      const wanted = new Set(ids);
+      set({
+        components: get().components.map((c) => {
+          if (!wanted.has(c.id) || !c.group) return c;
+          const rest = { ...c };
+          delete rest.group;
+          return rest;
+        }),
       });
     },
 
@@ -125,9 +167,36 @@ export function createSceneStore(): SceneStore {
     },
 
     setTransform: (id, transform) => {
+      const comp = get().components.find((c) => c.id === id);
+      if (!comp) return;
       const t = transformSchema.parse(transform); // 越界（如 scale<0.05）拦截
+      const members = comp.group
+        ? get().components.filter((c) => c.group === comp.group)
+        : [comp];
+      if (members.length <= 1) {
+        set({
+          components: get().components.map((c) => (c.id === id ? { ...c, transform: t } : c)),
+        });
+        return;
+      }
+      // T-3.3 组感知：位置/旋转取增量，缩放取比值，同步到同组全部成员
+      const dPos = t.position.map((v, i) => v - comp.transform.position[i]) as Transform['position'];
+      const dRot = t.rotation.map((v, i) => v - comp.transform.rotation[i]) as Transform['rotation'];
+      const ratio = t.scale / comp.transform.scale;
       set({
-        components: get().components.map((c) => (c.id === id ? { ...c, transform: t } : c)),
+        components: get().components.map((c) => {
+          if (c.group === comp.group) {
+            return {
+              ...c,
+              transform: transformSchema.parse({
+                position: c.transform.position.map((v, i) => v + dPos[i]) as Transform['position'],
+                rotation: c.transform.rotation.map((v, i) => v + dRot[i]) as Transform['rotation'],
+                scale: c.transform.scale * ratio,
+              }),
+            };
+          }
+          return c;
+        }),
       });
     },
 

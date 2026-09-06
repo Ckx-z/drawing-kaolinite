@@ -244,3 +244,19 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-08"
+    date: "2026-09-06"
+    title: "T-3.3 组件锁定与分组（P1 仅剩 T-5.1）"
+    summary: "schema componentCommon 增 group optional（向后兼容，随场景 JSON 往返保留）；store.select 屏蔽锁定组件（画布/图层面板统一，selection 不变 → 绑定层不会把锁定 id 交给 setSelection，gizmo 天然不吸附）；toggleLock 锁定选中组件时取消选中；setTransform 组感知（位置/旋转增量、缩放比值同步同组，未分组回归不变）；groupComponents/ungroupComponents 入撤销栈（快照命令自动覆盖，合并键 setTransform:id 使组内整段拖动一条撤销步）。LayerPanel 每行 🔒 锁定 + ⛓ 成组/解组（组内 ⛓ 前缀标记，锁定行降透明度），.op 按钮样式复用 .eye。验收 11 条测试（锁定屏蔽×4、分组变换/解组/JSON 往返×5、撤销集成×2）。vitest 109 passed（+11）、build/lint 全绿、demo 基线 ALL OK。实际 0.5d（预估 1d）。"
+    files_modified:
+      - src/core/schema.ts（+group optional）
+      - src/state/sceneStore.ts（select 屏蔽/toggleLock 语义/groupComponents/ungroup/setTransform 组感知）
+      - src/state/history.ts（TRACKED +2）
+      - src/state/groupLock.test.ts（新建，11 条）
+      - src/ui/LayerPanel.tsx（锁定/成组 UI）+ src/index.css（.op/.lock 样式）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"
