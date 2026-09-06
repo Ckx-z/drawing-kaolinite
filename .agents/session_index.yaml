@@ -73,3 +73,18 @@ sessions:
     commits: []   # 随本次会话提交
     blockers: []
     status: "completed"
+
+  - id: "2026-09-05-04"
+    date: "2026-09-05"
+    title: "T-1.2 数据模型与 zod Schema（P0）"
+    summary: "zod 4.5.4 落地 src/core/schema.ts：五类组件 params（范围与 DATA_DICT 逐条对应）+ transform + kaolin-scene/v1 场景文档 + 模块库条目（含 T-3.2 规划字段 tags/createdAt/moduleVersion）；全部 strictObject（未知字段拒绝）；types.ts 为 z.infer 单一事实源出口。demo 兼容关键设计：demo 保存的组件无 id/locked → schema optional + normalizeScene 载入补齐；molecule 默认 scale=4。验收测试 20 条（fixtures=demo loadPreset 真实参数）：5 类型样例校验/往返序列化无损/6 组参数越界报字段路径（components.N.params.X）/版本/未知字段/非 JSON/模块条目。test 23 passed、build 零错误、lint 零告警。实际工时 0.5d。"
+    files_modified:
+      - src/core/schema.ts
+      - src/core/types.ts
+      - src/core/schema.test.ts
+      - package.json / package-lock.json (+zod)
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-05*.md (记忆更新)
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

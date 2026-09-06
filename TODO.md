@@ -40,12 +40,13 @@
 - 关联文件：`src/`（新建）、`package.json`、`tsconfig.json`
 - 完成记录：实际工时约 0.5d。验收实测——dev 壳页面浏览器渲染正常（React 挂载、三栏布局）；`tsc --noEmit && vite build` 零错误（196KB gzip 61.8KB）；vitest 3 passed（首测：元素数据不变量）；eslint 零告警。附带交付：`src/core/elements.ts`（类型化元素库，T-1.3 数据基线）。
 
-### T-1.2 [P0] 数据模型与 Schema 定义（含 zod 校验）
+### T-1.2 ✅ [P0] 数据模型与 Schema 定义（含 zod 校验）（2026-09-05 完成）
 - 描述：按技术方案 §4 实现 `Component / Document(kaolin-scene/v1) / Module` 的 TypeScript 类型 + zod schema；覆盖 PARAM_DEFS 全部素材参数类型；提供 `serialize/deserialize` 与版本字段。
 - 依赖：T-1.1
 - 验收标准：demo 保存的场景 JSON 样例（含 5 种组件类型）能通过 schema 校验并往返序列化无损；非法参数被拒绝并报出字段路径。
 - 预估工时：1d
 - 关联文件：`src/core/types.ts`、`src/core/schema.ts`
+- 完成记录：实际工时约 0.5d。zod 4.5.4；strictObject 全覆盖（拼写错误早暴露）；demo 无 id 组件约定以 optional + `normalizeScene` 补齐实现；20 条 schema 测试（demo 5 类型样例校验/往返无损/6 组参数越界报路径/版本/未知字段/模块条目含 T-3.2 规划字段）。test 23 passed、build 零错误、lint 零告警。
 
 ### T-1.3 [P0] 几何内核 TS 移植 + 单元测试
 - 描述：`demo/core/crystal.js`、`builders.js` → `src/core/*.ts`（补全类型，逻辑不变）；vitest 复刻 `test.js` 全部断言并补充边界用例（progress→0、锥角极限、空裁剪）。

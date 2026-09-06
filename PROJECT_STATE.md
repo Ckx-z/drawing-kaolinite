@@ -1,7 +1,7 @@
 # PROJECT_STATE — 项目当前状态
 
 > ⭐ **这是每次会话的第一份必读文件**。会话开头读它进入状态，结尾更新它。
-> 最后更新：2026-09-05（T-1.1 脚手架完成，阶段 1 已开工，下一步 T-1.2）
+> 最后更新：2026-09-05（T-1.2 Schema 完成，P0 已过半，下一步 T-1.3/T-1.4 并行）
 
 ---
 
@@ -22,7 +22,7 @@
 |---|---|---|
 | **阶段 0** | 技术验证：方案文档 + 几何内核（CIF/切片/卷曲）+ 三维 Demo 全链路实测 | ✅ **已完成**（2026-09-04） |
 | **阶段 0.5** | 工程治理：Git 仓库、TODO 清单（47 条）、Q1–Q4 决策闭环、记忆系统骨架（T-8.1） | ✅ **已完成**（2026-09-05） |
-| **阶段 1（当前）** | P0 工程基座：T-1.1 ~ T-1.7（Vite+TS+React 脚手架 → Schema → 内核 TS 移植 → 渲染服务 → 状态管理 → UI 迁移 → 回归验收） | 🔶 **进行中**（T-1.1 ✅ 2026-09-05，余 T-1.2~T-1.7） |
+| **阶段 1（当前）** | P0 工程基座：T-1.1 ~ T-1.7（Vite+TS+React 脚手架 → Schema → 内核 TS 移植 → 渲染服务 → 状态管理 → UI 迁移 → 回归验收） | 🔶 **进行中**（T-1.1 ✅、T-1.2 ✅ 2026-09-05，余 T-1.3~T-1.7） |
 | 阶段 2 | P1：撤销重做 / Worker 化 / IndexedDB 模块库 / 组合模块 / 首批素材模块（T-9.1~9.2） | ⬜ 未开始 |
 | 阶段 3+ | P2–P3：双轨渲染 / 矢量导出 / 桌面端 / 素材积累至 8–10 个模块 | ⬜ 未开始 |
 
@@ -30,9 +30,9 @@
 
 ## 三、下一步（按优先级）
 
-1. **T-1.2 数据模型与 zod Schema**（关键路径，约 1d）——以 `DATA_DICT.md` 为直接依据；验收含"demo 场景 JSON 样例通过校验"
-2. T-1.3 几何内核 TS 移植 + 单测（依赖 T-1.1 ✅，可与 T-1.2 并行；断言对齐 `demo/core/test.js` 基线）
-3. T-1.4 渲染服务封装（依赖 T-1.1 ✅ + T-1.2）
+1. **T-1.3 几何内核 TS 移植 + 单测**（依赖已满足，约 1–2d）——`demo/core/*.js` → `src/core/*.ts`；vitest 断言对齐 T-0.1 基线数值（同参数同原子数同键数）
+2. **T-1.4 渲染服务封装**（依赖 T-1.2 ✅，可与 T-1.3 并行，约 2d）——demo 渲染器/InstancedMesh/compBox 取景 → `src/render/`；保留 sRGB 线性化与 LOD
+3. T-1.5 场景图状态管理（Zustand，依赖 T-1.2 ✅）
 4. T-8.2 `check_library_state.py` 对账脚本（P2，可并行）
 
 完整任务清单见 `TODO.md`（47 条，含依赖关系与验收标准）。
@@ -58,6 +58,7 @@
 | 任务清单 | `TODO.md` | 47 条任务 + 依赖 + 验收标准 + 顶部四项已决策记录 |
 | 几何内核（JS 基线） | `demo/core/crystal.js` `builders.js` | T-1.3 移植源；`node demo/core/test.js` 回归 |
 | 生产工程 | `src/` + `package.json` | T-1.1 脚手架：`npm run dev/build/test/lint` 全通；`src/core/elements.ts` 为类型化元素库 |
+| 数据模型 | `src/core/schema.ts` + `types.ts` | T-1.2：zod 4 strictObject；demo 兼容（无 id 组件→normalizeScene 补齐）；serializeScene/deserializeScene/deserializeModule |
 | 三维 Demo | `demo/index.html` | 双击可用；生产版功能对照基准 |
 | CIF 种子库 | `data/*.cif` | 高岭石/地开石/珍珠石/蒙脱石/伊利石 |
 | 决策日志 | `DECISIONS.md` | D01–D08 |
