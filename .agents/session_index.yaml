@@ -379,3 +379,17 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-17"
+    date: "2026-09-06"
+    title: "记忆系统全面刷新（README 生产工程重写 / DATA_DICT / AGENTS / DECISIONS D09 / 日报收尾）"
+    summary: "README.md 从技术验证阶段重写为生产工程现状：交付物表（src/ 主力 + data/seed-modules.json 9 模块种子库 + 记忆系统）、npm 快速开始、已实现能力全清单（素材生成/编辑组合/模块库/四格式导出/双轨渲染色板/SMILES 导入）、技术栈、路线图进度表。DATA_DICT：molecule 补 smiles 字段、场景文档补 palette 全局字段、新增双轨渲染与色板章节、RDKit WASM 遗留行同步为 D09 决策后状态。AGENTS.md 项目路径修正（旧 C:/ 路径 → 本机 + GitHub 远程）。DECISIONS 新增 D09（T-2.8 内置 SMILES 构象器替代 RDKit WASM v1.0，含理由/备选/复盘条件）。日报双轨收尾（本日总结：17 个记录会话、P0+P1 收官、素材目标达成、测试 3→168 条）。"
+    files_modified:
+      - README.md（重写）
+      - DATA_DICT.md / AGENTS.md / DECISIONS.md（D09）
+      - .agents/session_state.yaml
+      - （提交 af7baa5）
+    decisions_made: ["D09：T-2.8 内置 SMILES 构象器替代 RDKit WASM（v1.0）"]
+    commits: ["af7baa5"]
+    blockers: []
+    status: "completed"
