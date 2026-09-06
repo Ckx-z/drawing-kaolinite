@@ -348,3 +348,18 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-15"
+    date: "2026-09-06"
+    title: "T-7.1 拾取高亮 / 悬停反馈（双向联动）"
+    summary: "highlight.ts：反转法线高亮外壳（悬停淡橙 1.10 / 选中强调橙 1.14，与线稿档描边 1.07 分层共存；raycast 置空；仅原子网格，基底走面板联动）+ hoverStore（vanilla，画布/面板单一数据源）。RendererService：setHover/setShellState（惰性创建、重建后恢复选中优先）、pickAt BBox 级轻量拾取（compBox 逐原子包围盒+1Å 余量缓存、几何重建失效——绕开 r147 Box3.setFromObject 不含实例矩阵的坑；O(组件数) vs 全量实例 raycast）。SceneCanvas pointermove 80ms 节流+pointerleave 清除+hoverStore 订阅；LayerPanel 行 onMouseEnter/Leave+行样式 hoverStore 驱动。验收实测：悬停外壳/选中外壳/离开清除全对、500ms 36 帧 ≈60fps 帧率无感、画布悬停→面板行 .hov（双向联动）。单测 5 条（外壳矩阵缩放/材质契约/raycast 置空/findShell/hoverStore）。vitest 145 passed（+5）、build/lint 全绿。实际 1d。"
+    files_modified:
+      - src/render/highlight.ts / highlight.test.ts（新建）
+      - src/render/RendererService.ts（setHover/pickAt/setShellState + box 缓存 + 类型沿用）
+      - src/ui/SceneCanvas.tsx（pointermove/leave + hoverStore 订阅）
+      - src/ui/LayerPanel.tsx（行悬停/联动样式）+ src/index.css（.layer-row.hov）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

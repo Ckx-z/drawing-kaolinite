@@ -34,10 +34,13 @@ import { setActivePalette, type PaletteSetting } from './palette';
 import { substrateMaterial } from './materials';
 import { buildSubstrateGeometry } from './substrate';
 import { materialFor, outlineMaterial, type RenderMode } from './toon';
+import { createHighlightShell, findShell, type HighlightState } from './highlight';
 import type { SubstrateParams } from '../core/types';
 
 interface ComponentRecord {
   comp: RenderComponent; // store 条目恒带 id（RenderComponent），id 不可缺省
+  /** 组件包围盒缓存（T-7.1 BBox 级悬停拾取用）；几何重建时置空 */
+  box: THREE.Box3 | null;
   group: THREE.Group;
   data: GeometryData | null;
   atomCount: number;
@@ -160,7 +163,7 @@ export class RendererService {
   addComponent(comp: RenderComponent): void {
     const group = new THREE.Group();
     group.userData.componentId = comp.id;
-    const rec: ComponentRecord = { comp, group, data: null, atomCount: 0 };
+    const rec: ComponentRecord = { comp, group, data: null, atomCount: 0, box: null };
     this.records.set(comp.id, rec);
     this.applyTransform(comp, group);
     group.visible = comp.visible;
@@ -205,11 +208,84 @@ export class RendererService {
   }
 
   setSelection(id: string | null): void {
+    const prev = this.selectedId;
     this.selectedId = id;
     const rec = id ? this.records.get(id) : null;
     if (rec && rec.comp.visible) this.tc.attach(rec.group);
     else this.tc.detach();
+    // T-7.1 选中外壳（与 gizmo 互补的轮廓高亮）
+    if (prev && prev !== id) {
+      const prevRec = this.records.get(prev);
+      if (prevRec) this.setShellState(prevRec, 'none');
+    }
+    if (rec) this.setShellState(rec, 'selected');
   }
+
+  /* ---------- 拾取高亮 / 悬停反馈（T-7.1） ---------- */
+
+  private hoverId: string | null = null;
+
+  /** 设置悬停组件（hoverStore 驱动； null 清除）。帧率无感：外壳可见性切换，O(1) */
+  setHover(id: string | null): void {
+    if (id === this.hoverId) return;
+    if (this.hoverId) {
+      const prevRec = this.records.get(this.hoverId);
+      if (prevRec) this.setShellState(prevRec, this.hoverId === this.selectedId ? 'selected' : 'none');
+    }
+    this.hoverId = id;
+    if (id) {
+      const rec = this.records.get(id);
+      // 选中态优先：悬停在已选中组件上保持选中色
+      if (rec && id !== this.selectedId) this.setShellState(rec, 'hover');
+    }
+  }
+
+  /** 组件外壳状态（none/hover/selected）：外壳缺失时惰性创建 */
+  private setShellState(rec: ComponentRecord, state: HighlightState): void {
+    this.ensureHighlightShells(rec);
+    const hover = findShell(rec.group, 'hover');
+    const select = findShell(rec.group, 'selected');
+    if (hover) hover.visible = state === 'hover';
+    if (select) select.visible = state === 'selected';
+  }
+
+  private ensureHighlightShells(rec: ComponentRecord): void {
+    if (rec.group.userData.highlightsReady) return;
+    rec.group.userData.highlightsReady = true;
+    for (const child of [...rec.group.children]) {
+      if (child.userData.matKind !== 'atom') continue;
+      rec.group.add(createHighlightShell(child as THREE.InstancedMesh, 'hover'));
+      rec.group.add(createHighlightShell(child as THREE.InstancedMesh, 'selected'));
+    }
+  }
+
+  /**
+   * BBox 级轻量拾取（悬停用，T-7.1）：对每个可见组件的缓存包围盒做 ray-intersect，
+   * 最近者胜。相比全量实例 raycast（16k 实例毫秒级×每帧），成本 O(组件数)。
+   * 精度到组件包围盒级——悬停反馈足够；点击选中仍走全量拾取。
+   */
+  pickAt(clientX: number, clientY: number): string | null {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1,
+    );
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(ndc, this.camera);
+    let best: { id: string; dist: number } | null = null;
+    const pt = new THREE.Vector3();
+    for (const rec of this.records.values()) {
+      if (!rec.group.visible || !rec.comp.visible) continue;
+      // compBox 逐原子计算（setFromObject 不含实例矩阵）；外扩 1Å 作悬停余量
+      if (!rec.box) rec.box = this.compBox(rec, new THREE.Box3()).expandByScalar(1);
+      if (!raycaster.ray.intersectBox(rec.box, pt)) continue;
+      const dist = pt.distanceTo(raycaster.ray.origin);
+      if (!best || dist < best.dist) best = { id: rec.comp.id, dist };
+    }
+    return best?.id ?? null;
+  }
+
+  /* ---------- 色板（T-4.2） ---------- */
 
   getSelectedId(): string | null {
     return this.selectedId;
@@ -656,7 +732,11 @@ export class RendererService {
     }
     this.applyTransform(comp, rec.group);
     rec.group.visible = comp.visible;
+    rec.box = null; // 几何已变，包围盒缓存失效（T-7.1）
     this.applyMode(rec); // T-4.1：新几何按当前档位着装（含描边外壳重建）
+    // T-7.1：重建后恢复高亮状态（选中优先于悬停）
+    if (this.selectedId === comp.id) this.setShellState(rec, 'selected');
+    else if (this.hoverId === comp.id) this.setShellState(rec, 'hover');
     // 构建完成时点在 store 变更之外，图层面板的原子数依赖此事件刷新
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('kaolin-geometry-updated', { detail: { id: comp.id } }));
@@ -693,6 +773,7 @@ export class RendererService {
     });
     while (g.children.length) g.remove(g.children[0]);
     g.userData.outlinesReady = false; // 重建后描边外壳随之重建（applyMode）
+    g.userData.highlightsReady = false; // T-7.1 高亮外壳同理
   }
 
   private resize(): void {

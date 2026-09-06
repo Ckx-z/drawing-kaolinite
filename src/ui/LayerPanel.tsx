@@ -5,8 +5,14 @@
  */
 import { useSyncExternalStore } from 'react';
 import { useStore } from 'zustand';
+import { hoverStore } from '../render/highlight';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
+
+/** 悬停 id 的极简外部源（画布 pointermove 与面板行悬停双向写入） */
+function subscribeHover(onChange: () => void): () => void {
+  return hoverStore.subscribe(onChange);
+}
 
 /** 几何构建完成 → 原子数变化的极简外部通知源（RendererService 派发 window 事件） */
 function subscribeGeometryUpdated(onChange: () => void): () => void {
@@ -17,6 +23,7 @@ function subscribeGeometryUpdated(onChange: () => void): () => void {
 export default function LayerPanel() {
   const components = useStore(sceneStore, (s) => s.components);
   const selectionId = useStore(sceneStore, (s) => s.selectionId);
+  const hoverId = useSyncExternalStore(subscribeHover, () => hoverStore.getState().id);
   // 异步构建完成时让面板重渲染（读取最新 atomCountOf）
   useSyncExternalStore(subscribeGeometryUpdated, () => rendererRef.current?.stats().atoms ?? 0);
 
@@ -29,8 +36,10 @@ export default function LayerPanel() {
         return (
           <div
             key={c.id}
-            className={`layer-row${c.id === selectionId ? ' sel' : ''}${c.visible ? '' : ' hid'}${locked ? ' lock' : ''}`}
+            className={`layer-row${c.id === selectionId ? ' sel' : ''}${c.visible ? '' : ' hid'}${locked ? ' lock' : ''}${c.id === hoverId ? ' hov' : ''}`}
             onClick={() => sceneStore.getState().select(c.id)}
+            onMouseEnter={() => hoverStore.getState().setHover(c.id)}
+            onMouseLeave={() => hoverStore.getState().setHover(null)}
           >
             <span className="nm">
               {c.group ? '⛓ ' : ''}

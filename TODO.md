@@ -289,12 +289,13 @@
 
 ## 七、交互与体验
 
-### T-7.1 [P2] 拾取高亮 / 悬停反馈
+### T-7.1 ✅ [P2] 拾取高亮 / 悬停反馈（2026-09-06 完成）
 - 描述：悬停组件描边或提亮；选中组件轮廓高亮（与 gizmo 互补）；图层面板与画布双向联动高亮。
 - 依赖：T-1.6
 - 验收标准：悬停/选中反馈帧率无感损耗；双向联动正确（点图层选画布、点画布亮图层）。
 - 预估工时：1d
 - 关联文件：`src/ui/Viewport.tsx`、`src/render/highlight.ts`（新建）
+- 完成记录：`highlight.ts`——反转法线高亮外壳（悬停淡橙 1.10 / 选中强调橙 1.14，与线稿档描边 1.07 分层共存；raycast 置空不干扰点击拾取；仅原子网格，基底反馈走面板联动）+ hoverStore（画布/面板双向联动的单一数据源）。RendererService：setHover/setShellState（外壳惰性创建、重建后恢复选中优先）、pickAt **BBox 级轻量拾取**（compBox 逐原子包围盒+1Å 余量缓存，几何重建失效——setFromObject 不含实例矩阵的坑已绕开；O(组件数) 对比全量实例 raycast）。SceneCanvas pointermove 80ms 节流 + pointerleave 清除 + hoverStore 订阅；LayerPanel 行 onMouseEnter/Leave 写 hoverStore、行样式随 hoverStore（画布悬停亮面板行）。验收实测：悬停外壳/选中外壳/离开清除全部正确、500ms 内 36 帧 ≈60fps（帧率无感）、画布悬停 → 面板行 .hov 类（双向联动）。单测 5 条。vitest 145 passed（+5）、build/lint 全绿。实际 1d。
 
 ### T-7.2 [P2] 快捷键体系 + 操作提示
 - 描述：统一快捷键（复制/粘贴/成组/删/显隐/视角预设），快捷键速查浮层；首次使用引导。
