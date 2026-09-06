@@ -20,3 +20,7 @@ __pycache__/
 
 # ZCode 工具内部产物不入库
 .zcode/
+
+# 浏览器下载测试产物不入库
+kaolin-scene.json
+*-scene-export.json
