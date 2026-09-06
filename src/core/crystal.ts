@@ -452,26 +452,49 @@ export function addHydroxylHydrogens(atoms: Atom[]): Atom[] {
  * 让切片边缘无"悬空氧"。
  */
 export function saturateEdges(atoms: Atom[], bonds: Bond[]): Atom[] {
+  // T-2.5 升级：区分边缘氧位点并按化学方向补 H——
+  //   1 配位（桥氧末端）→ 逆键方向补 1 个 H 成 -OH（消除旧版"径向向心"方向畸变）；
+  //   0 配位（孤立悬空 O）→ 沿片层法向/径向补 2 个 H（确定性正交对）；
+  //   ≥2 配位或羟基氧（O-H* 位点）→ 不处理。
   const cnt = new Array<number>(atoms.length).fill(0);
+  const neighbor = new Array<number>(atoms.length).fill(-1);
   for (const b of bonds) {
     cnt[b[0]]++;
     cnt[b[1]]++;
+    if (neighbor[b[0]] < 0) neighbor[b[0]] = b[1];
+    if (neighbor[b[1]] < 0) neighbor[b[1]] = b[0];
   }
   let cx = 0;
   let cy = 0;
+  let cz = 0;
   for (const a of atoms) {
     cx += a.x;
     cy += a.y;
+    cz += a.z;
   }
   cx /= atoms.length;
   cy /= atoms.length;
+  cz /= atoms.length;
+
+  const addH = (o: Atom, dx: number, dy: number, dz: number): Atom => {
+    const L = Math.hypot(dx, dy, dz) || 1;
+    return { el: 'H', label: 'H*', x: o.x + (dx / L) * 0.98, y: o.y + (dy / L) * 0.98, z: o.z + (dz / L) * 0.98 };
+  };
+
   const added: Atom[] = [];
   atoms.forEach((a, i) => {
     if (a.el !== 'O' || cnt[i] >= 2 || (a.label ?? '').startsWith('O-H')) return;
-    const vx = a.x - cx;
-    const vy = a.y - cy;
-    const L = Math.hypot(vx, vy) || 1;
-    added.push({ el: 'H', label: 'H*', x: a.x + (vx / L) * 0.98, y: a.y + (vy / L) * 0.98, z: a.z });
+    if (cnt[i] === 1 && neighbor[i] >= 0) {
+      // 逆键方向（O 减去邻居方向）——与既有 O-X 键成 ≈180° 反位，sp3 观感自然
+      const nb = atoms[neighbor[i]];
+      added.push(addH(a, a.x - nb.x, a.y - nb.y, a.z - nb.z));
+    } else {
+      // 孤立悬空 O：补 2 个 H（径向 + 法向正交对，确定性）
+      const vx = a.x - cx, vy = a.y - cy, vz = a.z - cz;
+      const L = Math.hypot(vx, vy, vz) || 1;
+      added.push(addH(a, vx, vy, vz));
+      added.push(addH(a, -vy, vx, (L * 0.6)));
+    }
   });
   return atoms.concat(added);
 }
