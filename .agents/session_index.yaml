@@ -117,3 +117,17 @@ sessions:
     commits: []   # 随会话提交并推送 origin/master
     blockers: []
     status: "completed"
+
+  - id: "2026-09-05-07"
+    date: "2026-09-05"
+    title: "T-1.6 三大面板与画布 UI 迁移（React）"
+    summary: "完整交互界面落地：SceneCanvas（挂载渲染服务 + bindRenderer 正向同步 + 拾取/gizmo 回写 store）、LibraryPanel（五类素材卡片添加+取景）、ParamPanel（滑块/下拉/勾选 + 位置/旋转/缩放数字输入 + gizmo 模式切换/适配视角）、LayerPanel（选择/显隐/删除/原子数）、TopBar（示例场景/保存场景/打开场景/清空，demo JSON 兼容载入）、App（Delete/Backspace/Esc 快捷键、首启自动载示例场景、__KAOLIN 调试出口）。RendererService 补 setGizmoMode/getComponentTransform/atomCountOf；新建 rendererRef 单例槽位。paramDefs 防呆单测（默认值必落在面板范围）。浏览器实测全过（含卷曲进度 45% 实时半卷重建）。test 59 passed、build/lint 全绿。实际 0.5d（预估 2d）。"
+    files_modified:
+      - src/ui/（App/TopBar/LibraryPanel/ParamPanel/LayerPanel/SceneCanvas/paramDefs/paramDefs.test/preset/index.css；删 preview.ts）
+      - src/render/RendererService.ts（+3 接口）
+      - src/state/rendererRef.ts（新建）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-05*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

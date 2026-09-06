@@ -19,7 +19,7 @@ import {
   buildParticle,
 } from '../core/builders';
 import type { GeometryData } from '../core/geometry';
-import type { SceneComponent } from '../core/types';
+import type { SceneComponent, Transform } from '../core/types';
 import { addAtoms, addBonds } from './instanced';
 import { substrateMaterial } from './materials';
 import { buildSubstrateGeometry } from './substrate';
@@ -178,6 +178,29 @@ export class RendererService {
 
   getSelectedId(): string | null {
     return this.selectedId;
+  }
+
+  /** gizmo 模式切换（ParamPanel 移动/旋转按钮） */
+  setGizmoMode(mode: 'translate' | 'rotate'): void {
+    this.tc.setMode(mode);
+  }
+
+  /** 读取组件当前变换（gizmo 拖动后由状态层回写 store） */
+  getComponentTransform(id: string): Transform | null {
+    const rec = this.records.get(id);
+    if (!rec) return null;
+    const g = rec.group;
+    const d = 180 / Math.PI;
+    return {
+      position: [g.position.x, g.position.y, g.position.z],
+      rotation: [g.rotation.x * d, g.rotation.y * d, g.rotation.z * d],
+      scale: g.scale.x,
+    };
+  }
+
+  /** 组件原子数（图层面板显示用） */
+  atomCountOf(id: string): number {
+    return this.records.get(id)?.atomCount ?? 0;
   }
 
   stats(): ServiceStats {

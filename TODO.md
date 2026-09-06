@@ -72,12 +72,13 @@
 - 关联文件：`src/state/sceneStore.ts`
 - 完成记录：实际 0.5d。zustand 5 vanilla `createStore`（工厂化，React 侧 T-1.6 用 useStore 桥接）；全部写操作经 schema 校验（非法抛错状态不变）；`rendererBinding.ts` 订阅差异同步（增删/显隐/变换即时，参数重建 rAF 合并，调度器可注入）；RendererService 补 `setComponentTransform`（变换不重建几何）。测试：sceneStore 15 条（默认值/命名自增/参数校验失败状态不变/序列化往返+demo 兼容载入）+ binding 5 条（替身不依赖 three：即时同步/同帧多次更新仅一次 rebuild/删除跳过/取消订阅），合计 55 passed。
 
-### T-1.6 [P0] 三大面板与画布 UI 迁移
+### T-1.6 ✅ [P0] 三大面板与画布 UI 迁移（2026-09-05 完成）
 - 描述：React 重写素材库/参数面板（含"卷曲进度"滑块）/图层面板/顶部工具栏/画布挂载与拾取（pointerup 距离阈值 + gizmo 排除逻辑）。
 - 依赖：T-1.3、T-1.4、T-1.5
 - 验收标准：功能对齐 demo——五类素材添加、参数调改实时重建、图层显隐/删除、选中 gizmo 移动旋转、Delete/Esc 快捷键。
 - 预估工时：2d
-- 关联文件：`src/ui/LibraryPanel.tsx`、`src/ui/ParamPanel.tsx`、`src/ui/LayerPanel.tsx`、`src/ui/Viewport.tsx`、`src/ui/TopBar.tsx`
+- 关联文件：`src/ui/LibraryPanel.tsx`、`src/ui/ParamPanel.tsx`、`src/ui/LayerPanel.tsx`、`src/ui/Viewport.tsx`（实为 SceneCanvas）、`src/ui/TopBar.tsx`
+- 完成记录：实际 0.5d。SceneCanvas 挂载渲染服务 + bindRenderer 正向同步 + onSelect/onTransformChange 回写 store；ParamPanel（滑块/下拉/勾选 + 变换数字输入 + gizmo 模式/适配视角）；LayerPanel（选择/显隐/删除/原子数）；TopBar（示例场景/保存/打开场景/清空）；App（Delete/Backspace/Esc 快捷键，输入框聚焦跳过；首启自动载示例场景）；paramDefs 防呆单测（默认值必落在面板 min/max 内，防面板与 schema 漂移）。浏览器实测全过：添加片层自动选中命名自增、卷曲进度滑块拖至 45% 实时半卷重建（store 0.45 ↔ 面板 45%）、隐藏颗粒/删除片层、gizmo 附着、Esc 取消选中、Delete 删除并清选择。
 
 ### T-1.7 [P0] 基座回归验收（对照 Demo 基线）
 - 描述：端到端跑通"添加→调参→组合→保存场景→载入→导出 300dpi PNG"全流程；场景 JSON 与 demo 互导兼容。

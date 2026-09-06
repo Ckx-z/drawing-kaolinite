@@ -6,6 +6,7 @@
   --txt: #c9d1d9;
   --dim: #8792a0;
   --acc: #e08a4e;
+  --acc-soft: rgba(224, 138, 78, 0.16);
 }
 
 * {
@@ -21,6 +22,7 @@ body {
   font: 13px/1.55 'Segoe UI', system-ui, 'Microsoft YaHei', sans-serif;
   background: var(--bg);
   color: var(--txt);
+  user-select: none;
 }
 
 .app {
@@ -29,10 +31,11 @@ body {
   height: 100%;
 }
 
+/* ---------- 顶栏 ---------- */
 .topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   height: 46px;
   padding: 0 14px;
   background: var(--panel);
@@ -41,6 +44,7 @@ body {
 }
 .brand {
   font-weight: 600;
+  white-space: nowrap;
 }
 .brand .logo {
   color: var(--acc);
@@ -53,15 +57,57 @@ body {
   font-size: 11px;
   margin-left: 8px;
 }
-.badge {
+.tb-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tb-group:first-of-type {
   margin-left: auto;
+}
+.badge {
   font-size: 12px;
   color: var(--acc);
   border: 1px solid var(--acc);
   border-radius: 20px;
   padding: 2px 12px;
+  white-space: nowrap;
 }
 
+button {
+  background: var(--panel2);
+  color: var(--txt);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+button:hover {
+  border-color: var(--acc);
+  color: #fff;
+}
+button.mini {
+  padding: 2px 10px;
+  font-size: 12px;
+}
+button.on {
+  border-color: var(--acc);
+  color: var(--acc);
+  background: var(--acc-soft);
+}
+select,
+input[type='number'] {
+  background: var(--panel2);
+  color: var(--txt);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font: inherit;
+}
+
+/* ---------- 三栏布局 ---------- */
 .layout {
   flex: 1;
   display: grid;
@@ -71,7 +117,8 @@ body {
 .panel {
   background: var(--panel);
   padding: 12px;
-  overflow: auto;
+  overflow-y: auto;
+  min-height: 0;
 }
 .panel.left {
   border-right: 1px solid var(--line);
@@ -79,23 +126,62 @@ body {
 .panel.right {
   border-left: 1px solid var(--line);
 }
-.panel h3 {
+.panel h3,
+.right-section h3 {
   margin: 0 0 10px;
   font-size: 12px;
   color: var(--dim);
   letter-spacing: 1px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.right-section h3 .tip {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.right-section {
+  margin-bottom: 14px;
 }
 .hint {
   color: var(--dim);
   font-size: 12px;
+  margin: 4px 0;
 }
 
+/* ---------- 素材库 ---------- */
+.lib-card {
+  margin: 0 0 8px;
+  padding: 9px 10px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+.lib-card:hover {
+  border-color: var(--acc);
+}
+.lib-card .t {
+  font-weight: 600;
+}
+.lib-card .t .ic {
+  color: var(--acc);
+  margin-right: 7px;
+}
+.lib-card .d {
+  color: var(--dim);
+  font-size: 11.5px;
+  margin-top: 2px;
+}
+
+/* ---------- 画布 ---------- */
 .canvas {
   position: relative;
   background: #f4f5f7;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  min-width: 0;
+  min-height: 0;
 }
 .canvas-host {
   position: absolute;
@@ -104,69 +190,129 @@ body {
 .canvas-host canvas {
   display: block;
 }
-.canvas-empty {
-  text-align: center;
-  color: #5b6470;
-}
-.canvas-empty .mark {
-  font-size: 42px;
-  color: var(--acc);
-  opacity: 0.75;
-}
-.canvas-empty h2 {
-  margin: 6px 0 4px;
-  font-size: 18px;
-  color: #3c434c;
-}
-.canvas-empty p {
-  margin: 4px 0;
-  font-size: 12.5px;
-}
-.canvas-empty .sub code {
-  background: #e8eaee;
-  border-radius: 4px;
-  padding: 1px 6px;
-}
 
-.roadmap {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 6px;
+/* ---------- 参数面板 ---------- */
+.ctl {
+  margin: 0 0 9px;
 }
-.roadmap li {
+.ctl .row {
   display: flex;
+  justify-content: space-between;
   align-items: baseline;
-  gap: 8px;
-  background: var(--panel2);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 7px 10px;
+  margin-bottom: 2px;
+}
+.ctl label {
+  color: var(--txt);
   font-size: 12.5px;
 }
-.roadmap li .tid {
+.ctl .val {
   color: var(--dim);
+  font-size: 11.5px;
   font-variant-numeric: tabular-nums;
 }
-.roadmap li .st {
-  margin-left: auto;
+.ctl input[type='range'] {
+  width: 100%;
+  accent-color: var(--acc);
+  height: 22px;
+  margin: 0;
+  padding: 0;
+}
+.ctl select {
+  width: 100%;
+}
+label.chk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--txt);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+input[type='checkbox'] {
+  accent-color: var(--acc);
+}
+.grid3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+.grid3 .cell label {
+  display: block;
   font-size: 11px;
   color: var(--dim);
+  margin-bottom: 1px;
 }
-.roadmap li.done {
-  border-color: #3d5a3f;
+.grid3 input[type='number'] {
+  width: 100%;
+  padding: 3px 6px;
+  font-size: 12px;
 }
-.roadmap li.done .st {
-  color: #7fbf7f;
+.subhead {
+  margin: 14px 0 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 11.5px;
+  color: var(--dim);
+  letter-spacing: 1px;
 }
-.roadmap li.next {
-  border-color: var(--acc);
-}
-.roadmap li.next .st {
-  color: var(--acc);
+.btnrow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
+/* ---------- 图层面板 ---------- */
+.layer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border-left: 3px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.layer-row:hover {
+  background: var(--panel2);
+}
+.layer-row.sel {
+  background: var(--acc-soft);
+  border-left-color: var(--acc);
+}
+.layer-row .nm {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.layer-row .cnt {
+  color: var(--dim);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.layer-row .eye,
+.layer-row .del {
+  background: none;
+  border: none;
+  color: var(--dim);
+  cursor: pointer;
+  padding: 0 3px;
+  font-size: 13px;
+}
+.layer-row .eye:hover,
+.layer-row .del:hover {
+  color: #fff;
+}
+.layer-row.hid .nm {
+  color: var(--dim);
+  text-decoration: line-through;
+}
+
+/* ---------- 状态栏 ---------- */
 .statusbar {
   flex: none;
   display: flex;
@@ -176,4 +322,15 @@ body {
   background: var(--panel);
   color: var(--dim);
   font-size: 11.5px;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: #333b46;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }
