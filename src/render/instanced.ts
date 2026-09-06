@@ -23,6 +23,7 @@ export function addAtoms(g: THREE.Group, atoms: Atom[], ballstick: boolean): voi
     const baseR = ballstick ? info.cov * 0.95 : info.vdw * 0.92;
     const arr = byEl[el];
     const m = new THREE.InstancedMesh(sph, atomMaterial, arr.length);
+    m.userData.matKind = 'atom'; // T-4.1 双轨切换按此换材质
     for (let k = 0; k < arr.length; k++) {
       const a = arr[k];
       const r = a.r ?? baseR;
@@ -43,6 +44,7 @@ export function addBonds(g: THREE.Group, atoms: Atom[], bonds: Bond[], rad: numb
   if (!bonds.length) return;
   const cyl = new THREE.CylinderGeometry(1, 1, 1, 10, 1, true);
   const m = new THREE.InstancedMesh(cyl, bondMaterial, bonds.length);
+  m.userData.matKind = 'bond';
   const v1 = new THREE.Vector3();
   const v2 = new THREE.Vector3();
   const dir = new THREE.Vector3();

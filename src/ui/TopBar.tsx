@@ -18,6 +18,7 @@ export default function TopBar() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [dpi, setDpi] = useState(300);
   const [alpha, setAlpha] = useState(false);
+  const [mode, setMode] = useState<'render' | 'toon'>('render');
   const [toast, setToast] = useState('');
 
   const flash = (msg: string): void => {
@@ -160,6 +161,16 @@ export default function TopBar() {
         </button>
       </div>
       <div className="tb-group">
+        <button
+          onClick={() => {
+            const next = mode === 'render' ? 'toon' : 'render';
+            setMode(next);
+            rendererRef.current?.setRenderMode(next);
+          }}
+          title="双轨渲染（T-4.1）：渲染档 = PBR 质感（宣讲/PPT）；线稿档 = 三阶色阶+描边（期刊示意/矢量导出用）"
+        >
+          {mode === 'render' ? '🎨 渲染档' : '✏️ 线稿档'}
+        </button>
         <button
           onClick={() => {
             sceneStore.getState().clear();

@@ -287,3 +287,18 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-11"
+    date: "2026-09-06"
+    title: "T-4.1 线稿档/渲染档双轨切换（P2 开工）"
+    summary: "toon.ts：MeshToonMaterial + 3 阶 gradientMap（110/190/255，NearestFilter 硬边）三件套（原子走实例色通路）+ 反转法线描边材质（BackSide 纯色 MeshBasic）；模块级单例。RendererService.setRenderMode：mesh.userData.matKind（addAtoms/addBonds/基底打标）热换材质引用；描边外壳=原子 InstancedMesh 复制实例矩阵放大 1.07 的 BackSide 外壳（惰性创建、clearGroup 重置标记随重建恢复、raycast 置空不参与拾取）；applyGeometry 收尾 applyMode 按当前档位着装。TopBar「🎨 渲染档/✏️ 线稿档」切换。验收实测（浏览器，16,097 原子示例场景）：切换 10.7ms（<1s）、InstancedMesh uuid 不变（不重建几何）、描边外壳 12 个；像素抽样（同步渲染后取样避空帧）：渲染档 67 阶亮度/maxLum=1.0（有高光）vs 线稿档 35 阶/maxLum=0.913（无高光像素），两档截图归档。经验：IAB 后台标签 rAF 暂停时 drawImage 抓到清空帧——取样前同步 renderer.render 一帧。vitest 119 passed（+5）、build/lint 全绿。实际 1d（预估 2d）。"
+    files_modified:
+      - src/render/toon.ts / toon.test.ts（新建）
+      - src/render/RendererService.ts（setRenderMode/applyMode/ensureOutlines）
+      - src/render/instanced.ts（matKind 打标）
+      - src/ui/TopBar.tsx（双档切换按钮）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

@@ -195,12 +195,13 @@
 
 ## 四、渲染质量（双轨制，对齐 M1 样图审美）
 
-### T-4.1 [P2] 线稿档 / 渲染档双轨切换
+### T-4.1 ✅ [P2] 线稿档 / 渲染档双轨切换（2026-09-06 完成）
 - 描述：新增"线稿档"材质路径（MeshToonMaterial + gradientMap，无高光无阴影，均匀描边），全局一键切换；渲染档保持现有 PBR。
 - 依赖：T-1.4
 - 验收标准：同一场景两档渲染截图各一张，线稿档无高光/阴影像素（脚本抽样验证）；切换 < 1s 不重建几何。
 - 预估工时：2d
 - 关联文件：`src/render/materials.ts`、`src/render/toon.ts`（新建）
+- 完成记录：`toon.ts`——MeshToonMaterial + 3 阶 gradientMap（110/190/255，NearestFilter 硬边色阶）三件套 + 反转法线描边材质（BackSide 纯色）；模块级单例，切换只改 material 引用与描边外壳可见性。RendererService.setRenderMode：按 mesh.userData.matKind 热换材质（addAtoms/addBonds/基底打标）；描边外壳=原子 InstancedMesh 复制实例矩阵放大 1.07 的 BackSide 外壳（惰性创建、clearGroup 后随重建恢复、raycast 置空不参与拾取）；重建几何时 applyMode 自动按当前档位着装。TopBar「🎨 渲染档 / ✏️ 线稿档」一键切换。验收实测：**切换 10.7ms（<1s）**、InstancedMesh uuid 不变（不重建几何）、**像素抽样：渲染档 67 阶亮度/maxLum=1.0（有高光）vs 线稿档 35 阶/maxLum=0.913（无高光像素）**，两档截图归档。vitest 119 passed（+5）、build/lint 全绿。实际 1d。
 
 ### T-4.2 [P2] 预设色板 + 逐元素取色器
 - 描述：3–4 套低饱和学术色板（默认/暖调/冷调/高对比）；参数面板增加逐元素颜色覆盖（存入 `style.palette`）。

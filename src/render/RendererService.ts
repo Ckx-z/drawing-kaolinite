@@ -29,6 +29,7 @@ import { encodeTIFF, resolveExportSize } from '../export/tiff';
 import { addAtoms, addBonds } from './instanced';
 import { substrateMaterial } from './materials';
 import { buildSubstrateGeometry } from './substrate';
+import { materialFor, outlineMaterial, type RenderMode } from './toon';
 import type { SubstrateParams } from '../core/types';
 
 interface ComponentRecord {
@@ -380,6 +381,59 @@ export class RendererService {
     }
   }
 
+  /* ---------- 渲染档位（T-4.1 双轨渲染，D04） ---------- */
+
+  private renderMode: RenderMode = 'render';
+
+  getRenderMode(): RenderMode {
+    return this.renderMode;
+  }
+
+  /**
+   * 全局双档切换：只改材质引用与描边外壳可见性，不触碰几何（验收 <1s）。
+   * 线稿档 = Toon 三阶色阶 + 原子反转法线描边；渲染档 = PBR + PMREM。
+   */
+  setRenderMode(mode: RenderMode): void {
+    this.renderMode = mode;
+    for (const rec of this.records.values()) this.applyMode(rec);
+  }
+
+  /** 按 renderMode 给组件着装：换材质 + 描边外壳可见性（惰性创建） */
+  private applyMode(rec: ComponentRecord): void {
+    for (const child of rec.group.children) {
+      const kind = child.userData.matKind as string | undefined;
+      if (kind) (child as THREE.Mesh).material = materialFor(kind, this.renderMode);
+      else if (child.userData.outline) child.visible = this.renderMode === 'toon';
+    }
+    if (this.renderMode === 'toon') this.ensureOutlines(rec);
+  }
+
+  /** 为组件的原子实例网格创建反转法线描边外壳（每实例放大 1.07，BackSide 纯色） */
+  private ensureOutlines(rec: ComponentRecord): void {
+    if (rec.group.userData.outlinesReady) return;
+    rec.group.userData.outlinesReady = true;
+    for (const child of [...rec.group.children]) {
+      if (child.userData.matKind !== 'atom') continue;
+      const src = child as THREE.InstancedMesh;
+      const outline = new THREE.InstancedMesh(src.geometry, outlineMaterial, src.count);
+      outline.userData.outline = true;
+      outline.raycast = () => undefined; // 描边外壳不参与拾取
+      const mtx = new THREE.Matrix4();
+      const pos = new THREE.Vector3();
+      const quat = new THREE.Quaternion();
+      const scl = new THREE.Vector3();
+      for (let k = 0; k < src.count; k++) {
+        src.getMatrixAt(k, mtx);
+        mtx.decompose(pos, quat, scl);
+        scl.multiplyScalar(1.07);
+        mtx.compose(pos, quat, scl);
+        outline.setMatrixAt(k, mtx);
+      }
+      outline.visible = this.renderMode === 'toon';
+      rec.group.add(outline);
+    }
+  }
+
   /* ---------- 内部实现 ---------- */
 
   /** 离屏渲染会话：改尺寸/透明底渲染一帧，返回现场供 endOffscreen 恢复（PNG/TIFF 共用） */
@@ -456,11 +510,13 @@ export class RendererService {
       rec.group.add(
         new THREE.Mesh(buildSubstrateGeometry(comp.params as SubstrateParams), substrateMaterial),
       );
+      rec.group.children[rec.group.children.length - 1].userData.matKind = 'substrate';
       rec.data = null;
       rec.atomCount = 0;
     }
     this.applyTransform(comp, rec.group);
     rec.group.visible = comp.visible;
+    this.applyMode(rec); // T-4.1：新几何按当前档位着装（含描边外壳重建）
     // 构建完成时点在 store 变更之外，图层面板的原子数依赖此事件刷新
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('kaolin-geometry-updated', { detail: { id: comp.id } }));
@@ -496,6 +552,7 @@ export class RendererService {
       if (o instanceof THREE.Mesh || o instanceof THREE.InstancedMesh) o.geometry.dispose();
     });
     while (g.children.length) g.remove(g.children[0]);
+    g.userData.outlinesReady = false; // 重建后描边外壳随之重建（applyMode）
   }
 
   private resize(): void {
