@@ -203,12 +203,13 @@
 - 关联文件：`src/render/materials.ts`、`src/render/toon.ts`（新建）
 - 完成记录：`toon.ts`——MeshToonMaterial + 3 阶 gradientMap（110/190/255，NearestFilter 硬边色阶）三件套 + 反转法线描边材质（BackSide 纯色）；模块级单例，切换只改 material 引用与描边外壳可见性。RendererService.setRenderMode：按 mesh.userData.matKind 热换材质（addAtoms/addBonds/基底打标）；描边外壳=原子 InstancedMesh 复制实例矩阵放大 1.07 的 BackSide 外壳（惰性创建、clearGroup 后随重建恢复、raycast 置空不参与拾取）；重建几何时 applyMode 自动按当前档位着装。TopBar「🎨 渲染档 / ✏️ 线稿档」一键切换。验收实测：**切换 10.7ms（<1s）**、InstancedMesh uuid 不变（不重建几何）、**像素抽样：渲染档 67 阶亮度/maxLum=1.0（有高光）vs 线稿档 35 阶/maxLum=0.913（无高光像素）**，两档截图归档。vitest 119 passed（+5）、build/lint 全绿。实际 1d。
 
-### T-4.2 [P2] 预设色板 + 逐元素取色器
+### T-4.2 ✅ [P2] 预设色板 + 逐元素取色器（2026-09-06 完成）
 - 描述：3–4 套低饱和学术色板（默认/暖调/冷调/高对比）；参数面板增加逐元素颜色覆盖（存入 `style.palette`）。
 - 依赖：T-1.4
 - 验收标准：切色板全场景即时生效并随场景 JSON 保存/恢复；导出 PNG 颜色与画布一致（sRGB 校验）。
 - 预估工时：1d
 - 关联文件：`src/render/palette.ts`（新建）、`src/ui/ParamPanel.tsx`
+- 完成记录：`palette.ts`——4 套色板（期刊柔和=elements.ts 基线；暖调/冷调/高对比=对默认色确定性 HSL 变换）；`resolveColor` 优先级 overrides > 指定色板 > 默认；active 状态供新组件着色。schema 增 `paletteSettingSchema`（id + overrides #RRGGBB 校验）挂入 sceneDocument（旧场景缺省合法）；store palette 状态随 toSceneDocument/loadScene 往返（未设置时不产出字段）。instanced 着色改走 activeColorFor + mesh.userData.elements 元素表；`recolorAtomMesh` 换色板不重建几何。binding 层 palette 差异同步。ParamPanel 色板区（两分支均可见）：色板下拉 + 场景元素逐个取色器 + 恢复默认。验收测试 8 条。浏览器实测：切暖调整景即时重着色（截图归档）。vitest 127 passed（+8）、build/lint 全绿。实际 1d。
 
 ### T-4.3 [P2] SSAO / 接触阴影 + 构图预设
 - 描述：可选 SSAO 后处理或廉价接触阴影；等距视角/正视/俯视一键预设；画面水平线吸附。
