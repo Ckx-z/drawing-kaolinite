@@ -2,6 +2,7 @@
  * 顶部工具栏 —— T-1.6/T-1.7（对齐 demo：示例场景 / 保存场景 / 打开场景 / 导出 PNG / 清空）
  */
 import { useRef, useState } from 'react';
+import { buildLayerPngs } from '../export/layers';
 import { moduleEntryFromComponent, moduleEntryFromScene, saveModule } from '../state/moduleLibrary';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
@@ -60,6 +61,21 @@ export default function TopBar() {
     const { dataUrl, width, height } = svc.exportPNG({ dpi, alpha });
     download(dataUrl, `kaolin-16cm-${dpi}dpi.png`);
     flash(`已导出 ${width} × ${height} px（16cm @ ${dpi}dpi${alpha ? '，透明底' : ''}）`);
+  };
+
+  /** T-5.4：分层透明 PNG（每可见组件一张，按远→近叠放序；供 PPT 叠放编辑） */
+  const onExportLayeredPNG = (): void => {
+    const svc = rendererRef.current;
+    if (!svc) return;
+    const layers = buildLayerPngs(svc, { dpi, widthCM: 16 });
+    if (!layers.length) {
+      flash('画布为空，先添加组件再导出分层 PNG');
+      return;
+    }
+    layers.forEach((layer, i) => {
+      setTimeout(() => download(layer.dataUrl, layer.filename), i * 350);
+    });
+    flash(`已导出 ${layers.length} 张分层 PNG（远→近序号命名，PPT 按序叠放即还原）`);
   };
 
   /** T-5.3：分组 SVG 矢量导出（线稿档画风，PPT 转形状/取消组合逐组件编辑） */
@@ -176,6 +192,9 @@ export default function TopBar() {
           title={'矢量图（线稿档画风）：PPT 插入后右键「转换为形状」可逐组件编辑'}
         >
           导出 SVG
+        </button>
+        <button onClick={onExportLayeredPNG} title="每可见组件一张透明底 PNG（远→近序号命名），PPT 中按序叠放即还原整图">
+          导出分层 PNG
         </button>
       </div>
       <div className="tb-group">

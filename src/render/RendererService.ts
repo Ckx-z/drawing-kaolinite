@@ -37,7 +37,7 @@ import { materialFor, outlineMaterial, type RenderMode } from './toon';
 import type { SubstrateParams } from '../core/types';
 
 interface ComponentRecord {
-  comp: SceneComponent;
+  comp: RenderComponent; // store 条目恒带 id（RenderComponent），id 不可缺省
   group: THREE.Group;
   data: GeometryData | null;
   atomCount: number;
@@ -444,6 +444,62 @@ export class RendererService {
       }, {}),
       fallbackColor: '#9AA0A6',
     });
+  }
+
+  /**
+   * 单层隔离 PNG（T-5.4 分层导出的基础）：只渲染指定组件（其他组件与 gizmo 隐藏），
+   * 透明底 RGBA。分辨率公式与 exportPNG 一致（含 maxTextureSize 降级）。
+   */
+  exportComponentPNG(
+    id: string,
+    opts: ExportOptions,
+  ): { dataUrl: string; width: number; height: number } | null {
+    const rec = this.records.get(id);
+    if (!rec) return null;
+    const plan = resolveExportSize(
+      opts.dpi,
+      opts.widthCM ?? 16,
+      this.container.clientWidth,
+      this.container.clientHeight,
+      this.renderer.capabilities.maxTextureSize,
+    );
+    // 隐藏其他组件与 gizmo（在 beginOffscreen 渲染前生效）
+    const prevVis: Array<[string, boolean]> = [];
+    for (const [k, r] of this.records) {
+      prevVis.push([k, r.group.visible]);
+      r.group.visible = k === id && r.comp.visible;
+    }
+    const tcVisible = this.tc.visible;
+    this.tc.visible = false;
+    const st = this.beginOffscreen(plan.w, plan.h, true); // 透明底
+    try {
+      const dataUrl = this.renderer.domElement.toDataURL('image/png');
+      return { dataUrl, width: plan.w, height: plan.h };
+    } finally {
+      this.endOffscreen(st);
+      this.tc.visible = tcVisible;
+      for (const [k, v] of prevVis) {
+        const r = this.records.get(k);
+        if (r) r.group.visible = v;
+      }
+    }
+  }
+
+  /** 可见组件按深度排序（远→近，画家序）：分层 PNG 叠放顺序的依据 */
+  visibleLayersByDepth(): Array<{ id: string; name: string }> {
+    this.scene.updateMatrixWorld(true);
+    const viewInv = this.camera.matrixWorldInverse;
+    const pos = new THREE.Vector3();
+    const layers = [] as Array<{ id: string; name: string; depth: number }>;
+    for (const rec of this.records.values()) {
+      if (!rec.comp.visible) continue;
+      rec.group.getWorldPosition(pos);
+      pos.applyMatrix4(viewInv);
+      layers.push({ id: rec.comp.id, name: rec.comp.name, depth: pos.z });
+    }
+    return layers
+      .sort((a, b) => a.depth - b.depth) // 视空间 z 越小越远
+      .map(({ id, name }) => ({ id, name }));
   }
 
   /* ---------- 色板（T-4.2） ---------- */
