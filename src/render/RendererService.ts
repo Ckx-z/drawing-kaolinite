@@ -20,6 +20,11 @@ import {
 } from '../core/builders';
 import type { GeometryData } from '../core/geometry';
 import type { SceneComponent, Transform } from '../core/types';
+import {
+  createGeometryEngine,
+  type GeometryEngine,
+  type GeometryRequest,
+} from '../core/worker';
 import { addAtoms, addBonds } from './instanced';
 import { substrateMaterial } from './materials';
 import { buildSubstrateGeometry } from './substrate';
@@ -61,6 +66,10 @@ export class RendererService {
 
   private records = new Map<string, ComponentRecord>();
   private cifText = '';
+  /** 几何生成引擎（T-2.2：默认 Worker 子线程；测试/回退注入同步引擎） */
+  private readonly engine: GeometryEngine;
+  /** 每组件构建序号：滑块连续拖动时丢弃过期响应（只采纳最后一次请求） */
+  private buildTokens = new Map<string, number>();
   private raf = 0;
   private ro: ResizeObserver | null = null;
   private downXY: [number, number] | null = null;
@@ -73,7 +82,8 @@ export class RendererService {
   /** gizmo 拖动结束帧的变换同步回调（T-1.5 状态层接入） */
   onTransformChange: ((id: string) => void) | null = null;
 
-  constructor(private container: HTMLElement) {
+  constructor(private container: HTMLElement, opts?: { engine?: GeometryEngine }) {
+    this.engine = opts?.engine ?? createGeometryEngine();
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.outputEncoding = THREE.sRGBEncoding;
@@ -136,29 +146,31 @@ export class RendererService {
   addComponent(comp: RenderComponent): void {
     const group = new THREE.Group();
     group.userData.componentId = comp.id;
-    const { data, atomCount } = this.fillGroup(group, comp);
+    const rec: ComponentRecord = { comp, group, data: null, atomCount: 0 };
+    this.records.set(comp.id, rec);
     this.applyTransform(comp, group);
     group.visible = comp.visible;
-    this.records.set(comp.id, { comp, group, data, atomCount });
     this.scene.add(group);
+    this.requestBuild(rec, comp);
   }
 
-  /** 参数变化后全量重建该组件（其余组件不触碰） */
+  /** 参数变化后全量重建该组件（其余组件不触碰；几何经引擎异步生成） */
   rebuildComponent(comp: RenderComponent): void {
     const rec = this.records.get(comp.id);
     if (!rec) return;
     this.clearGroup(rec.group);
     rec.comp = comp;
-    const { data, atomCount } = this.fillGroup(rec.group, comp);
-    rec.data = data;
-    rec.atomCount = atomCount;
+    rec.data = null;
+    rec.atomCount = 0;
     this.applyTransform(comp, rec.group);
     rec.group.visible = comp.visible;
+    this.requestBuild(rec, comp);
   }
 
   removeComponent(id: string): void {
     const rec = this.records.get(id);
     if (!rec) return;
+    this.buildTokens.set(id, (this.buildTokens.get(id) ?? 0) + 1); // 使在途构建作废
     this.clearGroup(rec.group);
     this.scene.remove(rec.group);
     this.records.delete(id);
@@ -318,6 +330,7 @@ export class RendererService {
   dispose(): void {
     cancelAnimationFrame(this.raf);
     this.ro?.disconnect();
+    this.engine.dispose(); // 终止几何 Worker（同步引擎为空操作）
     this.renderer.domElement.removeEventListener('pointerdown', this.onDown);
     this.renderer.domElement.removeEventListener('pointerup', this.onUp);
     this.orbit.dispose();
@@ -332,23 +345,59 @@ export class RendererService {
 
   /* ---------- 内部实现 ---------- */
 
-  /** 装载组件几何到 group（params 联合在 buildData 的 switch 内收窄；基底走 null 分支） */
-  private fillGroup(
-    group: THREE.Group,
-    comp: RenderComponent,
-  ): { data: GeometryData | null; atomCount: number } {
-    const data = this.buildData(comp);
+  /**
+   * 发起几何构建（T-2.2）：基底走主线程挤出几何，其余经引擎（默认 Worker 子线程）。
+   * token 保证滑块连续拖动时只采纳最后一次请求的结果；Worker 失败时同步回退一次。
+   */
+  private requestBuild(rec: ComponentRecord, comp: RenderComponent): void {
+    if (comp.type === 'rubber_substrate') {
+      this.applyGeometry(rec, comp, null);
+      return;
+    }
+    const token = (this.buildTokens.get(comp.id) ?? 0) + 1;
+    this.buildTokens.set(comp.id, token);
+    const req: GeometryRequest = { kind: comp.type, cifText: this.cifText, params: comp.params };
+    this.engine
+      .build(req)
+      .then((result) => {
+        if (this.buildTokens.get(comp.id) !== token) return; // 已被新请求/删除作废
+        if (this.records.get(comp.id) !== rec) return;
+        this.applyGeometry(rec, comp, result);
+      })
+      .catch(() => {
+        if (this.buildTokens.get(comp.id) !== token) return;
+        if (this.records.get(comp.id) !== rec) return;
+        try {
+          this.applyGeometry(rec, comp, this.buildData(comp)); // 同步回退（保持功能可用）
+        } catch {
+          /* CIF 缺失等异常：保持空几何，等下一次 rebuild */
+        }
+      });
+  }
+
+  /** 把构建结果装载到 group（data=null 走基底挤出几何）；完成后通知 UI 刷新原子数 */
+  private applyGeometry(rec: ComponentRecord, comp: RenderComponent, data: GeometryData | null): void {
+    this.clearGroup(rec.group);
     if (data) {
       const style = (comp.params as { style?: string }).style;
       const ballstick = style === '球棍' || comp.type === 'molecule';
-      addAtoms(group, data.atoms, ballstick);
-      if (ballstick && data.bonds.length) addBonds(group, data.atoms, data.bonds, 0.16);
-      return { data, atomCount: data.atoms.length };
+      addAtoms(rec.group, data.atoms, ballstick);
+      if (ballstick && data.bonds.length) addBonds(rec.group, data.atoms, data.bonds, 0.16);
+      rec.data = data;
+      rec.atomCount = data.atoms.length;
+    } else {
+      rec.group.add(
+        new THREE.Mesh(buildSubstrateGeometry(comp.params as SubstrateParams), substrateMaterial),
+      );
+      rec.data = null;
+      rec.atomCount = 0;
     }
-    group.add(
-      new THREE.Mesh(buildSubstrateGeometry(comp.params as SubstrateParams), substrateMaterial),
-    );
-    return { data: null, atomCount: 0 };
+    this.applyTransform(comp, rec.group);
+    rec.group.visible = comp.visible;
+    // 构建完成时点在 store 变更之外，图层面板的原子数依赖此事件刷新
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('kaolin-geometry-updated', { detail: { id: comp.id } }));
+    }
   }
 
   private buildData(comp: SceneComponent): GeometryData | null {

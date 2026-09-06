@@ -203,3 +203,17 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-05"
+    date: "2026-09-06"
+    title: "T-2.2 Web Worker 化几何生成（阶段 2 第 6 条完成）"
+    summary: "src/core/worker.ts：computeGeometry 统一计算入口（Worker 脚本与同步回退共用，协议一致性单测保证）+ GeometryEngine 接口（createSyncEngine / createWorkerEngine，spawn 可注入）；src/core/geometryWorker.ts 模块 Worker 入口（Vite new URL 方式，独立 chunk）；RendererService 构造器注入引擎，组件生命周期改异步构建——requestBuild 按 id 持 token（滑块连续拖动只采纳最后一次请求，删除组件使在途构建作废），Worker 失败自动同步回退一次，构建完成后派发 kaolin-geometry-updated 事件（LayerPanel 用 useSyncExternalStore 监听刷新原子数）。computeGeometry 补 CIF 存在性校验使错误经协议回传；dispose 拒绝新请求并终止 Worker。验收 9 条测试：协议与 builders 直调逐位一致（15k 原子双层管、2448 原子片层基线）、假 Worker 验证 id 匹配/错误传导/过期丢弃、工厂回退。vitest 93 passed（+9）、build/lint 全绿、demo 基线 ALL OK。实际 0.5d（预估 1d）。"
+    files_modified:
+      - src/core/worker.ts / geometryWorker.ts / worker.test.ts（新建）
+      - src/render/RendererService.ts（引擎注入 + 异步 requestBuild/applyGeometry + token 取消）
+      - src/ui/LayerPanel.tsx（原子数异步刷新）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"
