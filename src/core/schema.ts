@@ -142,7 +142,7 @@ export const sceneDocumentSchema = z.strictObject({
   components: z.array(componentSchema),
 });
 
-/* ---------- 模块库条目（单组件模块；组合模块 T-3.1 扩展） ---------- */
+/* ---------- 模块库条目（单组件模块 + 组合模块 T-3.1） ---------- */
 
 const moduleCommon = {
   id: z.string().min(1),
@@ -155,6 +155,18 @@ const moduleCommon = {
   moduleVersion: z.number().optional(),
 };
 
+/** 组合模块：一次保存多个组件（含各自变换），实例化时整体复现相对位置 */
+export const combinedModuleSchema = z.strictObject({
+  type: z.literal('combined'),
+  id: z.string().min(1),
+  name: z.string().min(1),
+  components: z.array(componentSchema).min(1),
+  thumb: z.string().startsWith('data:image/'),
+  tags: z.array(z.string()).optional(),
+  createdAt: z.string().optional(),
+  moduleVersion: z.number().optional(),
+});
+
 export const moduleSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('kaolinite_sheet'), params: sheetParamsSchema, ...moduleCommon }),
   z.strictObject({ type: z.literal('halloysite_tube'), params: tubeParamsSchema, ...moduleCommon }),
@@ -165,6 +177,7 @@ export const moduleSchema = z.discriminatedUnion('type', [
     params: substrateParamsSchema,
     ...moduleCommon,
   }),
+  combinedModuleSchema,
 ]);
 
 /* ---------- 默认值（与 DATA_DICT / demo DEFAULTS 一致） ---------- */

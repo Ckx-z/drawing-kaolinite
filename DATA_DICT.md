@@ -84,18 +84,36 @@
 
 ## 八、模块库条目
 
+**单组件模块**：
+
 ```jsonc
 {
   "id": "m<timestamp>",
   "name": "模块显示名",
-  "type": "kaolinite_sheet",            // 组合模块时用 components[] 替代单组件字段（T-3.1）
+  "type": "kaolinite_sheet",            // 五类组件类型之一
   "params": { /* 同上 */ },
   "transform": { /* 同上 */ },
   "thumb": "data:image/jpeg;base64,…"   // 150×110 JPEG，入库时快照
 }
 ```
+
+**组合模块**（T-3.1，`type: "combined"`）：
+
+```jsonc
+{
+  "id": "m<timestamp>",
+  "name": "组合模块（N 组件）",
+  "type": "combined",
+  "components": [                        // 各组件完整条目（identity+params+transform+visible）
+    { "id": "c1", "type": "halloysite_tube", "params": {…}, "transform": {…}, "visible": true }
+  ],
+  "thumb": "data:image/jpeg;base64,…"    // 整景快照（RendererService.snapshotScene）
+}
+```
+- 实例化：逐组件 `addComponent`（变换原样还原 → **相对位置一致**），实例化后各组件仍独立可选中/调参/删除。
+- 校验：`combinedModuleSchema`（`components` ≥ 1；strictObject）；与五类单组件变体共存于 `moduleSchema` 判别联合。
 - 浏览器期存储：localStorage `kaolin_modules_v1`（基线）→ IndexedDB/Dexie（T-2.3）。
-- 规划字段（T-3.2）：`tags[]`、`createdAt`、`moduleVersion`。
+- 已实现字段：`tags[]`、`createdAt`、`moduleVersion`（T-3.2 检索/版本规划使用）。
 
 ## 九、元素显示数据（Crystal.ELEMENTS）
 

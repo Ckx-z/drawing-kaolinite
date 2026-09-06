@@ -76,6 +76,35 @@ export function moduleEntryFromComponent(
   }) as ModuleEntry;
 }
 
+/**
+ * 从整景（或选区）构造组合模块条目 —— T-3.1。
+ * 各组件的 params/transform/visible 原样入库（实例化时逐个 addComponent，
+ * 变换保持入库时的绝对值 → 组件间相对位置天然一致）。
+ */
+export function moduleEntryFromScene(
+  components: SceneEntry[],
+  thumb: string,
+  name: string,
+): ModuleEntry {
+  return moduleSchema.parse({
+    id: `m${Date.now()}`,
+    name,
+    type: 'combined',
+    components: components.map((c) => ({
+      id: c.id,
+      name: c.name,
+      type: c.type,
+      params: c.params,
+      transform: c.transform,
+      visible: c.visible,
+      locked: c.locked ?? false,
+    })),
+    thumb,
+    createdAt: new Date().toISOString(),
+    moduleVersion: 1,
+  }) as ModuleEntry;
+}
+
 export async function deleteModule(id: string): Promise<void> {
   await getDB().modules.delete(id);
   cache = null;

@@ -187,3 +187,19 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-04"
+    date: "2026-09-06"
+    title: "T-3.1 组合模块存取（阶段 2 第 5 条完成）"
+    summary: "combinedModuleSchema（type:'combined' + components[]≥1）并入 moduleSchema 判别联合，ModuleEntry 升级为联合类型（编译器强制 UI 判别分支）；moduleEntryFromScene 工厂（组件 identity+params+transform+visible 原样入库）；RendererService.snapshotScene 整景缩略图（仅隐 gizmo，区别于 snapshotComponent 的隔离快照）；TopBar 新增「★ 存组合」；ModulePanel 实例化判别分支逐组件 addComponent（变换原样还原、id 全新生成、实例化后各组件仍独立可调）。导入导出/迁移链路经 moduleSchema 校验自动兼容。验收测试 7 条：核心=三组件（管+颗粒+分子）保存→清空→实例化逐对位置差向量与距离逐一相等（强于验收线的包围盒重叠率）+ 旋转/缩放/参数/显隐逐组件一致。vitest 84 passed（+6）、build/lint 全绿、demo 基线 ALL OK。DATA_DICT §八补组合格式。实际 0.5d（预估 1d）。"
+    files_modified:
+      - src/core/schema.ts（+combinedModuleSchema）
+      - src/state/moduleLibrary.ts（+moduleEntryFromScene）
+      - src/state/combinedModule.test.ts（新建，7 条）
+      - src/render/RendererService.ts（+snapshotScene）
+      - src/ui/TopBar.tsx（+存组合）/ src/ui/ModulePanel.tsx（实例化分支）
+      - DATA_DICT.md / TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

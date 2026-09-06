@@ -28,7 +28,22 @@ export default function ModulePanel() {
   }, []);
 
   const instantiate = (m: ModuleEntry): void => {
-    const id = sceneStore.getState().addComponent(m.type, {
+    const s = sceneStore.getState();
+    if (m.type === 'combined') {
+      // T-3.1 组合模块：逐组件 addComponent（变换原样还原 → 相对位置一致），
+      // 实例化后各组件仍独立可选中/调参/删除
+      for (const c of m.components) {
+        s.addComponent(c.type, {
+          name: c.name,
+          params: c.params,
+          transform: c.transform,
+          visible: c.visible,
+        });
+      }
+      rendererRef.current?.frameAll();
+      return;
+    }
+    const id = s.addComponent(m.type, {
       name: `${m.name} 副本`,
       params: m.params,
       transform: m.transform,
@@ -97,7 +112,7 @@ export default function ModulePanel() {
         </div>
       ) : (
         <p className="hint">
-          暂无模块。选中组件后点顶栏「★ 存为模块」，即可反复复用；半年积累 8–10 个常用模块。
+          暂无模块。选中组件后点顶栏「★ 存为模块」、或点「★ 存组合」保存整景，即可反复复用；半年积累 8–10 个常用模块。
         </p>
       )}
     </>

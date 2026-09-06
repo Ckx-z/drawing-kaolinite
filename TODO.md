@@ -168,12 +168,13 @@
 
 ## 三、模块库系统
 
-### T-3.1 [P1] 组合模块存取（多组件模块）
+### T-3.1 ✅ [P1] 组合模块存取（多组件模块）（2026-09-06 完成）
 - 描述：模块 schema 扩展 `components[]`（一次保存选中组或整个场景）；组合模块入库/实例化时保持组件间相对变换。
 - 依赖：T-1.2、T-2.3
 - 验收标准：保存"管+颗粒+分子"三组件模块→清空画布→重新实例化，相对位置一致（包围盒重叠率断言）；缩略图完整。
 - 预估工时：1d
 - 关联文件：`src/core/schema.ts`、`src/state/moduleLibrary.ts`
+- 完成记录：`combinedModuleSchema`（`type:'combined'` + `components[]` ≥1，与五类单组件变体共存于 moduleSchema 判别联合，ModuleEntry 升级为联合类型）；`moduleEntryFromScene` 工厂 + `RendererService.snapshotScene` 整景缩略图（仅隐 gizmo）；TopBar 新增「★ 存组合」保存整景；ModulePanel 实例化判别分支——逐组件 addComponent（变换原样还原，id 全新生成），实例化后各组件仍独立可调。导入导出/迁移链路自动兼容（moduleSchema 校验）。验收测试 7 条：核心=三组件保存→清空→实例化**逐对位置差向量与距离逐一相等**（强于包围盒重叠率断言）+ 旋转/缩放/参数/显隐逐组件一致；另覆盖 schema 拒绝（空 components/thumb 前缀/未知字段）、JSON 往返、CRUD、导入导出往返。vitest 84 passed（+6）、build/lint 全绿。DATA_DICT §八已更新。实际 0.5d。
 
 ### T-3.2 [P2] 模块检索 / 分类 / 版本
 - 描述：模块名称/标签搜索、类型筛选、收藏排序；记录创建时间与来源工程版本（`moduleVersion` 字段）。

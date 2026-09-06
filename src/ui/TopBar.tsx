@@ -2,7 +2,7 @@
  * 顶部工具栏 —— T-1.6/T-1.7（对齐 demo：示例场景 / 保存场景 / 打开场景 / 导出 PNG / 清空）
  */
 import { useRef, useState } from 'react';
-import { moduleEntryFromComponent, saveModule } from '../state/moduleLibrary';
+import { moduleEntryFromComponent, moduleEntryFromScene, saveModule } from '../state/moduleLibrary';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
 import { loadPresetScene } from './preset';
@@ -75,6 +75,21 @@ export default function TopBar() {
     flash(`已存为模块「${comp.name}」，以后一键复用`);
   };
 
+  /** T-3.1：整景存为组合模块（组件各自变换入库，实例化时相对位置整体复现） */
+  const onSaveCombined = async (): Promise<void> => {
+    const s = sceneStore.getState();
+    const svc = rendererRef.current;
+    if (!svc) return;
+    if (!s.components.length) {
+      flash('场景为空，先添加组件再存组合模块');
+      return;
+    }
+    const thumb = svc.snapshotScene();
+    const name = `组合模块（${s.components.length} 组件）`;
+    await saveModule(moduleEntryFromScene(s.components, thumb, name));
+    flash(`已存组合模块「${name}」，实例化后各组件仍独立可调`);
+  };
+
   return (
     <header className="topbar">
       <div className="brand">
@@ -98,6 +113,14 @@ export default function TopBar() {
           title="把选中的组件存入左侧「我的模块」，可反复复用"
         >
           ★ 存为模块
+        </button>
+        <button
+          onClick={() => {
+            void onSaveCombined();
+          }}
+          title="把整景存为一个组合模块（管+颗粒+分子…整体复用，实例化后各组件仍独立可调）"
+        >
+          ★ 存组合
         </button>
       </div>
       <div className="tb-group">
