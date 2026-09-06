@@ -137,12 +137,13 @@
 - 关联文件：`src/core/builders.ts`（buildHalloysiteTube/rollToTube）
 - 完成记录：builders.buildHalloysiteTube 增 `curlAxis`（'a' 基线 / 'b' = 按 b 周向铺板后交换 x↔y，使卷曲仍沿 x——半径校验两轴一致：内 ≈11.4Å 外 ≈23Å 同容差区间）与 `portNoise`（mulberry32(1337) 确定性噪声：管两端 3Å 内原子扰动，轴向全幅/径向 0.35×，随端口向内线性衰减；computeBonds 前施加键连自适应）。schema tubeParams 增两字段（default 兼容旧场景）；paramDefs 增「卷曲方向」下拉与「端口噪声」滑块；DEFAULT_PARAMS 同步；预烘焙清单补新字段（标记升 v2）。验收：7 条测试全过（双轴半径一致/构型确不同/缺省兼容/键数变化<5%/确定性/幅值 ≤2×/零噪声逐位一致）；浏览器实测 b 轴双层管 15,502 原子竖立渲染、端口天然不规则、参数面板控件正常（截图归档）。vitest 191 passed（+7）、build/lint 全绿。实际 1d。
 
-### T-2.7 [P2] 晶学严格模式（保留 β/γ 夹角）
+### T-2.7 ✅ [P2] 晶学严格模式（保留 β/γ 夹角）（2026-09-06 完成）
 - 描述：新增开关：关闭"示意正交化"，按真实三斜晶胞向量投影（层片倾斜呈现）；导出与渲染全链路兼容。
 - 依赖：T-1.3
 - 验收标准：开关切换后键长与 CIF 距离矩阵偏差 < 0.5%（严格模式下）；默认仍为示意模式。
 - 预估工时：1d
 - 关联文件：`src/core/crystal.ts`（latticeVectors 已有实现，接 UI 开关）
+- 完成记录：crystal.buildSlab 增 `orthogonal` 选项——false 时全投影（含层内 fz 的 β 倾斜贡献）+ 层间沿真实 c 轴单位向量 × d001 堆叠；正交路径逐字节不变（回归覆盖）。builders.buildKaoliniteSheet 透传 `strictCell`（**卷曲管线保持示意正交化**——斜方板卷曲会引入人为扭曲，严格模式仅用于片层）。schema sheetParams.strictCell default false（旧场景兼容）；paramDefs 勾选框；DEFAULT_PARAMS 同步。验收：**严格模式全部 Si–O 键长落在 CIF 距离矩阵理论集合内（偏差 <0.5%）**（理论集合 = 单胞位点 × 27 周期镜像的真实度量枚举）；双层堆叠层间位移 x ≈ d001·cosβ ≈ -1.9Å（示意模式 ≈0）——倾斜呈现数值化确认；默认模式原子数基线 2448 回归 ✓；schema 旧文件兼容 ✓；浏览器实测双层片层倾斜渲染（截图归档）。单测 4 条。vitest 195 passed（+4）、build/lint 全绿。实际 1d。
 
 ### T-2.8 ✅ [P2] 分子导入 v1.0：SMILES 文本输入（2026-09-06 完成）—— 决策（Q4）实现偏差：内置构象器替代 RDKit WASM
 - 描述：内置分子库之外，支持用户输入 SMILES，经 RDKit WASM 转 3D 构象后进入"分子"组件类型（球棍/空间填充可切换）。

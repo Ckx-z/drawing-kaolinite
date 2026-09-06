@@ -26,6 +26,7 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     { key: 'shape', label: '片层轮廓', type: 'select', options: ['矩形', '六角'] },
     { key: 'style', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
     { key: 'edgeH', label: '边缘羟基饱和（实验）', type: 'checkbox' },
+    { key: 'strictCell', label: '晶学严格模式（保留 β/γ 夹角）', type: 'checkbox' },
   ],
   halloysite_tube: [
     { key: 'innerR', label: '内半径', unit: 'Å', min: 8, max: 40, step: 1 },

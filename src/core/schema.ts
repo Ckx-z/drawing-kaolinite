@@ -44,6 +44,8 @@ export const sheetParamsSchema = z.strictObject({
   shape: z.enum(['矩形', '六角']),
   style: renderStyle,
   edgeH: z.boolean(),
+  // T-2.7：晶学严格模式（保留 β/γ 夹角的真实三斜投影）；默认示意正交化（D03）
+  strictCell: z.boolean().default(false),
   // D05 预留：showInterlayer（T-2.4 多矿物接入时启用，当前类型不暴露）
 });
 
@@ -208,6 +210,7 @@ export const DEFAULT_PARAMS = {
     shape: '矩形',
     style: '空间填充',
     edgeH: false,
+    strictCell: false,
   },
   halloysite_tube: {
     innerR: 14,

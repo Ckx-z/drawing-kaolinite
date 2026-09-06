@@ -28,7 +28,7 @@ describe('addComponent：默认值与命名（对齐 demo DEFAULTS / DATA_DICT�
 
     const sheet = comps[0];
     expect(sheet.type).toBe('kaolinite_sheet');
-    expect(sheet.params).toMatchObject({ Lx: 70, Ly: 60, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false });
+    expect(sheet.params).toMatchObject({ Lx: 70, Ly: 60, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false, strictCell: false });
     expect(comps[3].transform.scale).toBe(4);
     expect(comps[3].type).toBe('molecule');
     expect(comps.every((c) => c.visible && c.locked === false)).toBe(true);

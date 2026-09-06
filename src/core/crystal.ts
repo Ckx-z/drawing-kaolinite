@@ -270,6 +270,8 @@ export interface SlabOptions {
   nb: number;
   nc: number;
   d001: number;
+  /** T-2.7 晶学严格模式：false（默认）= 示意正交化 */
+  orthogonal?: boolean;
 }
 
 /**
@@ -278,16 +280,39 @@ export interface SlabOptions {
  */
 export function buildSlab(parsed: ParsedCIF, opts: SlabOptions): { atoms: Atom[]; size: Size3 } {
   const base = expandSymmetry(parsed.atoms, parsed.symops);
-  const L = latticeVectors(parsed.cell, true);
+  // T-2.7：orthogonal = false 时走晶学严格模式（保留 β/γ 夹角的真实三斜投影，
+  // 层间沿真实 c 轴方向堆叠）；默认 true = 示意正交化（D03，路径保持逐字节不变）
+  const orthogonal = opts.orthogonal ?? true;
+  const L = latticeVectors(parsed.cell, orthogonal);
   const d001 = opts.d001 || parsed.cell.c;
   const atoms: Atom[] = [];
-  for (let k = 0; k < opts.nc; k++) {
-    for (let j = 0; j < opts.nb; j++) {
-      for (let i = 0; i < opts.na; i++) {
-        for (const a of base) {
-          const zIntra = a.fz * parsed.cell.c; // 层内高度（不缩放）
-          const p = fracToCart(L, a.fx + i, a.fy + j, 0);
-          atoms.push({ label: a.label, el: a.el, x: p.x, y: p.y, z: zIntra + k * d001 });
+  if (orthogonal) {
+    for (let k = 0; k < opts.nc; k++) {
+      for (let j = 0; j < opts.nb; j++) {
+        for (let i = 0; i < opts.na; i++) {
+          for (const a of base) {
+            const zIntra = a.fz * parsed.cell.c; // 层内高度（不缩放）
+            const p = fracToCart(L, a.fx + i, a.fy + j, 0);
+            atoms.push({ label: a.label, el: a.el, x: p.x, y: p.y, z: zIntra + k * d001 });
+          }
+        }
+      }
+    }
+  } else {
+    // 严格模式：全投影（含层内 fz 的 β 倾斜贡献）；层间沿 c 轴单位向量 × d001
+    const cl = Math.hypot(L.cx, L.cy, L.cz) || 1;
+    const ucx = L.cx / cl, ucy = L.cy / cl, ucz = L.cz / cl;
+    for (let k = 0; k < opts.nc; k++) {
+      const lift = k * d001;
+      for (let j = 0; j < opts.nb; j++) {
+        for (let i = 0; i < opts.na; i++) {
+          for (const a of base) {
+            const p = fracToCart(L, a.fx + i, a.fy + j, a.fz);
+            atoms.push({
+              label: a.label, el: a.el,
+              x: p.x + ucx * lift, y: p.y + ucy * lift, z: p.z + ucz * lift,
+            });
+          }
         }
       }
     }

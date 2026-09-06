@@ -38,7 +38,7 @@ describe('协议一致性：computeGeometry 与 builders 直调逐位一致', ()
   });
 
   it('四类素材请求均正确分发（片层/颗粒/分子）', () => {
-    const sheet = computeGeometry({ kind: 'kaolinite_sheet', cifText: CIF, params: { Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false } });
+    const sheet = computeGeometry({ kind: 'kaolinite_sheet', cifText: CIF, params: { Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false, strictCell: false } });
     expect(sheet.atoms.length).toBe(2448); // T-0.1 基线
 
     const part = computeGeometry({ kind: 'nanoparticle', cifText: '', params: { radius: 9, grains: 150, seed: 7, mode: '簇装' } });
@@ -104,7 +104,7 @@ describe('Worker 引擎：异步语义与协议编解码（假 Worker）', () =>
     const { worker } = fakeSpawn();
     const engine = createWorkerEngine(() => worker);
     await expect(
-      engine.build({ kind: 'kaolinite_sheet', cifText: '', params: { Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false } }),
+      engine.build({ kind: 'kaolinite_sheet', cifText: '', params: { Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false, strictCell: false } }),
     ).rejects.toThrow('CIF 数据未设置');
     engine.dispose();
   });

@@ -41,7 +41,7 @@ describe('片层切片（基线：60×50Å 单层 = 2448 原子 / 3372 键）', 
       d001: 7.4,
       shape: '矩形',
       style: '空间填充',
-      edgeH: false,
+      edgeH: false, strictCell: false
     });
     expect(sheet.atoms).toHaveLength(2448);
     expect(sheet.bonds).toHaveLength(3372);
@@ -55,7 +55,7 @@ describe('片层切片（基线：60×50Å 单层 = 2448 原子 / 3372 键）', 
       d001: 7.4,
       shape: '六角',
       style: '空间填充',
-      edgeH: true,
+      edgeH: true, strictCell: false
     });
     expect(hex.atoms).toHaveLength(2597);
     expect(hex.bonds).toHaveLength(3514);
@@ -69,7 +69,7 @@ describe('片层切片（基线：60×50Å 单层 = 2448 原子 / 3372 键）', 
       d001: 10,
       shape: '矩形',
       style: '空间填充',
-      edgeH: false,
+      edgeH: false, strictCell: false
     });
     // 3 层共享同一 na×nb 骨架：层内原子 3×，羟基氢 3×
     expect(tri.atoms.length).toBeGreaterThan(2448 * 2);

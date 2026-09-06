@@ -437,3 +437,19 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-21"
+    date: "2026-09-06"
+    title: "T-2.7 晶学严格模式（D03 后路落地，P2 第 12 条）"
+    summary: "crystal.buildSlab 增 orthogonal 选项——false 时全投影（层内 fz 的 β 倾斜贡献进入 x/z）+ 层间沿真实 c 轴单位向量 × d001 堆叠；正交路径逐字节不变（回归基线 2448 原子覆盖）。builders.buildKaoliniteSheet 透传 strictCell（卷曲管线保持示意正交化——斜方板卷曲会引入人为扭曲，仅片层暴露）。schema sheetParams.strictCell default false（旧场景兼容）、DEFAULT_PARAMS/paramDefs/DATA_DICT 同步。验收：严格模式全部 Si–O 键长落在 CIF 距离矩阵理论集合内（单胞位点×27 周期镜像真实度量枚举，偏差 <0.5%）；双层堆叠层间 x 位移 ≈ d001·cosβ ≈ -1.9A（示意模式 ≈0）——倾斜数值化确认；浏览器实测双层片层倾斜渲染（截图归档）。调试：倾斜信号先误用 x-z/y-z 单层协方差（幅值仅 ~0.6-1，与随机噪声不可分）——改为双层堆叠层间位移方向（强信号 >1A vs <0.1A）。单测 4 条。vitest 195 passed（+4）、build/lint 全绿。实际 1d。"
+    files_modified:
+      - src/core/crystal.ts（buildSlab orthogonal 分支 + SlabOptions）
+      - src/core/builders.ts（strictCell 透传）
+      - src/core/schema.ts（sheetParams.strictCell + DEFAULT_PARAMS）
+      - src/core/strictCell.test.ts（新建，4 条）
+      - src/ui/paramDefs.ts / DATA_DICT.md
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

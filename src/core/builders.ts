@@ -29,7 +29,8 @@ export function buildKaoliniteSheet(cifText: string, p: SheetParams): GeometryDa
   const parsed = C.parseCIF(cifText);
   const na = Math.max(2, Math.round(p.Lx / parsed.cell.a));
   const nb = Math.max(2, Math.round(p.Ly / parsed.cell.b));
-  const slab = C.buildSlab(parsed, { na, nb, nc: p.layers, d001: p.d001 });
+  // T-2.7：strictCell = 晶学严格模式（保留 β/γ 夹角）；卷曲管线保持示意正交化（斜方板卷曲会引入人为扭曲）
+  const slab = C.buildSlab(parsed, { na, nb, nc: p.layers, d001: p.d001, orthogonal: !p.strictCell });
   let atoms = slab.atoms;
   if (p.shape === '六角') {
     atoms = C.clipHexagon(atoms, Math.min(p.Lx, p.Ly) * 0.52);
