@@ -8,7 +8,7 @@
  * 状态层不直接 import three —— RendererLike 只描述本绑定用到的方法。
  */
 import type { StoreApi } from 'zustand/vanilla';
-import type { Transform } from '../core/types';
+import type { PaletteSetting, Transform } from '../core/types';
 import type { SceneEntry, SceneState } from './sceneStore';
 
 export interface RendererLike {
@@ -18,6 +18,8 @@ export interface RendererLike {
   setComponentVisible: (id: string, visible: boolean) => void;
   setComponentTransform: (id: string, transform: Transform) => void;
   setSelection: (id: string | null) => void;
+  /** T-4.2 色板同步（可选：旧测试替身未实现时跳过） */
+  setPalette?: (p: PaletteSetting) => void;
 }
 
 export interface BindOptions {
@@ -38,6 +40,8 @@ export function bindRenderer(
   let prev = new Map(store.getState().components.map((c) => [c.id, c]));
   for (const c of prev.values()) svc.addComponent(c);
   svc.setSelection(store.getState().selectionId);
+  let prevPalette = store.getState().palette;
+  svc.setPalette?.(prevPalette);
 
   let prevSelection = store.getState().selectionId;
   const dirty = new Set<string>();
@@ -75,6 +79,10 @@ export function bindRenderer(
     if (state.selectionId !== prevSelection) {
       svc.setSelection(state.selectionId);
       prevSelection = state.selectionId;
+    }
+    if (state.palette !== prevPalette) {
+      svc.setPalette?.(state.palette);
+      prevPalette = state.palette;
     }
 
     prev = next;

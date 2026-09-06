@@ -26,7 +26,8 @@ import {
   type GeometryRequest,
 } from '../core/worker';
 import { encodeTIFF, resolveExportSize } from '../export/tiff';
-import { addAtoms, addBonds } from './instanced';
+import { addAtoms, addBonds, recolorAtomMesh } from './instanced';
+import { setActivePalette, type PaletteSetting } from './palette';
 import { substrateMaterial } from './materials';
 import { buildSubstrateGeometry } from './substrate';
 import { materialFor, outlineMaterial, type RenderMode } from './toon';
@@ -379,6 +380,25 @@ export class RendererService {
     if (this.renderer.domElement.parentElement === this.container) {
       this.container.removeChild(this.renderer.domElement);
     }
+  }
+
+  /* ---------- 色板（T-4.2） ---------- */
+
+  /** 更新全局色板并对既有原子网格重着色（不重建几何；新组件经 activeColorFor 即刻着色） */
+  setPalette(p: PaletteSetting): void {
+    setActivePalette(p);
+    this.scene.traverse((o) => {
+      if (o.userData?.matKind === 'atom') recolorAtomMesh(o as THREE.InstancedMesh);
+    });
+  }
+
+  /** 场景中出现的元素集合（逐元素取色器 UI 用） */
+  elementsInScene(): string[] {
+    const set = new Set<string>();
+    for (const rec of this.records.values()) {
+      for (const a of rec.data?.atoms ?? []) set.add(a.el);
+    }
+    return [...set].sort();
   }
 
   /* ---------- 渲染档位（T-4.1 双轨渲染，D04） ---------- */

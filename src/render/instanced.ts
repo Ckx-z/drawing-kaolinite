@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { getElement } from '../core/elements';
 import type { Atom, Bond } from '../core/geometry';
 import { atomMaterial, bondMaterial } from './materials';
+import { activeColorFor } from './palette';
 
 const FALLBACK = { cov: 1, vdw: 1.6, color: '#9AA0A6', name: '未知' };
 
@@ -24,19 +25,33 @@ export function addAtoms(g: THREE.Group, atoms: Atom[], ballstick: boolean): voi
     const arr = byEl[el];
     const m = new THREE.InstancedMesh(sph, atomMaterial, arr.length);
     m.userData.matKind = 'atom'; // T-4.1 双轨切换按此换材质
+    m.userData.elements = arr.map((a) => a.el); // T-4.2 换色板重着色用
     for (let k = 0; k < arr.length; k++) {
       const a = arr[k];
       const r = a.r ?? baseR;
       mtx.makeScale(r, r, r);
       mtx.setPosition(a.x, a.y, a.z);
       m.setMatrixAt(k, mtx);
-      col.set(info.color).convertSRGBToLinear(); // sRGB → 线性，保证输出色相
+      col.set(activeColorFor(el)).convertSRGBToLinear(); // sRGB → 线性，保证输出色相（T-4.2 色板感知）
       col.offsetHSL(0, 0, (Math.random() - 0.5) * 0.05); // 轻微明度抖动，"手作"质感
       m.setColorAt(k, col);
     }
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
     g.add(m);
   }
+}
+
+/** 换色板后对既有原子网格重着色（不重建几何，T-4.2） */
+export function recolorAtomMesh(m: THREE.InstancedMesh): void {
+  const els = m.userData.elements as string[] | undefined;
+  if (!els) return;
+  const col = new THREE.Color();
+  for (let k = 0; k < els.length; k++) {
+    col.set(activeColorFor(els[k])).convertSRGBToLinear();
+    col.offsetHSL(0, 0, (Math.random() - 0.5) * 0.05);
+    m.setColorAt(k, col);
+  }
+  if (m.instanceColor) m.instanceColor.needsUpdate = true;
 }
 
 /** 键 → 单个 InstancedMesh 圆柱（半径 rad Å） */

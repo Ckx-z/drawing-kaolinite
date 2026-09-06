@@ -138,10 +138,18 @@ export const componentSchema = z.discriminatedUnion('type', [
 
 export const SCENE_FORMAT = 'kaolin-scene/v1' as const;
 
+/** 全局色板设置（T-4.2）：id 指向预设色板，overrides 逐元素覆盖（#RRGGBB） */
+export const paletteSettingSchema = z.strictObject({
+  id: z.string().optional(),
+  overrides: z.record(z.string(), z.string().regex(/^#[0-9a-fA-F]{6}$/)).optional(),
+});
+
 export const sceneDocumentSchema = z.strictObject({
   format: z.literal(SCENE_FORMAT),
   saved: z.iso.datetime(),
   components: z.array(componentSchema),
+  // T-4.2：旧场景文件无此字段 → 缺省合法（向后兼容）
+  palette: paletteSettingSchema.optional(),
 });
 
 /* ---------- 模块库条目（单组件模块 + 组合模块 T-3.1） ---------- */

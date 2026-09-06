@@ -4,10 +4,65 @@
  */
 import { useState } from 'react';
 import { useStore } from 'zustand';
-import type { Transform } from '../core/types';
+import type { PaletteSetting, Transform } from '../core/types';
+import { PALETTES, resolveColor } from '../render/palette';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
 import { PARAM_DEFS, type ParamDef } from './paramDefs';
+
+/**
+ * 全局色板 + 逐元素取色器（T-4.2）：对整个场景生效，随场景 JSON 持久化。
+ * 换色经 setPalette（store 持久化）+ renderer.setPalette（即时重着色，不重建几何）。
+ */
+function PaletteSection() {
+  const palette = useStore(sceneStore, (s) => s.palette);
+  const componentCount = useStore(sceneStore, (s) => s.components.length);
+  const elements = componentCount ? (rendererRef.current?.elementsInScene() ?? []) : [];
+  const set = (p: PaletteSetting): void => {
+    sceneStore.getState().setPalette(p);
+    rendererRef.current?.setPalette(p);
+  };
+  const setOverride = (el: string, hex: string): void =>
+    set({ ...palette, overrides: { ...palette.overrides, [el]: hex } });
+  const clearOverrides = (): void => set({ id: palette.id, overrides: undefined });
+
+  return (
+    <>
+      <div className="subhead">色 板</div>
+      <select
+        value={palette.id ?? 'default'}
+        onChange={(e) => set({ id: e.target.value, overrides: palette.overrides })}
+      >
+        {PALETTES.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
+      {elements.length > 0 && (
+        <div className="grid3" style={{ marginTop: 6 }}>
+          {elements.map((el) => (
+            <div className="cell" key={el}>
+              <label>{el}</label>
+              <input
+                type="color"
+                value={resolveColor(el, palette)}
+                onChange={(e) => setOverride(el, e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      {palette.overrides && (
+        <div className="btnrow" style={{ marginTop: 6 }}>
+          <button className="mini" onClick={clearOverrides}>
+            恢复默认配色
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
 
 function RangeControl(props: { compId: string; def: ParamDef; value: number }) {
   const { compId, def, value } = props;
@@ -99,6 +154,7 @@ export default function ParamPanel() {
           <br />
           组件之间相互独立，可分层、分步自由组合。
         </p>
+        <PaletteSection />
         <h3>图层</h3>
         <p className="hint">画布为空。</p>
       </section>
@@ -154,6 +210,8 @@ export default function ParamPanel() {
           适配视角
         </button>
       </div>
+
+      <PaletteSection />
     </section>
   );
 }

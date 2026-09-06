@@ -21,7 +21,14 @@ import {
   sceneDocumentSchema,
   transformSchema,
 } from '../core/schema';
-import type { AnyParams, ComponentType, SceneComponent, SceneDocument, Transform } from '../core/types';
+import type {
+  AnyParams,
+  ComponentType,
+  PaletteSetting,
+  SceneComponent,
+  SceneDocument,
+  Transform,
+} from '../core/types';
 
 /** store 中的组件条目：合法组件 + 必需 id（与渲染层 RenderComponent 同构） */
 export type SceneEntry = SceneComponent & { id: string };
@@ -44,6 +51,10 @@ export interface AddComponentOptions {
 export interface SceneState {
   components: SceneEntry[];
   selectionId: string | null;
+  /** 全局色板设置（T-4.2；随场景 JSON 持久化） */
+  palette: PaletteSetting;
+  /** 设置色板（整体替换；渲染重着色由调用方经 rendererRef 触发或绑定层同步） */
+  setPalette: (p: PaletteSetting) => void;
   /** 新增组件（默认参数 + 类型命名），返回新 id */
   addComponent: (type: ComponentType, opts?: AddComponentOptions) => string;
   removeComponent: (id: string) => void;
@@ -80,6 +91,9 @@ export function createSceneStore(): SceneStore {
   return createStore<SceneState>()((set, get) => ({
     components: [],
     selectionId: null,
+    palette: {},
+
+    setPalette: (p) => set({ palette: p }),
 
     addComponent: (type, opts) => {
       const id = uid();
@@ -207,12 +221,15 @@ export function createSceneStore(): SceneStore {
       });
     },
 
-    toSceneDocument: () =>
-      sceneDocumentSchema.parse({
+    toSceneDocument: () => {
+      const palette = get().palette;
+      return sceneDocumentSchema.parse({
         format: SCENE_FORMAT,
         saved: new Date().toISOString(),
         components: get().components.map((c) => ({ ...c, locked: c.locked ?? false })),
-      }),
+        ...(palette.id || palette.overrides ? { palette } : {}),
+      });
+    },
 
     loadScene: (raw) => {
       const text = typeof raw === 'string' ? raw : JSON.stringify(raw);
@@ -220,6 +237,7 @@ export function createSceneStore(): SceneStore {
       set({
         components: doc.components as SceneEntry[],
         selectionId: null,
+        palette: doc.palette ?? {}, // T-4.2：旧场景文件无 palette → 回默认色板
       });
     },
 

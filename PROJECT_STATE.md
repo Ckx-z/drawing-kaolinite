@@ -1,7 +1,7 @@
 # PROJECT_STATE — 项目当前状态
 
 > ⭐ **这是每次会话的第一份必读文件**。会话开头读它进入状态，结尾更新它。
-> 最后更新：2026-09-06（T-4.1 双轨渲染完成；P0+P1 收官、素材 9/8-10、P2 进行中）
+> 最后更新：2026-09-06（T-4.1 双轨渲染 + T-4.2 色板完成；P0+P1 收官、素材 9/8-10、P2 进行中）
 
 ---
 
@@ -30,10 +30,10 @@
 
 ## 三、下一步（按优先级）
 
-1. **T-4.2 预设色板 + 逐元素取色器**（依赖 T-1.4 ✅ + T-4.1 ✅，约 1d）
-2. **T-5.3 分组 SVG 矢量导出**（依赖 T-4.1 ✅，约 2d）——PPT 转形状核心卖点（矢量模式走线稿档）
-3. **T-5.4 分层透明 PNG 导出**（依赖 T-1.4 ✅，约 1d）——PPT 叠放第二路径
-4. T-7.1 拾取高亮 / T-8.2 对账脚本（可并行）
+1. **T-5.3 分组 SVG 矢量导出**（依赖 T-4.1 ✅，约 2d）——PPT 转形状核心卖点（矢量模式走线稿档）
+2. **T-5.4 分层透明 PNG 导出**（依赖 T-1.4 ✅，约 1d）——PPT 叠放第二路径
+3. **T-7.1 拾取高亮 / 悬停反馈**（依赖 T-1.6 ✅，约 1d）
+4. T-8.2 `check_library_state.py` 对账脚本（P2，可并行）
 
 完整任务清单见 `TODO.md`（47 条，含依赖关系与验收标准）。
 
@@ -65,6 +65,7 @@
 | 冒烟回归 | `e2e/smoke.spec.ts` + `e2e/fixtures/demo-scene.json` | T-1.7：8 条 Playwright 冒烟（@playwright/test 未装，已用 IAB 浏览器逐条人工实测）；fixture=demo 原生保存输出 |
 | TIFF 导出 | `src/export/tiff.ts` | T-5.1：内置无压缩 RGBA TIFF 编码器（dpi 物理分辨率标签 + 透明底，零依赖 Node 可测）；resolveExportSize 按 maxTextureSize 降级；浏览器实测 sips 读出 300×300dpi ✓ |
 | 双轨渲染 | `src/render/toon.ts` | T-4.1：线稿档（Toon 3 阶色阶+描边外壳）/渲染档（PBR）一键热切换；实测切换 10.7ms 不重建几何；像素抽样线稿档无高光（35 阶 vs 67 阶，maxLum 0.913 vs 1.0） |
+| 色板 | `src/render/palette.ts` | T-4.2：4 套学术色板（期刊柔和/暖调/冷调/高对比）+ 逐元素覆盖；palette 随场景 JSON 往返；换色即时重着色不重建几何 |
 | 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移 + 导入导出；T-3.2：filterModules 检索/类型筛选/收藏排序 + toggleFavorite（favorite 字段向后兼容） |
 | 撤销/重做 | `src/state/history.ts` + `commands.ts` | T-2.1：attachHistory 实例包装（UI 零改动）；全量快照命令 + 800ms 合并窗口；栈深可配（默认 100）；Ctrl/Cmd+Z、+Shift/Y（App.tsx）；sceneStore 单例已挂接（sceneHistory） |
 | 素材模块 | 模块库内 9 个条目 | M2 三层片层、M3 埃洛石管 7Å、M4 颗粒 S/M/L、M5 橡胶基底、M6 片层+颗粒组合、M7 多壁埃洛石 10Å、M8 埃洛石@CeO₂ 复合场景——**素材积累目标达成（9/8-10，M1 样图另计）** |

@@ -302,3 +302,21 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-12"
+    date: "2026-09-06"
+    title: "T-4.2 预设色板 + 逐元素取色器"
+    summary: "palette.ts：4 套色板（期刊柔和=elements.ts 基线；暖调 HSL+0.055/暖化、冷调 -0.07/降饱和、高对比 饱和×1.5+明度双向拉开——全部确定性变换）+ resolveColor 优先级（overrides>指定色板>默认）+ active 状态（新组件着色）。schema paletteSettingSchema（id + overrides #RRGGBB regex 校验）挂 sceneDocument；store palette 状态/toSceneDocument（未设置不产出字段）/loadScene 还原。instanced 着色走 activeColorFor + userData.elements 元素表；recolorAtomMesh 换色不重建几何。binding palette 差异同步（RendererLike 可选方法，旧替身兼容）。ParamPanel 色板区（选择器+场景元素取色器+恢复默认，两分支均可见）。验收 8 条测试（覆盖/确定性/优先级/JSON 往返/旧文件兼容/非法拒绝/重着色实例色断言）+ 浏览器实测切暖调整景即时重着色（截图归档，色板区 6 元素取色器正常）。vitest 127 passed（+8）、build/lint 全绿。实际 1d。"
+    files_modified:
+      - src/render/palette.ts / palette.test.ts（新建）
+      - src/core/schema.ts（+paletteSettingSchema）/ src/core/types.ts（+PaletteSetting）
+      - src/state/sceneStore.ts（palette 状态/setPalette/序列化）
+      - src/render/instanced.ts（activeColorFor/elements 表/recolorAtomMesh）
+      - src/render/RendererService.ts（setPalette/elementsInScene）
+      - src/state/rendererBinding.ts（palette 差异同步）
+      - src/ui/ParamPanel.tsx（色板区）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"
