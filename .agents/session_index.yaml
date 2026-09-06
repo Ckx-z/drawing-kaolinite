@@ -393,3 +393,17 @@ sessions:
     commits: ["af7baa5"]
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-18"
+    date: "2026-09-06"
+    title: "T-4.3 接触阴影 + 构图预设（P2 第 9 条）"
+    summary: "选型：SSAO 多 pass 60fps 风险高 → 廉价接触阴影（方向光 shadow map PCFSoft 2048 + ShadowMaterial 地板贴场景最低点-0.8A，本体透明只显示阴影；运行时开关需材质重编译，新几何自动 castShadow）。postfx.ts 纯函数 presetDirection/presetPosition（等距/正视/俯视/复位，保持视距只转方位，top 微 z 分量避万向锁）；RendererService.setShadows/setCameraPreset/snapHorizon（视线降到水平，保持水平方位与视距）。TopBar：接触阴影 checkbox + 视角按钮组。验收实测：阴影开启 62fps（16,097 原子，验收线 60）；同视距两次调用位置逐分量一致；俯视截图接触阴影清晰（光源自 140,230,170 的方向投影）。单测 5 条（预设算位/视距保持/单位向量/万向锁规避/ShadowMaterial 契约）。vitest 173 passed（+5）、build/lint 全绿。实际 1d。Viewport 职能由 SceneCanvas 承担。"
+    files_modified:
+      - src/render/postfx.ts / postfx.test.ts（新建）
+      - src/render/RendererService.ts（setShadows/setCameraPreset/snapHorizon + dirLight 引用）
+      - src/ui/TopBar.tsx（接触阴影 checkbox + 视角按钮组）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

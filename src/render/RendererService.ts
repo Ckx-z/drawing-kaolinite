@@ -27,6 +27,7 @@ import {
 } from '../core/worker';
 import { encodeTIFF, resolveExportSize } from '../export/tiff';
 import { smilesTo3D } from '../core/molecules/smiles';
+import { presetPosition, type CameraPreset } from './postfx';
 import { sceneToSVG, type SvgAtom, type SvgComponentInput } from '../export/svg';
 import { getElement } from '../core/elements';
 import { activeColorFor } from './palette';
@@ -137,6 +138,7 @@ export class RendererService {
     }
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
     dirLight.position.set(140, 230, 170);
+    this.dirLight = dirLight;
     this.scene.add(dirLight);
     const fillLight = new THREE.DirectionalLight(0xdfe8ff, 0.25);
     fillLight.position.set(-170, 90, -130);
@@ -225,6 +227,89 @@ export class RendererService {
   /* ---------- 拾取高亮 / 悬停反馈（T-7.1） ---------- */
 
   private hoverId: string | null = null;
+
+  /* ---------- 接触阴影与构图预设（T-4.3） ---------- */
+
+  private readonly dirLight: THREE.DirectionalLight;
+  /** 接影地板（ShadowMaterial：只显示阴影，本体透明） */
+  private shadowGround: THREE.Mesh | null = null;
+  private shadowsOn = false;
+
+  /**
+   * 廉价接触阴影开关（T-4.3）：方向光 shadow map（PCFSoft）+ ShadowMaterial 地板。
+   * 地板贴着场景最低点略下；开销 = 每帧一次深度绘制（与主渲染同量级，60fps 达标）。
+   */
+  setShadows(on: boolean): void {
+    this.shadowsOn = on;
+    this.renderer.shadowMap.enabled = on;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.dirLight.castShadow = on;
+    if (on) {
+      this.dirLight.shadow.mapSize.set(2048, 2048);
+      const sc = this.dirLight.shadow.camera;
+      sc.left = -260; sc.right = 260; sc.top = 260; sc.bottom = -260;
+      sc.near = 10; sc.far = 1200;
+      sc.updateProjectionMatrix();
+      if (!this.shadowGround) {
+        const ground = new THREE.Mesh(
+          new THREE.PlaneGeometry(4000, 4000),
+          new THREE.ShadowMaterial({ opacity: 0.22 }),
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        this.shadowGround = ground;
+        this.scene.add(ground);
+      }
+      // 地板贴场景最低点略下（含组件变换）
+      this.scene.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      for (const rec of this.records.values()) if (rec.comp.visible) this.compBox(rec, box);
+      this.shadowGround.position.y = box.isEmpty() ? 0 : box.min.y - 0.8;
+      this.shadowGround.visible = true;
+    } else if (this.shadowGround) {
+      this.shadowGround.visible = false;
+    }
+    this.scene.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh && o.userData?.matKind !== 'substrate') {
+        (o as THREE.Mesh).castShadow = on;
+      }
+    });
+    // 运行时开关 shadowMap 需要材质重编译
+    this.scene.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+      if (m) m.needsUpdate = true;
+    });
+  }
+
+  getShadows(): boolean {
+    return this.shadowsOn;
+  }
+
+  /** 构图预设：等距/正视/俯视/复位——保持视距只转方位（T-4.3） */
+  setCameraPreset(preset: CameraPreset): void {
+    const target = this.orbit.target;
+    const distance = this.camera.position.distanceTo(target);
+    const [x, y, z] = presetPosition(preset, [target.x, target.y, target.z], distance);
+    this.camera.position.set(x, y, z);
+    this.camera.lookAt(target);
+    this.orbit.update();
+  }
+
+  /** 水平线吸附：相机降到与目标同高（视线水平 → 地平线水平），保持水平方位与视距 */
+  snapHorizon(): void {
+    const target = this.orbit.target;
+    const p = this.camera.position;
+    const dist = p.distanceTo(target);
+    const hx = p.x - target.x;
+    const hz = p.z - target.z;
+    const hl = Math.hypot(hx, hz) || 1e-6;
+    const scale = dist / hl;
+    this.camera.position.set(target.x + hx * scale, target.y, target.z + hz * scale);
+    this.camera.lookAt(target);
+    this.orbit.update();
+  }
+
+  /* ---------- 色板（T-4.2） ---------- */
 
   /** 设置悬停组件（hoverStore 驱动； null 清除）。帧率无感：外壳可见性切换，O(1) */
   setHover(id: string | null): void {
@@ -733,6 +818,9 @@ export class RendererService {
     }
     this.applyTransform(comp, rec.group);
     rec.group.visible = comp.visible;
+    if (this.shadowsOn) {
+      rec.group.traverse((o) => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true; });
+    }
     rec.box = null; // 几何已变，包围盒缓存失效（T-7.1）
     this.applyMode(rec); // T-4.1：新几何按当前档位着装（含描边外壳重建）
     // T-7.1：重建后恢复高亮状态（选中优先于悬停）

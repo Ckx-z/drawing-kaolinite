@@ -212,12 +212,13 @@
 - 关联文件：`src/render/palette.ts`（新建）、`src/ui/ParamPanel.tsx`
 - 完成记录：`palette.ts`——4 套色板（期刊柔和=elements.ts 基线；暖调/冷调/高对比=对默认色确定性 HSL 变换）；`resolveColor` 优先级 overrides > 指定色板 > 默认；active 状态供新组件着色。schema 增 `paletteSettingSchema`（id + overrides #RRGGBB 校验）挂入 sceneDocument（旧场景缺省合法）；store palette 状态随 toSceneDocument/loadScene 往返（未设置时不产出字段）。instanced 着色改走 activeColorFor + mesh.userData.elements 元素表；`recolorAtomMesh` 换色板不重建几何。binding 层 palette 差异同步。ParamPanel 色板区（两分支均可见）：色板下拉 + 场景元素逐个取色器 + 恢复默认。验收测试 8 条。浏览器实测：切暖调整景即时重着色（截图归档）。vitest 127 passed（+8）、build/lint 全绿。实际 1d。
 
-### T-4.3 [P2] SSAO / 接触阴影 + 构图预设
+### T-4.3 ✅ [P2] 接触阴影 + 构图预设（2026-09-06 完成）
 - 描述：可选 SSAO 后处理或廉价接触阴影；等距视角/正视/俯视一键预设；画面水平线吸附。
 - 依赖：T-1.4
 - 验收标准：开启 AO 后 60fps 不跌破（16k 原子场景）；构图预设一键切换相机位姿可复现。
 - 预估工时：1–2d
 - 关联文件：`src/render/postfx.ts`（新建）、`src/ui/Viewport.tsx`
+- 完成记录：**选型**——SSAO 多 pass 在 16k 实例原子下 60fps 风险高，采用 TODO 允许的"廉价接触阴影"：方向光 shadow map（PCFSoft 2048）+ ShadowMaterial 接影地板（贴场景最低点-0.8Å，本体透明只显示阴影）。`postfx.ts` presetDirection/presetPosition 纯函数（等距/正视/俯视/复位，保持视距只转方位；top 用微小 z 分量规避万向锁）；RendererService.setShadows（运行时开关 + 材质重编译 + 新几何自动 castShadow）/ setCameraPreset / snapHorizon（视线降到水平）。TopBar：接触阴影 checkbox + 视角按钮组（等距/正视/俯视/水平吸附）。验收实测：**阴影开启 62fps（16,097 原子，验收线 60）**；同视距两次调用位置逐分量一致（可复现）；俯视截图接触阴影清晰。单测 5 条。vitest 173 passed（+5）、build/lint 全绿。实际 1d（预估 1–2d）。Viewport 职能由 SceneCanvas 承担。
 
 ### T-4.4 [P3] 比例尺 / 晶胞参数 / 图注标注层
 - 描述：画布内叠加标注层（比例尺 nm、d₀₀₁ 标注、组件引线标签），随导出渲染（位图与 SVG 双支持）。

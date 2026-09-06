@@ -20,6 +20,7 @@ export default function TopBar() {
   const [dpi, setDpi] = useState(300);
   const [alpha, setAlpha] = useState(false);
   const [mode, setMode] = useState<'render' | 'toon'>('render');
+  const [shadows, setShadows] = useState(false);
   const [toast, setToast] = useState('');
 
   const flash = (msg: string): void => {
@@ -207,6 +208,30 @@ export default function TopBar() {
           title="双轨渲染（T-4.1）：渲染档 = PBR 质感（宣讲/PPT）；线稿档 = 三阶色阶+描边（期刊示意/矢量导出用）"
         >
           {mode === 'render' ? '🎨 渲染档' : '✏️ 线稿档'}
+        </button>
+        <label className="chk" title="接触阴影（T-4.3）：方向光 shadow map + 接影地板，低成本立体感">
+          <input
+            type="checkbox"
+            checked={shadows}
+            onChange={(e) => {
+              setShadows(e.target.checked);
+              rendererRef.current?.setShadows(e.target.checked);
+            }}
+          />
+          接触阴影
+        </label>
+        <span style={{ opacity: 0.6, alignSelf: 'center', fontSize: 12 }}>视角</span>
+        {(['iso', 'front', 'top'] as const).map((p) => (
+          <button
+            key={p}
+            onClick={() => rendererRef.current?.setCameraPreset(p)}
+            title="构图预设（T-4.3）：保持视距只转方位"
+          >
+            {p === 'iso' ? '等距' : p === 'front' ? '正视' : '俯视'}
+          </button>
+        ))}
+        <button onClick={() => rendererRef.current?.snapHorizon()} title="水平线吸附：视线降到水平（地平线水平）">
+          水平吸附
         </button>
         <button
           onClick={() => {
