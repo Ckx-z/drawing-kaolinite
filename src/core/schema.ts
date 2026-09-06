@@ -149,10 +149,11 @@ const moduleCommon = {
   name: z.string().min(1),
   transform: transformSchema,
   thumb: z.string().startsWith('data:image/'),
-  // T-3.2 规划字段
+  // T-3.2：检索/分类/版本字段（旧条目缺省均合法 → 向后兼容）
   tags: z.array(z.string()).optional(),
   createdAt: z.string().optional(),
   moduleVersion: z.number().optional(),
+  favorite: z.boolean().optional(),
 };
 
 /** 组合模块：一次保存多个组件（含各自变换），实例化时整体复现相对位置 */
@@ -165,6 +166,7 @@ export const combinedModuleSchema = z.strictObject({
   tags: z.array(z.string()).optional(),
   createdAt: z.string().optional(),
   moduleVersion: z.number().optional(),
+  favorite: z.boolean().optional(),
 });
 
 export const moduleSchema = z.discriminatedUnion('type', [

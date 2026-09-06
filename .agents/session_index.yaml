@@ -229,3 +229,18 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-07"
+    date: "2026-09-06"
+    title: "T-3.2 模块检索/分类/收藏排序（阶段 2 第 10 条完成）"
+    summary: "filterModules 纯函数：关键词命中名称+标签（不区分大小写）→ 类型筛选（五类+combined+all）→ 收藏优先、组内 createdAt 倒序（旧条目无时间字段排末组）；schema 增 favorite optional（旧条目缺省合法，向后兼容）；toggleFavorite 持久化+缓存刷新+kaolin-modules-changed 通知；ModulePanel 增搜索框/类型下拉/收藏星标（.fav 常显金色态）/无匹配提示；收藏与 tags 随导入导出往返保留。验收 5 条测试：200 模块检索实测 <100ms（内存过滤，远优于验收线）、类型筛选互斥、旧条目兼容参与、收藏持久化、标签检索。vitest 98 passed（+5）、build/lint 全绿。实际 0.5d（预估 1d）。"
+    files_modified:
+      - src/core/schema.ts（+favorite optional）
+      - src/state/moduleLibrary.ts（+filterModules/toggleFavorite）
+      - src/ui/ModulePanel.tsx（搜索/筛选/收藏 UI）+ src/index.css（.fav 样式）
+      - src/state/moduleLibrary.test.ts（+5 条）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

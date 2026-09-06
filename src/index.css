@@ -395,6 +395,24 @@ input[type='checkbox'] {
 .mod-card:hover .x {
   display: block;
 }
+/* 收藏星标（T-3.2）：常显，收藏态金色 */
+.mod-card .fav {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #c9c9c9;
+  font-size: 11px;
+  cursor: pointer;
+}
+.mod-card .fav[data-on='1'] {
+  color: #f5c542;
+}
 .mod-grid button.mini {
   padding: 0 6px;
   font-size: 11px;

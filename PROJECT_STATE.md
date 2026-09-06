@@ -1,7 +1,7 @@
 # PROJECT_STATE — 项目当前状态
 
 > ⭐ **这是每次会话的第一份必读文件**。会话开头读它进入状态，结尾更新它。
-> 最后更新：2026-09-06（T-2.2 Worker 化 + 素材模块 M4/M5/M6 入库，阶段 2 已完成 9 条；素材积累 6/8-10）
+> 最后更新：2026-09-06（T-3.2 模块检索完成，阶段 2 已完成 10 条；素材积累 6/8-10）
 
 ---
 
@@ -30,9 +30,9 @@
 
 ## 三、下一步（按优先级）
 
-1. **T-3.2 模块检索/分类/版本**（依赖 T-2.3 ✅，约 1d）——模块库已有 7 个条目，检索价值开始显现
-2. **T-3.3 组件锁定与分组**（依赖 T-1.5 ✅ + T-2.1 ✅，约 1d）——锁定/成组补全 schema 字段
-3. **T-9.6 M7 多壁埃洛石 10Å**（依赖 T-9.2 ✅，0.5d）→ T-9.7 M8 复合模块（依赖 T-3.1 ✅ + T-9.6）
+1. **T-3.3 组件锁定与分组**（依赖 T-1.5 ✅ + T-2.1 ✅，约 1d）——锁定交互屏蔽/成组变换，补全 schema `locked`/`group` 字段
+2. **T-9.6 M7 多壁埃洛石 10Å**（依赖 T-9.2 ✅，0.5d）→ T-9.7 M8 复合模块（依赖 T-3.1 ✅ + T-9.6，素材收官）
+3. **T-4.1 线稿档 / 渲染档双轨切换**（P2 起点，依赖 T-1.4 ✅）
 4. T-8.2 `check_library_state.py` 对账脚本（P2，可并行）
 
 完整任务清单见 `TODO.md`（47 条，含依赖关系与验收标准）。
@@ -63,7 +63,7 @@
 | 渲染服务 | `src/render/RendererService.ts` + materials/instanced/substrate | T-1.4：组件装载/重建/选择/取景；`?preview=1` 浏览器预览（16,097 原子与 demo 一致）；three r147 |
 | 状态管理 | `src/state/sceneStore.ts` + `rendererBinding.ts` | T-1.5：zustand 5 vanilla 工厂化 store（写操作全 schema 校验）；绑定层差异同步 + rAF 重建节流（调度器可注入）；远端仓库 github.com/Ckx-z/drawing-kaolinite（SSH，master） |
 | 冒烟回归 | `e2e/smoke.spec.ts` + `e2e/fixtures/demo-scene.json` | T-1.7：8 条 Playwright 冒烟（@playwright/test 未装，已用 IAB 浏览器逐条人工实测）；fixture=demo 原生保存输出 |
-| 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移（原 key 保留）+ .kaolin-modules.json 导入导出；★存为模块（snapshotComponent 快照） |
+| 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移 + 导入导出；T-3.2：filterModules 检索/类型筛选/收藏排序 + toggleFavorite（favorite 字段向后兼容） |
 | 撤销/重做 | `src/state/history.ts` + `commands.ts` | T-2.1：attachHistory 实例包装（UI 零改动）；全量快照命令 + 800ms 合并窗口；栈深可配（默认 100）；Ctrl/Cmd+Z、+Shift/Y（App.tsx）；sceneStore 单例已挂接（sceneHistory） |
 | 素材模块 | 模块库内 7 个条目 | M2 三层片层、M3 埃洛石管 7Å、M4 颗粒 S/M/L、M5 橡胶基底、M6 片层+颗粒组合（首个组合模块）——**素材积累 6/8-10（M1 样图另计）** |
 | 种子模块库 | `data/seed-modules.json` | kaolin-modules/v1 全量备份（含缩略图，21KB）；模块面板「导入」即可整套恢复/分发 |

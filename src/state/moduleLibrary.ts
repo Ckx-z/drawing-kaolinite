@@ -188,3 +188,45 @@ export async function clearModuleLibrary(): Promise<void> {
   cache = null;
   notifyModulesChanged();
 }
+
+/* ---------- 检索 / 分类 / 收藏排序（T-3.2） ---------- */
+
+export type ModuleFilterType = 'all' | 'kaolinite_sheet' | 'halloysite_tube' | 'nanoparticle' | 'molecule' | 'rubber_substrate' | 'combined';
+
+export interface ModuleFilter {
+  /** 关键词：命中名称或标签（不区分大小写）；空串 = 不过滤 */
+  query?: string;
+  /** 类型筛选；'all' = 不过滤 */
+  type?: ModuleFilterType;
+}
+
+/**
+ * 纯函数检索/排序（内存中执行，200 条 <100ms 验收）：
+ * 关键词过滤 → 类型过滤 → 收藏优先，同组内按创建时间倒序（旧条目无 createdAt 排最后组）。
+ */
+export function filterModules(modules: ModuleEntry[], filter: ModuleFilter): ModuleEntry[] {
+  const query = (filter.query ?? '').trim().toLowerCase();
+  const type = filter.type ?? 'all';
+  const hit = modules.filter((m) => {
+    if (type !== 'all' && m.type !== type) return false;
+    if (!query) return true;
+    const haystack = (m.name + ' ' + (m.tags ?? []).join(' ')).toLowerCase();
+    return haystack.includes(query);
+  });
+  return hit.slice().sort((a, b) => {
+    const fav = Number(b.favorite ?? false) - Number(a.favorite ?? false);
+    if (fav !== 0) return fav;
+    return (b.createdAt ?? '').localeCompare(a.createdAt ?? '');
+  });
+}
+
+/** 切换收藏标记（持久化 + 缓存刷新 + 通知面板） */
+export async function toggleFavorite(id: string): Promise<boolean> {
+  const entry = (await listModules()).find((m) => m.id === id);
+  if (!entry) throw new Error(`模块不存在：${id}`);
+  const favorite = !(entry.favorite ?? false);
+  await getDB().modules.put({ ...entry, favorite });
+  cache = null;
+  notifyModulesChanged();
+  return favorite;
+}

@@ -176,12 +176,13 @@
 - 关联文件：`src/core/schema.ts`、`src/state/moduleLibrary.ts`
 - 完成记录：`combinedModuleSchema`（`type:'combined'` + `components[]` ≥1，与五类单组件变体共存于 moduleSchema 判别联合，ModuleEntry 升级为联合类型）；`moduleEntryFromScene` 工厂 + `RendererService.snapshotScene` 整景缩略图（仅隐 gizmo）；TopBar 新增「★ 存组合」保存整景；ModulePanel 实例化判别分支——逐组件 addComponent（变换原样还原，id 全新生成），实例化后各组件仍独立可调。导入导出/迁移链路自动兼容（moduleSchema 校验）。验收测试 7 条：核心=三组件保存→清空→实例化**逐对位置差向量与距离逐一相等**（强于包围盒重叠率断言）+ 旋转/缩放/参数/显隐逐组件一致；另覆盖 schema 拒绝（空 components/thumb 前缀/未知字段）、JSON 往返、CRUD、导入导出往返。vitest 84 passed（+6）、build/lint 全绿。DATA_DICT §八已更新。实际 0.5d。
 
-### T-3.2 [P2] 模块检索 / 分类 / 版本
+### T-3.2 ✅ [P2] 模块检索 / 分类 / 版本（2026-09-06 完成）
 - 描述：模块名称/标签搜索、类型筛选、收藏排序；记录创建时间与来源工程版本（`moduleVersion` 字段）。
 - 依赖：T-2.3
 - 验收标准：200 模块中按关键词检索 < 100ms；旧版模块（无版本字段）能被识别并兼容载入。
 - 预估工时：1d
 - 关联文件：`src/ui/LibraryPanel.tsx`、`src/state/moduleLibrary.ts`
+- 完成记录：`filterModules` 纯函数（关键词命中名称+标签（不区分大小写）→ 类型筛选（六类+all）→ 收藏优先、组内 createdAt 倒序，旧条目无时间字段排末组）；schema 增 `favorite` optional（旧条目缺省合法，向后兼容）；`toggleFavorite` 持久化+缓存刷新+事件通知；ModulePanel 增搜索框/类型下拉/收藏星标（.fav 常显，收藏态金色）/无匹配提示；收藏与 tags 随导入导出往返保留。验收测试 5 条：200 模块检索实测 <100ms（远优于验收线）、类型筛选互斥、旧条目（无 version/favorite/createdAt）兼容参与检索与排序、收藏持久化、标签检索。vitest 98 passed（+5）、build/lint 全绿。实际 0.5d。
 
 ### T-3.3 [P2] 组件锁定与分组
 - 描述：图层锁定（选中/变换屏蔽）、成组/解组（组内一起选中与变换），补全 schema 中 `locked`/`group` 字段。

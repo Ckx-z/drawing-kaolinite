@@ -6,11 +6,13 @@ import {
   clearModuleLibrary,
   deleteModule,
   exportModules,
+  filterModules,
   importModules,
   listModules,
   migrateFromLocalStorage,
   moduleEntryFromComponent,
   saveModule,
+  toggleFavorite,
 } from './moduleLibrary';
 import type { SceneEntry } from './sceneStore';
 
@@ -157,5 +159,80 @@ describe('moduleEntryFromComponent', () => {
     expect(entry.thumb).toBe(THUMB);
     expect(entry.moduleVersion).toBe(1);
     expect(typeof entry.createdAt).toBe('string');
+  });
+});
+
+/* ============================================================
+ * T-3.2 检索 / 分类 / 收藏排序
+ * ============================================================ */
+
+describe('T-3.2 filterModules：关键词 / 类型 / 收藏排序', () => {
+  it('200 模块按关键词检索 < 100ms（验收标准）', async () => {
+    for (let i = 0; i < 200; i++) await saveModule(fakeEntry(i));
+    const all = await listModules();
+    const t0 = performance.now();
+    const hits = filterModules(all, { query: '块 19' });
+    const ms = performance.now() - t0;
+    expect(hits.length).toBeGreaterThan(0);      // 「模块 19x」系列
+    expect(hits.every((m) => m.name.includes('块 19'))).toBe(true);
+    expect(ms).toBeLessThan(100);
+  });
+
+  it('类型筛选：combined 与五类互不混入', () => {
+    const a = fakeEntry(1);
+    const combined = moduleSchema.parse({
+      id: 'm-combined',
+      name: '组合',
+      type: 'combined',
+      components: [{ type: 'molecule', name: 'x', params: { kind: 'H₂O' }, transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: 4 } }],
+      thumb: THUMB,
+    }) as SceneEntry & { thumb: string };
+    const all = [a, combined] as never[];
+    expect(filterModules(all, { type: 'combined' }).map((m) => m.id)).toEqual(['m-combined']);
+    expect(filterModules(all, { type: 'nanoparticle' }).map((m) => m.id)).toEqual(['m1001']);
+    expect(filterModules(all, { type: 'all' })).toHaveLength(2);
+  });
+
+  it('收藏优先排序；同组内按 createdAt 倒序；旧条目（无版本/收藏/时间字段）兼容参与', () => {
+    const old = moduleSchema.parse({
+      id: 'm-old',
+      name: '旧版模块',
+      type: 'molecule',
+      params: { kind: 'H₂O' },
+      transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: 4 },
+      thumb: THUMB,
+      // 无 createdAt / moduleVersion / favorite / tags —— 模拟旧版本条目
+    }) as SceneEntry & { thumb: string };
+    const newer = fakeEntry(2);
+    const older = { ...fakeEntry(3), createdAt: '2026-09-01T00:00:00.000Z' };
+    const fav = { ...fakeEntry(4), createdAt: '2026-09-01T00:00:00.000Z', favorite: true };
+
+    const sorted = filterModules([older, old, fav, newer], {});
+    expect(sorted.map((m) => m.id)).toEqual(['m1004', 'm1002', 'm1003', 'm-old']); // 收藏 → 新 → 旧 → 无时间
+    // 旧条目照常被检索命中
+    expect(filterModules([old], { query: '旧版' })).toHaveLength(1);
+  });
+
+  it('toggleFavorite 持久化并在列表刷新后生效', async () => {
+    const e = fakeEntry(7);
+    await saveModule(e);
+    expect(await toggleFavorite(e.id)).toBe(true);
+    let listed = await listModules();
+    expect(listed.find((m) => m.id === e.id)?.favorite).toBe(true);
+    expect(await toggleFavorite(e.id)).toBe(false);
+    listed = await listModules();
+    expect(listed.find((m) => m.id === e.id)?.favorite).toBe(false);
+  });
+
+  it('收藏与标签随导入导出往返保留；标签参与检索', async () => {
+    const e = { ...fakeEntry(9), tags: ['埃洛石', '复合'], favorite: true };
+    await saveModule(e);
+    const text = await exportModules();
+    await clearModuleLibrary();
+    await importModules(text);
+    const listed = await listModules();
+    expect(listed.find((m) => m.id === e.id)?.tags).toEqual(['埃洛石', '复合']);
+    expect(listed.find((m) => m.id === e.id)?.favorite).toBe(true);
+    expect(filterModules(listed, { query: '埃洛石' })).toHaveLength(1);
   });
 });
