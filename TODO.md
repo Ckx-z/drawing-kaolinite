@@ -252,12 +252,13 @@
 - 关联文件：`src/export/svg.ts`（新建）
 - 完成记录：**实现取舍——弃用 THREE.SVGRenderer**（其 Projector 不支持 InstancedMesh，本项目上万原子全靠实例化），改为从原子/键数据直接生成 SVG 基本形状：原子→`<circle>`（透视投影+深度相关半径）、键→`<line>`（圆头端帽，**空间填充组件不画键与 3D 一致**）；画家算法（组件间按最深图元、组件内按图元深度）；视锥/相机后方剔除；每组件 `<g id="组件名">`（XML 转义+id 清洗）；平色填充（色板色）+均匀描边=线稿档画风。`sceneToSVG` 纯函数 Node 可测。RendererService.exportSVG（世界坐标=局部×变换矩阵，半径基准与渲染同款 vdW/cov×缩放，键仅球棍）+ TopBar「导出 SVG」。验收：浏览器实测真实场景（6 组件 16,097 原子）导出 1.4MB，**xmllint XML VALID**，g 分组=6 与图层名一致，circle=16,097 逐原子。投影/排序/剔除/半径公式/转义 9 条单测。vitest 136 passed（+9）、build/lint 全绿。实际 1d（预估 2d）。
 
-### T-5.4 [P2] 分层透明 PNG 导出
+### T-5.4 ✅ [P2] 分层透明 PNG 导出（2026-09-06 完成）
 - 描述：按图层遍历渲染透明底 PNG（每层一张），供 PPT 叠放编辑；可选"当前可见层合并"或"逐层"。
 - 依赖：T-1.4
 - 验收标准：逐层导出后在 PPT 中叠放还原与整图渲染一致（像素差 < 1%）；每层 PNG 为 RGBA 透明底。
 - 预估工时：1d
 - 关联文件：`src/export/layers.ts`（新建）
+- 完成记录：RendererService.exportComponentPNG（单层隔离离屏渲染：隐藏他者+gizmo、透明底、分辨率公式含 maxTextureSize 降级）+ visibleLayersByDepth（视空间 z 画家序）；layers.ts 纯编排（sanitizeLayerName / buildLayerPngs，文件名序号 01-远→NN-近 与叠放序一致，天然去重）；TopBar「导出分层 PNG」逐张下载（350ms 间隔避拦截）；「当前可见层合并」即既有 exportPNG alpha。验收实测（示例场景 6 层 @150dpi）：叠层合成 vs 整图像素差 0.04%（验收线 <1%）、各层角落 alpha=0（RGBA 透明底）。单测 5 条。vitest 140 passed（+4）、build/lint 全绿。实际 0.5d（预估 1d）。PPT 双路径（SVG 转形状 + 分层叠放）齐备。
 
 ### T-5.5 [P3] EMF 导出（Office 原生矢量）—— 已决策（Q2）：内置 Inkscape
 - 描述：桌面端（Tauri）将 Inkscape CLI 嵌入 `resources/`，导出 EMF 时静默调用 `--export-type=emf` 转换分组 SVG；若系统 PATH 已有 Inkscape 则优先使用（减小安装包的备选逻辑）；Web 端隐藏该入口。
