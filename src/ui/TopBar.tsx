@@ -2,6 +2,7 @@
  * 顶部工具栏 —— T-1.6/T-1.7（对齐 demo：示例场景 / 保存场景 / 打开场景 / 导出 PNG / 清空）
  */
 import { useRef, useState } from 'react';
+import { moduleEntryFromComponent, saveModule } from '../state/moduleLibrary';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
 import { loadPresetScene } from './preset';
@@ -60,6 +61,20 @@ export default function TopBar() {
     flash(`已导出 ${width} × ${height} px（16cm @ ${dpi}dpi${alpha ? '，透明底' : ''}）`);
   };
 
+  const onSaveModule = async (): Promise<void> => {
+    const s = sceneStore.getState();
+    if (!s.selectionId) {
+      flash('请先在画布中点选一个组件，再保存为模块');
+      return;
+    }
+    const comp = s.components.find((c) => c.id === s.selectionId);
+    const svc = rendererRef.current;
+    if (!comp || !svc) return;
+    const thumb = svc.snapshotComponent(comp.id);
+    await saveModule(moduleEntryFromComponent(comp, thumb));
+    flash(`已存为模块「${comp.name}」，以后一键复用`);
+  };
+
   return (
     <header className="topbar">
       <div className="brand">
@@ -75,6 +90,15 @@ export default function TopBar() {
         <button onClick={onSaveScene}>保存场景</button>
         <button onClick={onOpenScene}>打开场景</button>
         <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={onFile} />
+        <button
+          className="primary"
+          onClick={() => {
+            void onSaveModule();
+          }}
+          title="把选中的组件存入左侧「我的模块」，可反复复用"
+        >
+          ★ 存为模块
+        </button>
       </div>
       <div className="tb-group">
         <select

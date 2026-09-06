@@ -106,12 +106,13 @@
 - 预估工时：1d
 - 关联文件：`src/core/worker.ts`、`src/render/renderer.ts`
 
-### T-2.3 [P1] 模块库迁移 IndexedDB（Dexie）
+### T-2.3 ✅ [P1] 模块库迁移 IndexedDB（Dexie）（2026-09-06 完成）
 - 描述：模块条目（含缩略图 blob）从 localStorage 迁至 Dexie；导出/导入 `.kaolin-modules.json` 批量备份；容量与打开速度优化。
 - 依赖：T-1.2
 - 验收标准：200 个模块（含缩略图）入库 < 2s；模块面板打开 < 100ms；旧 localStorage 数据自动迁移不丢失。
 - 预估工时：1d
-- 关联文件：`src/state/moduleLibrary.ts`、`src/ui/LibraryPanel.tsx`
+- 关联文件：`src/state/moduleLibrary.ts`、`src/ui/LibraryPanel.tsx`（实为独立 `src/ui/ModulePanel.tsx`）
+- 完成记录：实际 0.5d。Dexie 4（表 `modules`：id/name/type/createdAt 索引）+ 内存缓存；迁移策略=legacy `kaolin_modules_v1` 逐条 schema 校验后 bulkPut、**原 key 保留不删**、migrated 标记防重；导入导出 `kaolin-modules/v1`（非法条目跳过计数、同 id 覆盖）；变更通知走 `kaolin-modules-changed` 事件。UI：`ModulePanel`（卡片网格/实例化副本/删除/导入导出）+ TopBar `★存为模块`（`snapshotComponent` 隔离快照 150×110 JPEG）。单测 9 条（fake-indexeddb）：**200 模块入库实测 <100ms**（远优于 2s）、缓存打开 <100ms、迁移幂等不丢、往返无损。浏览器实测：存为模块/复用副本（M2 副本 layers=3/d001=10/六角 全参数还原）/删除去重全过。附带修复：素材库添加后自动选中（demo 行为对齐）。
 
 ### T-2.4 [P2] 多矿物 CIF 支持（蒙脱石/伊利石等）—— 已决策（Q1）：参数化开关
 - 描述：接入 `data/` 中地开石/珍珠石/蒙脱石/伊利石 CIF；素材库增加矿物选择。层间阳离子/水分子**默认保留并显示**（体现真实结构）；参数面板新增 `showInterlayer` 勾选控制显隐；预留 `interlayerWater` 开关扩展（显示/隐藏/部分脱水）。
@@ -335,10 +336,13 @@
 
 > 每条 = 一个成品模块入库（JSON + 缩略图 + 人版日报记录）。M1 单层片层已有（`module_single_platelet.svg/png`），标记完成。
 
-### T-9.1 [P1] M2「三层堆叠片层」成品模块（含 d₀₀₁ 参数推荐值）
+### T-9.1 ✅ [P1] M2「三层堆叠片层」成品模块（含 d₀₀₁ 参数推荐值）（2026-09-06 入库）
 - 依赖：T-1.7 ｜ 验收：模块入库可复用，参数面板改层数/层间距即时生效 ｜ 工时：0.5d
-### T-9.2 [P1] M3「埃洛石管 7Å」成品模块
+- 完成记录：**已入库**（六角轮廓、3 层、d₀₀₁=10Å 水合间距；缩略图为真实渲染快照；复用副本实测参数全还原）
+
+### T-9.2 ✅ [P1] M3「埃洛石管 7Å」成品模块（2026-09-06 入库）
 - 依赖：T-1.7 ｜ 验收：卷曲进度可动画、Al-OH 内壁呈现正确 ｜ 工时：0.5d
+- 完成记录：**已入库**（单壁闭合、innerR=14Å、Al-OH 内壁；另存「埃洛石管（双层壁）」模块作为 M7 前身）
 ### T-9.3 [P2] M4「CeO₂ 纳米颗粒组」成品模块（3 种尺寸预设）
 - 依赖：T-1.7 ｜ 验收：同种子复现同颗粒形 ｜ 工时：0.5d
 ### T-9.4 [P2] M5「橡胶基底」成品模块

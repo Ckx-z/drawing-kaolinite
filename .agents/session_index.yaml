@@ -145,3 +145,18 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-01"
+    date: "2026-09-06"
+    title: "阶段 2 开工：T-2.3 模块库 IndexedDB + T-9.1/T-9.2 首批素材模块"
+    summary: "T-2.3：moduleLibrary（Dexie 4 IndexedDB，内存缓存；localStorage 迁移逐条校验、原 key 保留、幂等标记；kaolin-modules/v1 导入导出，非法跳过/同 id 覆盖）；RendererService.snapshotComponent 隔离快照；ModulePanel 卡片网格 + TopBar ★存为模块。验收：200 模块入库实测 <100ms（远优于 2s）、缓存打开 <100ms、迁移不丢、往返无损（fake-indexeddb 单测 9 条）；浏览器实测存为模块/去重/复用副本参数全还原。修复：素材库添加后自动选中（否则★存为模块存错组件）。T-9.1 M2 三层堆叠片层（六角/d001=10Å）与 T-9.2 M3 埃洛石管 7Å 正式入库（真实缩略图）——素材积累 3/8-10。test 68 passed、build/lint 全绿。"
+    files_modified:
+      - src/state/moduleLibrary.ts / moduleLibrary.test.ts（新建）
+      - src/render/RendererService.ts (+snapshotComponent)
+      - src/ui/ModulePanel.tsx（新建）/ LibraryPanel.tsx / TopBar.tsx / index.css
+      - package.json (+dexie, -D fake-indexeddb)
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

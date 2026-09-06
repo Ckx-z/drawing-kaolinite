@@ -215,6 +215,38 @@ export class RendererService {
   /* ---------- 导出（T-1.7，逻辑对齐 demo exportPNG） ---------- */
 
   /**
+   * 组件缩略图快照（模块库入库用，T-2.3）：
+   * 临时隐藏其他组件与 gizmo → 渲染一帧 → 离屏画布缩放绘制 → 恢复现场。
+   */
+  snapshotComponent(id: string, width = 150, height = 110): string {
+    const rec = this.records.get(id);
+    if (!rec) return '';
+    const prevVisibility: Array<[string, boolean]> = [];
+    for (const [k, r] of this.records) {
+      prevVisibility.push([k, r.group.visible]);
+      r.group.visible = k === id && r.comp.visible;
+    }
+    const tcVisible = this.tc.visible;
+    this.tc.visible = false;
+    this.renderer.render(this.scene, this.camera);
+    const oc = document.createElement('canvas');
+    oc.width = width;
+    oc.height = height;
+    const ctx = oc.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#F4F5F7';
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(this.renderer.domElement, 0, 0, width, height);
+    }
+    this.tc.visible = tcVisible;
+    for (const [k, v] of prevVisibility) {
+      const r = this.records.get(k);
+      if (r) r.group.visible = v;
+    }
+    return oc.toDataURL('image/jpeg', 0.8);
+  }
+
+  /**
    * 高分辨率 PNG 导出：px = cm × dpi / 2.54（16cm@300dpi → 1890px 宽）。
    * 离屏改尺寸渲染一帧 → toDataURL → 恢复原尺寸。返回尺寸供 UI 提示。
    */
