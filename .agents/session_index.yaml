@@ -320,3 +320,17 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-13"
+    date: "2026-09-06"
+    title: "T-5.3 分组 SVG 矢量导出（PPT 转形状核心卖点）"
+    summary: "实现取舍：弃用 THREE.SVGRenderer（Projector 不支持 InstancedMesh，本项目上万原子全靠实例化），改为从原子/键数据直接生成 SVG 基本形状——原子→circle（透视投影+深度相关半径 r_px = r_world×H/(2·dist·tanHalf)）、键→line（圆头端帽，空间填充组件不画键与 3D 一致）；画家算法（组件间按最深图元远→近、组件内按图元深度）；相机后方+视锥（z/x/y NDC）剔除；每组件 <g id=组件名>（XML 转义+id 清洗）；平色填充（色板）+均匀描边=线稿档画风。sceneToSVG 纯函数；RendererService.exportSVG（世界坐标=局部×变换矩阵、半径基准与渲染同款、键仅球棍）+ TopBar 导出 SVG。验收：浏览器实测真实场景（6 组件 16,097 原子）导出 1.4MB，xmllint XML VALID，g 分组 6 个与图层名一致，circle=16,097 逐原子；修复空间填充误画键（25,014→3 line，体积 4.2→1.4MB）。投影/排序/剔除/半径公式/转义/画风 9 条单测。vitest 136 passed（+9）、build/lint 全绿。实际 1d（预估 2d）。"
+    files_modified:
+      - src/export/svg.ts / svg.test.ts（新建）
+      - src/render/RendererService.ts（exportSVG + baseRadiusFor）
+      - src/ui/TopBar.tsx（+导出 SVG）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

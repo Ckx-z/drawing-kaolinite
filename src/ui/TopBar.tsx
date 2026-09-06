@@ -62,6 +62,18 @@ export default function TopBar() {
     flash(`已导出 ${width} × ${height} px（16cm @ ${dpi}dpi${alpha ? '，透明底' : ''}）`);
   };
 
+  /** T-5.3：分组 SVG 矢量导出（线稿档画风，PPT 转形状/取消组合逐组件编辑） */
+  const onExportSVG = (): void => {
+    const svc = rendererRef.current;
+    if (!svc) return;
+    const svg = svc.exportSVG({ background: alpha ? undefined : '#F4F5F7', strokeWidth: 1 });
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    download(url, 'kaolin-scene.svg');
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    flash('已导出分组 SVG（每组件一个分组，PPT 转形状后可逐组件编辑）');
+  };
+
   /** T-5.1：期刊 TIFF（300dpi+ 硬要求，带物理分辨率元数据；超上限自动降级提示） */
   const onExportTIFF = (): void => {
     const svc = rendererRef.current;
@@ -158,6 +170,12 @@ export default function TopBar() {
         </button>
         <button onClick={onExportTIFF} title="期刊投稿格式（300dpi+ 硬要求，含物理分辨率元数据）">
           导出 TIFF
+        </button>
+        <button
+          onClick={onExportSVG}
+          title={'矢量图（线稿档画风）：PPT 插入后右键「转换为形状」可逐组件编辑'}
+        >
+          导出 SVG
         </button>
       </div>
       <div className="tb-group">

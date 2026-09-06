@@ -26,6 +26,9 @@ import {
   type GeometryRequest,
 } from '../core/worker';
 import { encodeTIFF, resolveExportSize } from '../export/tiff';
+import { sceneToSVG, type SvgAtom, type SvgComponentInput } from '../export/svg';
+import { getElement } from '../core/elements';
+import { activeColorFor } from './palette';
 import { addAtoms, addBonds, recolorAtomMesh } from './instanced';
 import { setActivePalette, type PaletteSetting } from './palette';
 import { substrateMaterial } from './materials';
@@ -58,6 +61,14 @@ export interface ExportOptions {
   widthCM?: number;
   /** 透明底 */
   alpha?: boolean;
+}
+
+/** SVG 导出的原子显示半径基准（与 instanced.ts 同款约定） */
+function baseRadiusFor(el: string, ballstick: boolean): number {
+  const info = getElement(el);
+  const cov = info?.cov ?? 1;
+  const vdw = info?.vdw ?? 1.6;
+  return ballstick ? cov * 0.95 : vdw * 0.92;
 }
 
 export class RendererService {
@@ -380,6 +391,59 @@ export class RendererService {
     if (this.renderer.domElement.parentElement === this.container) {
       this.container.removeChild(this.renderer.domElement);
     }
+  }
+
+  /**
+   * 分组 SVG 矢量导出（T-5.3）：从原子/键数据直接生成（线稿档画风，平色+描边），
+   * 每组件 <g id="组件名">。原子/键世界坐标 = 局部坐标经组件变换（含缩放半径）。
+   */
+  exportSVG(opts?: { background?: string; strokeWidth?: number }): string {
+    this.scene.updateMatrixWorld(true);
+    const size = this.renderer.getSize(new THREE.Vector2());
+    const comps: SvgComponentInput[] = [];
+    for (const rec of this.records.values()) {
+      const comp = rec.comp;
+      const data = rec.data;
+      if (!comp.visible || !data) continue;
+      const mtx = new THREE.Matrix4().compose(
+        new THREE.Vector3().fromArray(comp.transform.position),
+        new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(
+            (comp.transform.rotation[0] * Math.PI) / 180,
+            (comp.transform.rotation[1] * Math.PI) / 180,
+            (comp.transform.rotation[2] * Math.PI) / 180,
+          ),
+        ),
+        new THREE.Vector3().setScalar(comp.transform.scale),
+      );
+      const ballstick = (comp.params as { style?: string }).style === '球棍' || comp.type === 'molecule';
+      const atoms: SvgAtom[] = data.atoms.map((a) => {
+        const v = new THREE.Vector3(a.x, a.y, a.z).applyMatrix4(mtx);
+        // 半径：颗粒自带晶粒 r；其余按显示基准（空间填充 vdw×0.92 / 球棍 cov×0.95）；世界半径含组件缩放
+        const worldR =
+          (a.r !== undefined ? a.r : baseRadiusFor(a.el, ballstick)) * comp.transform.scale;
+        return { el: a.el, x: v.x, y: v.y, z: v.z, r: worldR };
+      });
+      comps.push({
+        name: comp.name,
+        visible: comp.visible,
+        atoms,
+        bonds: ballstick ? data.bonds : [], // 空间填充不画键（与 3D 渲染一致）
+        bondRadius: 0.16 * comp.transform.scale,
+        bondColor: '#8f959c',
+      });
+    }
+    return sceneToSVG(comps, this.camera, {
+      width: size.x,
+      height: size.y,
+      background: opts?.background,
+      strokeWidth: opts?.strokeWidth,
+      elementColors: this.elementsInScene().reduce<Record<string, string>>((acc, el) => {
+        acc[el] = activeColorFor(el);
+        return acc;
+      }, {}),
+      fallbackColor: '#9AA0A6',
+    });
   }
 
   /* ---------- 色板（T-4.2） ---------- */
