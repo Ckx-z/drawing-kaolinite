@@ -1,7 +1,7 @@
 # PROJECT_STATE — 项目当前状态
 
 > ⭐ **这是每次会话的第一份必读文件**。会话开头读它进入状态，结尾更新它。
-> 最后更新：2026-09-05（T-1.3 + T-1.4 完成，P0 过半：内核与渲染层就绪，下一步 T-1.5 状态管理）
+> 最后更新：2026-09-05（T-1.5 状态管理完成 + 仓库推送 GitHub；P0 仅余 T-1.6/T-1.7）
 
 ---
 
@@ -22,7 +22,7 @@
 |---|---|---|
 | **阶段 0** | 技术验证：方案文档 + 几何内核（CIF/切片/卷曲）+ 三维 Demo 全链路实测 | ✅ **已完成**（2026-09-04） |
 | **阶段 0.5** | 工程治理：Git 仓库、TODO 清单（47 条）、Q1–Q4 决策闭环、记忆系统骨架（T-8.1） | ✅ **已完成**（2026-09-05） |
-| **阶段 1（当前）** | P0 工程基座：T-1.1 ~ T-1.7（Vite+TS+React 脚手架 → Schema → 内核 TS 移植 → 渲染服务 → 状态管理 → UI 迁移 → 回归验收） | 🔶 **进行中**（T-1.1~T-1.4 ✅ 2026-09-05，余 T-1.5~T-1.7） |
+| **阶段 1（当前）** | P0 工程基座：T-1.1 ~ T-1.7（Vite+TS+React 脚手架 → Schema → 内核 TS 移植 → 渲染服务 → 状态管理 → UI 迁移 → 回归验收） | 🔶 **进行中**（T-1.1~T-1.5 ✅ 2026-09-05，余 T-1.6~T-1.7） |
 | 阶段 2 | P1：撤销重做 / Worker 化 / IndexedDB 模块库 / 组合模块 / 首批素材模块（T-9.1~9.2） | ⬜ 未开始 |
 | 阶段 3+ | P2–P3：双轨渲染 / 矢量导出 / 桌面端 / 素材积累至 8–10 个模块 | ⬜ 未开始 |
 
@@ -30,10 +30,10 @@
 
 ## 三、下一步（按优先级）
 
-1. **T-1.5 场景图状态管理（Zustand）**（依赖 T-1.2 ✅，约 1–2d）——增删/选择/显隐/params-transform 更新/重建节流；store 单测驱动不依赖 UI
-2. **T-1.6 三大面板与画布 UI 迁移**（依赖 T-1.5，约 2d）——素材库/参数面板/图层面板/顶部工具栏，拾取与 gizmo 接 `RendererService.onSelect/onTransformChange`
-3. **T-1.7 基座回归验收**（依赖 T-1.6，约 1d）——demo 场景 JSON 互导、300dpi 导出公式、Playwright 冒烟
-4. T-8.2 `check_library_state.py` 对账脚本（P2，可并行）
+1. **T-1.6 三大面板与画布 UI 迁移**（依赖 T-1.5 ✅，约 2d）——素材库/参数面板/图层面板/顶部工具栏接 store+`bindRenderer`；拾取接 `onSelect`、gizmo 接 `onTransformChange`
+2. **T-1.7 基座回归验收**（依赖 T-1.6，约 1d）——demo 场景 JSON 互导、300dpi 导出公式、Playwright 冒烟
+3. T-8.2 `check_library_state.py` 对账脚本（P2，可并行）
+4. 阶段 1 收官后立即开工阶段 2：T-2.1 撤销重做 / T-2.3 IndexedDB 模块库 / T-9.1~T-9.2 首批素材模块
 
 完整任务清单见 `TODO.md`（47 条，含依赖关系与验收标准）。
 
@@ -61,6 +61,7 @@
 | 数据模型 | `src/core/schema.ts` + `types.ts` | T-1.2：zod 4 strictObject；demo 兼容（无 id 组件→normalizeScene 补齐）；serializeScene/deserializeScene/deserializeModule |
 | 几何内核（TS） | `src/core/crystal.ts` `builders.ts` `geometry.ts` | T-1.3：逻辑=demo 基线逐位复现；`npm run test` 35 条回归（kernel.test.ts 基线断言） |
 | 渲染服务 | `src/render/RendererService.ts` + materials/instanced/substrate | T-1.4：组件装载/重建/选择/取景；`?preview=1` 浏览器预览（16,097 原子与 demo 一致）；three r147 |
+| 状态管理 | `src/state/sceneStore.ts` + `rendererBinding.ts` | T-1.5：zustand 5 vanilla 工厂化 store（写操作全 schema 校验）；绑定层差异同步 + rAF 重建节流（调度器可注入）；远端仓库 github.com/Ckx-z/drawing-kaolinite（SSH，master） |
 | 三维 Demo | `demo/index.html` | 双击可用；生产版功能对照基准 |
 | CIF 种子库 | `data/*.cif` | 高岭石/地开石/珍珠石/蒙脱石/伊利石 |
 | 决策日志 | `DECISIONS.md` | D01–D08 |

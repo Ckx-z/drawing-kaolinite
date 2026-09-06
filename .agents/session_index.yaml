@@ -103,3 +103,17 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-05-06"
+    date: "2026-09-05"
+    title: "远端仓库推送 + T-1.5 场景图状态管理（Zustand）"
+    summary: "建立远端 origin=git@github.com:Ckx-z/drawing-kaolinite.git 并推送 master（SSH）。T-1.5：zustand 5 vanilla 工厂化 store（SceneEntry=合法组件+必需 id；addComponent 默认值/命名自增、updateParams 走 componentSchema 全量校验非法抛错状态不变、setTransform 校验、toSceneDocument/loadScene 序列化往返含 demo 无 id 兼容、clear）；rendererBinding 订阅差异同步（增删/显隐/变换即时，参数重建 rAF 合并、调度器可注入、删除跳过已删 id）；RendererService 补 setComponentTransform。测试 +20（55 passed：state 20/kernel 12/schema 20/elements 3），build/lint 全绿。实际 0.5d。"
+    files_modified:
+      - src/state/sceneStore.ts / rendererBinding.ts / sceneStore.test.ts / rendererBinding.test.ts
+      - src/render/RendererService.ts (+setComponentTransform)
+      - package.json (+zustand@5.0.15)
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-05*.md
+    decisions_made: []
+    commits: []   # 随会话提交并推送 origin/master
+    blockers: []
+    status: "completed"

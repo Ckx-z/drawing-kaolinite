@@ -161,6 +161,14 @@ export class RendererService {
     if (rec) rec.group.visible = visible;
   }
 
+  /** 仅更新变换（位置/旋转/缩放），不重建几何（gizmo 拖动与状态层同步用） */
+  setComponentTransform(id: string, transform: RenderComponent['transform']): void {
+    const rec = this.records.get(id);
+    if (!rec) return;
+    rec.comp = { ...rec.comp, transform };
+    this.applyTransform(rec.comp, rec.group);
+  }
+
   setSelection(id: string | null): void {
     this.selectedId = id;
     const rec = id ? this.records.get(id) : null;

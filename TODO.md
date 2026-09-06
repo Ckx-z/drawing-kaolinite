@@ -64,12 +64,13 @@
 - 关联文件：`src/render/renderer.ts`、`src/render/materials.ts`、`src/render/instanced.ts`（实为 `src/render/RendererService.ts` + materials/instanced/substrate）
 - 完成记录：实际 0.5d。three r147（与 demo 同版本）ESM 化（examples/jsm 控制器/RoomEnvironment）；服务接口：addComponent/rebuildComponent/removeComponent/setComponentVisible/setSelection/frameComponent/frameAll/stats/dispose + onSelect/onTransformChange 回调；fillGroup 统一装载（基底走 THREE 挤出几何）；拾取保留 5px 阈值与 gizmo 排除。浏览器实测：`?preview=1` 预设场景 6 组件 **16,097 原子与 demo 完全一致**，颜色/取景一致（截图对照）。附带 `src/ui/preview.ts` 预设复刻。产物 795KB（gzip 222KB，three.js 体积，T-6 前可代码分割）。
 
-### T-1.5 [P0] 场景图状态管理（Zustand store）
+### T-1.5 ✅ [P0] 场景图状态管理（Zustand store）（2026-09-05 完成）
 - 描述：实现 Document/Component 状态树：增删、选择、可见性、锁定（字段先占位）、params/transform 更新、重建节流（rAF 合并）。
 - 依赖：T-1.2
 - 验收标准：面板操作（添加/删除/改参数/选组件）通过 store 单测驱动，不依赖 UI；无渲染的直接状态测试全绿。
 - 预估工时：1–2d
 - 关联文件：`src/state/sceneStore.ts`
+- 完成记录：实际 0.5d。zustand 5 vanilla `createStore`（工厂化，React 侧 T-1.6 用 useStore 桥接）；全部写操作经 schema 校验（非法抛错状态不变）；`rendererBinding.ts` 订阅差异同步（增删/显隐/变换即时，参数重建 rAF 合并，调度器可注入）；RendererService 补 `setComponentTransform`（变换不重建几何）。测试：sceneStore 15 条（默认值/命名自增/参数校验失败状态不变/序列化往返+demo 兼容载入）+ binding 5 条（替身不依赖 three：即时同步/同帧多次更新仅一次 rebuild/删除跳过/取消订阅），合计 55 passed。
 
 ### T-1.6 [P0] 三大面板与画布 UI 迁移
 - 描述：React 重写素材库/参数面板（含"卷曲进度"滑块）/图层面板/顶部工具栏/画布挂载与拾取（pointerup 距离阈值 + gizmo 排除逻辑）。
