@@ -48,19 +48,21 @@
 - 关联文件：`src/core/types.ts`、`src/core/schema.ts`
 - 完成记录：实际工时约 0.5d。zod 4.5.4；strictObject 全覆盖（拼写错误早暴露）；demo 无 id 组件约定以 optional + `normalizeScene` 补齐实现；20 条 schema 测试（demo 5 类型样例校验/往返无损/6 组参数越界报路径/版本/未知字段/模块条目含 T-3.2 规划字段）。test 23 passed、build 零错误、lint 零告警。
 
-### T-1.3 [P0] 几何内核 TS 移植 + 单元测试
+### T-1.3 ✅ [P0] 几何内核 TS 移植 + 单元测试（2026-09-05 完成）
 - 描述：`demo/core/crystal.js`、`builders.js` → `src/core/*.ts`（补全类型，逻辑不变）；vitest 复刻 `test.js` 全部断言并补充边界用例（progress→0、锥角极限、空裁剪）。
 - 依赖：T-1.1
 - 验收标准：vitest 断言与 T-0.1 基线数值一致（同参数同原子数同键数）；类型检查零 `any` 逃逸。
 - 预估工时：1–2d
-- 关联文件：`src/core/crystal.ts`、`src/core/builders.ts`、`src/core/__tests__/`
+- 关联文件：`src/core/crystal.ts`、`src/core/builders.ts`、`src/core/__tests__/`（实为 `src/core/kernel.test.ts`）
+- 完成记录：实际 0.5d。移植零逻辑改动（ELEMENTS 复用 elements.ts 消除双份数据；buildSubstrate 因依赖 THREE 归渲染层 substrate.ts）；kernel.test.ts 12 条断言全部逐位复现基线（26 原子/晶胞、2448/3372、六角 2597/3514、闭合管 4991/7259 vs 60% 半卷 6930、内壁半径 11.4/外壁 23.2 区间、颗粒 217 + 确定性复现、H₂O 3/2），另补三层堆叠与双层壁断言。
 
-### T-1.4 [P0] 渲染服务封装（RendererService）
+### T-1.4 ✅ [P0] 渲染服务封装（RendererService）（2026-09-05 完成）
 - 描述：将 `demo/index.html` 中渲染器/相机/灯光/PMREM 环境/InstancedMesh 原子与键渲染/精确包围盒取景（compBox）重构为独立服务类；保留 sRGB 线性化处理与 LOD 分档。
 - 依赖：T-1.1、T-1.2
 - 验收标准：与 demo 同参数场景渲染结果一致（原子数、颜色、取景）；提供 `rebuild(component)` 纯接口供状态层调用。
 - 预估工时：2d
-- 关联文件：`src/render/renderer.ts`、`src/render/materials.ts`、`src/render/instanced.ts`
+- 关联文件：`src/render/renderer.ts`、`src/render/materials.ts`、`src/render/instanced.ts`（实为 `src/render/RendererService.ts` + materials/instanced/substrate）
+- 完成记录：实际 0.5d。three r147（与 demo 同版本）ESM 化（examples/jsm 控制器/RoomEnvironment）；服务接口：addComponent/rebuildComponent/removeComponent/setComponentVisible/setSelection/frameComponent/frameAll/stats/dispose + onSelect/onTransformChange 回调；fillGroup 统一装载（基底走 THREE 挤出几何）；拾取保留 5px 阈值与 gizmo 排除。浏览器实测：`?preview=1` 预设场景 6 组件 **16,097 原子与 demo 完全一致**，颜色/取景一致（截图对照）。附带 `src/ui/preview.ts` 预设复刻。产物 795KB（gzip 222KB，three.js 体积，T-6 前可代码分割）。
 
 ### T-1.5 [P0] 场景图状态管理（Zustand store）
 - 描述：实现 Document/Component 状态树：增删、选择、可见性、锁定（字段先占位）、params/transform 更新、重建节流（rAF 合并）。

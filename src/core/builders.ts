@@ -1,0 +1,266 @@
+/**
+ * 几何内核（二）：参数化素材生成器 —— T-1.3 自 demo/core/builders.js 移植
+ *
+ * 每个素材类型 = 纯函数 (params) → { atoms, bonds }（契约见 geometry.ts）。
+ * 移植铁律：逻辑逐位对齐 demo 基线，kernel.test.ts 以实测数值回归。
+ * 差异说明：buildSubstrate 依赖 THREE.Shape，归入渲染层 src/render/substrate.ts（T-1.4）。
+ */
+import * as C from './crystal';
+import type { Atom, Bond, GeometryData } from './geometry';
+import type { MoleculeParams, ParticleParams, SheetParams, TubeParams } from './types';
+
+/* 确定性伪随机（同一种子同一颗粒形，保证模块复现） */
+export function mulberry32(seed: number): () => number {
+  let t = (seed >>> 0) || 1;
+  return function () {
+    t += 0x6d2b79f5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* ============================================================
+ * 素材 1：高岭土片层
+ * 管线：parseCIF → expandSymmetry → buildSlab(超胞)
+ *       → [六角裁剪] → 补羟基氢 → 判键 → [边缘饱和]
+ * ============================================================ */
+export function buildKaoliniteSheet(cifText: string, p: SheetParams): GeometryData {
+  const parsed = C.parseCIF(cifText);
+  const na = Math.max(2, Math.round(p.Lx / parsed.cell.a));
+  const nb = Math.max(2, Math.round(p.Ly / parsed.cell.b));
+  const slab = C.buildSlab(parsed, { na, nb, nc: p.layers, d001: p.d001 });
+  let atoms = slab.atoms;
+  if (p.shape === '六角') {
+    atoms = C.clipHexagon(atoms, Math.min(p.Lx, p.Ly) * 0.52);
+    C.center(atoms);
+  }
+  atoms = C.addHydroxylHydrogens(atoms);
+  const bonds = C.computeBonds(atoms);
+  if (p.edgeH) atoms = C.saturateEdges(atoms, bonds);
+  return { atoms, bonds, meta: { na, nb } };
+}
+
+/* ============================================================
+ * 素材 2：埃洛石管 ——【片层卷成管状】
+ * 内半径 innerR → 周向晶胞数 na = round(2π(innerR+3.6)/a)；
+ * walls 2~3 先堆垛再整体卷曲（同心多壁）；progress 卷曲进度可动画；
+ * 卷曲后重新判键 → 开口端自动断键。算法推导见 docs/技术方案设计.md §5.2。
+ * ============================================================ */
+export function buildHalloysiteTube(cifText: string, p: TubeParams): GeometryData {
+  const parsed = C.parseCIF(cifText);
+  // 圆周方向用 a 轴：na 个晶胞 ≈ 2π·(内半径 + 半层厚)；层厚近似 7.2Å 的一半
+  const na = Math.max(6, Math.round((2 * Math.PI * (p.innerR + 3.6)) / parsed.cell.a));
+  const nb = Math.max(2, Math.round(p.length / parsed.cell.b));
+  const slab = C.buildSlab(parsed, { na, nb, nc: p.walls, d001: p.d001 || 7.4 });
+  let atoms = C.addHydroxylHydrogens(slab.atoms);
+
+  // 去掉卷曲方向末端一列原子（x = xMax），避免 progress=1 时首尾重叠
+  let x0 = 1e9;
+  let x1 = -1e9;
+  for (const a of atoms) {
+    if (a.x < x0) x0 = a.x;
+    if (a.x > x1) x1 = a.x;
+  }
+  const eps = (x1 - x0) * 1e-4;
+  atoms = atoms.filter((a) => a.x < x1 - eps);
+
+  const rolled = rollToTube(atoms, { progress: p.progress, taperDeg: p.taperDeg });
+  const bonds = C.computeBonds(rolled);
+  return { atoms: rolled, bonds, meta: { na, nb } };
+}
+
+export interface RollOptions {
+  /** 卷曲进度 0~1（1 = 闭合圆管） */
+  progress: number;
+  /** 锥角（°），0 = 圆柱 */
+  taperDeg: number;
+}
+
+/**
+ * 卷曲变换（保弧长等距映射，纯几何）：输入任意平面原子组，输出卷曲后原子组。
+ * 独立导出：可复用于"部分卷曲"形态与逐帧动画。
+ */
+export function rollToTube(atoms: Atom[], p: RollOptions): Atom[] {
+  const progress = Math.min(1, Math.max(0.001, p.progress || 0.001));
+  const phi = progress * Math.PI * 2;
+  let x0 = 1e9;
+  let x1 = -1e9;
+  let z0 = 1e9;
+  let z1 = -1e9;
+  for (const a of atoms) {
+    if (a.x < x0) x0 = a.x;
+    if (a.x > x1) x1 = a.x;
+    if (a.z < z0) z0 = a.z;
+    if (a.z > z1) z1 = a.z;
+  }
+  const Lx = Math.max(1e-6, x1 - x0);
+  const half = Lx / 2;
+  const zMid = (z0 + z1) / 2;
+  const Rmid = Lx / phi; // 中面半径（progress=1 → 闭合）
+  const t =
+    Math.tan(Math.min(40, Math.abs(p.taperDeg || 0)) * (Math.PI / 180)) *
+    Math.sign(p.taperDeg || 0);
+  // 防止锥角过大导致负半径
+  const tMax = (Rmid * 0.9) / Math.max(half, 1e-6);
+  const tc = Math.max(-tMax, Math.min(tMax, t));
+
+  // F(u) = ∫₀ᵘ du′/Rm(u′)：圆柱时线性，圆锥时为对数
+  const Fof = (u: number): number => {
+    if (Math.abs(tc) < 1e-6) return u / Rmid;
+    return Math.log((Rmid + (u - half) * tc) / (Rmid - half * tc)) / tc;
+  };
+  const Ftot = Fof(Lx) - Fof(0) || 1e-9;
+
+  const out: Atom[] = new Array(atoms.length);
+  for (let i = 0; i < atoms.length; i++) {
+    const a = atoms[i];
+    const u = a.x - x0;
+    const theta = (phi * (Fof(u) - Fof(0))) / Ftot;
+    const Rm = Rmid + (u - half) * tc; // 该处的局部半径
+    const r = Rm - (a.z - zMid); // 径向映射
+    out[i] = {
+      el: a.el,
+      label: a.label,
+      r: a.r,
+      x: r * Math.sin(theta),
+      y: a.y,
+      z: Rmid - r * Math.cos(theta),
+    };
+  }
+  return out;
+}
+
+/* ============================================================
+ * 素材 3：纳米颗粒（CeO₂ 风格簇装球 / 光滑球）
+ * 簇装：斐波那契球面布点 + 径向抖动 + 内部填充；确定性种子可复现。
+ * ============================================================ */
+export function buildParticle(p: ParticleParams): GeometryData {
+  const rng = mulberry32(p.seed || 7);
+  const R = p.radius;
+  const atoms: Atom[] = [];
+  if (p.mode === '光滑') {
+    // 低频噪声球：半径随三个互质频率正弦起伏 ±5%
+    const N = 160;
+    for (let i = 0; i < N; i++) {
+      const y = 1 - ((i + 0.5) / N) * 2;
+      const rr = Math.sqrt(1 - y * y);
+      const th = i * 2.39996;
+      const dir = [rr * Math.cos(th), y, rr * Math.sin(th)];
+      const bump =
+        1 +
+        (0.05 * (Math.sin(5 * dir[0] * R + 1) + Math.sin(4 * dir[1] * R + 2) + Math.sin(6 * dir[2] * R))) /
+          3;
+      const rad = R * bump * (0.97 + rng() * 0.06);
+      atoms.push({ el: rng() < 0.25 ? 'Ce' : 'O', x: dir[0] * rad, y: dir[1] * rad, z: dir[2] * rad });
+    }
+    // 中心骨架若干原子，避免侧视时"空心"
+    for (let i = 0; i < 40; i++) {
+      const d = [rng() - 0.5, rng() - 0.5, rng() - 0.5];
+      const L = Math.hypot(d[0], d[1], d[2]) || 1;
+      const rad = R * 0.5 * Math.cbrt(rng());
+      atoms.push({
+        el: rng() < 0.4 ? 'Ce' : 'O',
+        x: (d[0] / L) * rad,
+        y: (d[1] / L) * rad,
+        z: (d[2] / L) * rad,
+      });
+    }
+  } else {
+    const K = Math.max(30, p.grains || 150);
+    const grainBase = (R * 3.4) / Math.sqrt(K); // 晶粒半径随数量自适应
+    for (let i = 0; i < K; i++) {
+      const y = 1 - ((i + 0.5) / K) * 2;
+      const rr = Math.sqrt(1 - y * y);
+      const th = i * 2.39996; // 黄金角
+      const shell = R * (0.6 + rng() * 0.22); // 壳层半径抖动
+      const el = i % 3 === 0 ? 'Ce' : 'O';
+      atoms.push({
+        el,
+        x: rr * Math.cos(th) * shell,
+        y: y * shell,
+        z: rr * Math.sin(th) * shell,
+        r: grainBase * (el === 'Ce' ? 1.12 : 0.92) * (0.9 + rng() * 0.2),
+      });
+    }
+    // 内部填充 + 中心核
+    for (let i = 0; i < Math.floor(K * 0.45); i++) {
+      const d = [rng() - 0.5, rng() - 0.5, rng() - 0.5];
+      const L = Math.hypot(d[0], d[1], d[2]) || 1;
+      const rad = R * 0.62 * Math.cbrt(rng());
+      const el = i % 3 === 0 ? 'Ce' : 'O';
+      atoms.push({
+        el,
+        x: (d[0] / L) * rad,
+        y: (d[1] / L) * rad,
+        z: (d[2] / L) * rad,
+        r: grainBase * (el === 'Ce' ? 1.1 : 0.9) * (0.9 + rng() * 0.2),
+      });
+    }
+  }
+  return { atoms, bonds: [], meta: { n: atoms.length } };
+}
+
+/* ============================================================
+ * 素材 4：小分子 / 离子内置库（Å 坐标，标准键长键角）
+ * ============================================================ */
+interface MoleculeDef {
+  atoms: Array<{ el: string; x: number; y: number; z: number }>;
+  bonds: Bond[];
+}
+
+export const MOLECULES: Record<MoleculeParams['kind'], MoleculeDef> = {
+  'H₂O': {
+    atoms: [
+      { el: 'O', x: 0, y: 0, z: 0 },
+      { el: 'H', x: 0.759, y: 0.587, z: 0 },
+      { el: 'H', x: -0.759, y: 0.587, z: 0 },
+    ],
+    bonds: [
+      [0, 1],
+      [0, 2],
+    ],
+  },
+  'O₂': {
+    atoms: [
+      { el: 'O', x: -0.6, y: 0, z: 0 },
+      { el: 'O', x: 0.6, y: 0, z: 0 },
+    ],
+    bonds: [[0, 1]],
+  },
+  'CO₂': {
+    atoms: [
+      { el: 'C', x: 0, y: 0, z: 0 },
+      { el: 'O', x: -1.16, y: 0, z: 0 },
+      { el: 'O', x: 1.16, y: 0, z: 0 },
+    ],
+    bonds: [
+      [0, 1],
+      [0, 2],
+    ],
+  },
+  'N₂': {
+    atoms: [
+      { el: 'N', x: -0.55, y: 0, z: 0 },
+      { el: 'N', x: 0.55, y: 0, z: 0 },
+    ],
+    bonds: [[0, 1]],
+  },
+  'Ca²⁺': { atoms: [{ el: 'Ca', x: 0, y: 0, z: 0 }], bonds: [] },
+  'Ce³⁺': { atoms: [{ el: 'Ce', x: 0, y: 0, z: 0 }], bonds: [] },
+  '·OH (羟基自由基)': {
+    atoms: [
+      { el: 'O', x: 0, y: 0, z: 0 },
+      { el: 'H', x: 0.97, y: 0, z: 0 },
+    ],
+    bonds: [[0, 1]],
+  },
+};
+
+export function buildMolecule(kind: MoleculeParams['kind']): GeometryData {
+  const m = MOLECULES[kind] ?? MOLECULES['H₂O'];
+  return {
+    atoms: m.atoms.map((a) => ({ ...a })),
+    bonds: m.bonds.map((b) => [...b] as Bond),
+  };
+}

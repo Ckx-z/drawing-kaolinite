@@ -97,6 +97,13 @@ body {
   align-items: center;
   justify-content: center;
 }
+.canvas-host {
+  position: absolute;
+  inset: 0;
+}
+.canvas-host canvas {
+  display: block;
+}
 .canvas-empty {
   text-align: center;
   color: #5b6470;

@@ -16,12 +16,15 @@
   "dependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "three": "^0.147.0",
     "zod": "^4.5.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.27.0",
+    "@types/node": "^26.4.1",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
+    "@types/three": "^0.147.0",
     "@vitejs/plugin-react": "^4.5.0",
     "eslint": "^9.27.0",
     "eslint-plugin-react-hooks": "^5.2.0",
