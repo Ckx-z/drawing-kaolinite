@@ -160,3 +160,16 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-02"
+    date: "2026-09-06"
+    title: "本地同步远程阶段 2 进度（T-2.3/T-9.1/T-9.2）"
+    summary: "远程代理断开，改经 ghfast.top 镜像 fetch；本地 master 重置对齐远程 5058c50（T-2.3 IndexedDB 模块库 + T-9.1/T-9.2 素材模块 M2/M3 入库，68 tests）。本地验证全过：vitest 68 passed、build/lint 零错误、demo 基线 ALL OK（补回 demo/package.json shim——远程仍缺此文件，node demo/core/test.js 在根 type:module 下会挂）。此前本地提交 6e1d103 的记忆记录随重置被覆盖，本条为重新记录。"
+    files_modified:
+      - demo/package.json（重建 shim）
+      - .agents/session_index.yaml / session_state.yaml
+      - DAILY_LOG/2026-09-06*.md（追加同步记录）
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"
