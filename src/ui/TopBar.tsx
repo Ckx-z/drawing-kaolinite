@@ -2,6 +2,7 @@
  * 顶部工具栏 —— T-1.6/T-1.7（对齐 demo：示例场景 / 保存场景 / 打开场景 / 导出 PNG / 清空）
  */
 import { useRef, useState } from 'react';
+import { exportCurlAnimation } from '../export/animation';
 import { buildLayerPngs } from '../export/layers';
 import { moduleEntryFromComponent, moduleEntryFromScene, saveModule } from '../state/moduleLibrary';
 import { rendererRef } from '../state/rendererRef';
@@ -100,6 +101,32 @@ export default function TopBar() {
     download(url, `kaolin-${widthCM}x${heightCM}cm.pdf`);
     setTimeout(() => URL.revokeObjectURL(url), 3000);
     flash(`已导出 PDF（页面 ${widthCM} × ${heightCM} cm @ ${dpi}dpi 位图${alpha ? '，透明底' : ''}）`);
+  };
+
+  /** T-10.1：卷曲动画 GIF（选中埃洛石管，progress 0→1 均匀取帧） */
+  const onExportAnimation = async (): Promise<void> => {
+    const svc = rendererRef.current;
+    if (!svc) return;
+    const sel = sceneStore.getState().selectionId;
+    const comp = sel ? sceneStore.getState().components.find((c) => c.id === sel) : null;
+    if (!comp || comp.type !== 'halloysite_tube') {
+      flash('请先在画布中选中一个埃洛石管，再导出卷曲动画');
+      return;
+    }
+    flash('正在生成卷曲动画（逐帧构建几何，约几秒）…');
+    const result = await exportCurlAnimation(svc, comp.id, {
+      frames: 20,
+      dpi: 96,
+      onProgress: (p) => {
+        if (Math.abs(p - 1) < 1e-9) return;
+      },
+    });
+    if (!result) {
+      flash('动画导出失败');
+      return;
+    }
+    download(result.dataUrl, 'kaolin-curl-animation.gif');
+    flash(`已导出卷曲动画 GIF（${result.frames} 帧，片→管）`);
   };
 
   /** T-5.1：期刊 TIFF（300dpi+ 硬要求，带物理分辨率元数据；超上限自动降级提示） */
@@ -201,6 +228,14 @@ export default function TopBar() {
         </button>
         <button onClick={onExportPDF} title="PDF：页面物理尺寸 = 设定 cm 数（位图满幅嵌入）">
           导出 PDF
+        </button>
+        <button
+          onClick={() => {
+            void onExportAnimation();
+          }}
+          title={'卷曲动画 GIF：选中埃洛石管后导出「片→管」动画（20 帧）'}
+        >
+          导出动画 GIF
         </button>
         <button
           onClick={onExportSVG}

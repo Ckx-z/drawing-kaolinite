@@ -499,3 +499,17 @@ sessions:
     commits: []
     blockers: ["推送待网络恢复（代理关闭，直连被重置；0c7972a 与本会话提交在本地待推）"]
     status: "completed"
+
+  - id: "2026-09-06-25"
+    date: "2026-09-06"
+    title: "T-10.1 卷曲动画 GIF 导出（P3 提前完成）"
+    summary: "gif.ts 零依赖 GIF89a 编码器：216 色网页安全调色板量化 + LZW 变长码压缩（严格 GIF early change 升位约定——编码器字典领先解码器一码，解码器升位须提前一码；字典满 4096 清空重置）。animation.ts 编排：progress 0.02→1 均匀 N 帧 → rebuildComponent（Worker+缓存层）逐帧重建 → waitForGeometry（kaolin-geometry-updated 事件）等待落地 → exportComponentCanvas 隔离渲染 → encodeGIF；finally 恢复原始参数（直接渲染服务路径，不进撤销栈）。TopBar「导出动画 GIF」（选中管后可用，flash 进度提示）。调试三处：测试参考解码器字典索引双重计入 256 字面量（dict.size+2 而非 +258）、clear 后未重置码长（早期升位时机错位）、测试夹具帧引用错（frame(索引) vs frame(色值)）。验收：单测 14 条（调色板/量化/纯 LZW 对拍含字典满/GIF 结构遍历器/帧延时/像素往返/dataURL）；浏览器端到端 12 帧 GIF 37KB、GIF89a 头、12 GCE、浏览器 Image 原生解析 605×119 成功（真实互操作）、sips 识别 format=gif、参数恢复 progress=1、耗时 6.6s（12 帧 Worker 构建）。vitest 230 passed（+14）、build/lint 全绿。实际 1.5d（预估 1–2d）。MP4/帧序列打包留作后续扩展。"
+    files_modified:
+      - src/export/gif.ts / gif.test.ts / animation.ts / animation.test.ts（新建）
+      - src/render/RendererService.ts（getComponent/exportComponentCanvas/waitForGeometry）
+      - src/ui/TopBar.tsx（+导出动画 GIF）/ package.json（+jsdom devDep）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

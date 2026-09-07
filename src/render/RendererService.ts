@@ -722,6 +722,66 @@ export class RendererService {
       .map(({ id, name }) => ({ id, name }));
   }
 
+  /** 读取组件当前参数（动画帧间以新 progress 重建用） */
+  getComponent(id: string): RenderComponent | null {
+    return this.records.get(id)?.comp ?? null;
+  }
+
+  /**
+   * 单层隔离渲染画布（T-10.1 动画帧用）：只渲染指定组件（其他组件与 gizmo 隐藏），
+   * 离屏 2D 画布（含标注叠画）。分辨率公式与 exportPNG 一致。
+   */
+  exportComponentCanvas(id: string, opts: ExportOptions): HTMLCanvasElement | null {
+    const rec = this.records.get(id);
+    if (!rec) return null;
+    const plan = resolveExportSize(
+      opts.dpi,
+      opts.widthCM ?? 16,
+      this.container.clientWidth,
+      this.container.clientHeight,
+      this.renderer.capabilities.maxTextureSize,
+    );
+    const prevVis: Array<[string, boolean]> = [];
+    for (const [k, r] of this.records) {
+      prevVis.push([k, r.group.visible]);
+      r.group.visible = k === id && r.comp.visible;
+    }
+    const tcVisible = this.tc.visible;
+    this.tc.visible = false;
+    const st = this.beginOffscreen(plan.w, plan.h, false);
+    try {
+      return this.snapshotWithOverlay(plan.w, plan.h, opts.annotations ?? []);
+    } finally {
+      this.endOffscreen(st);
+      this.tc.visible = tcVisible;
+      for (const [k, v] of prevVis) {
+        const r = this.records.get(k);
+        if (r) r.group.visible = v;
+      }
+    }
+  }
+
+  /** 等待指定组件几何构建落地（applyGeometry 派发的 kaolin-geometry-updated 事件） */
+  waitForGeometry(id: string, timeoutMs = 8000): Promise<void> {
+    return new Promise((res) => {
+      const h = (e: Event): void => {
+        if ((e as CustomEvent).detail?.id === id) {
+          cleanup();
+          res();
+        }
+      };
+      const timer = setTimeout(() => {
+        cleanup();
+        res();
+      }, timeoutMs);
+      const cleanup = (): void => {
+        window.removeEventListener('kaolin-geometry-updated', h);
+        clearTimeout(timer);
+      };
+      window.addEventListener('kaolin-geometry-updated', h);
+    });
+  }
+
   /**
    * PDF 导出（T-5.2，先位图版）：离屏渲染 → PNG dataURL → jsPDF 按物理尺寸满幅嵌入。
    * 页面尺寸 = 设定 cm 数；有效分辨率 = 位图 dpi。
