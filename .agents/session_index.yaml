@@ -486,3 +486,16 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-24"
+    date: "2026-09-06"
+    title: "T-7.2 快捷键体系 + 速查浮层（P2 清单全清）"
+    summary: "shortcuts.ts 声明式注册表（key/mod/shift/label/needsSelection/run 单一事实源）11 项：Ctrl/Cmd+Z 撤销、+Shift+Z 与 Ctrl+Y 重做、Ctrl+C 复制（剪贴板=选中组件 type/name/params/transform 快照）、Ctrl+V 粘贴（+12Å 偏移、schema 校验、入撤销栈、自动选中）、Ctrl+D 原地副本、Del/Backspace 删除、H 显隐、Esc 取消、Shift+? 速查浮层（? 或点空白关闭，注册表同源渲染永不脱节）。App keydown 统一分发（输入框聚焦跳过）。调试修复两个真 bug：分发器 shift 语义（未声明 shift 的键在按 Shift 时也匹配 → Shift+Z 错触 undo；修为 def.shift ? shiftKey : !shiftKey）、addComponent 返回 string 被当对象取 .id（select(undefined) 静默失败）。验收：单测 9 条（无键位冲突/速查去重/分发门控/needsSelection/undo-redo 经真实历史栈/H/?/未注册不消费/复制粘贴偏移与自动选中）；浏览器端到端实测全部生效（速查浮层截图归档；此前 r 计数错误为测试脚本 getState 快照引用问题非应用 bug）。vitest 216 passed（+9）、build/lint 全绿。实际 1d。"
+    files_modified:
+      - src/ui/shortcuts.ts / shortcuts.test.ts（新建）
+      - src/ui/App.tsx（统一分发 + 浮层）/ src/index.css（.cheatsheet）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: ["推送待网络恢复（代理关闭，直连被重置；0c7972a 与本会话提交在本地待推）"]
+    status: "completed"

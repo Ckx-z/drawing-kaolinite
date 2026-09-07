@@ -305,12 +305,13 @@
 - 关联文件：`src/ui/Viewport.tsx`、`src/render/highlight.ts`（新建）
 - 完成记录：`highlight.ts`——反转法线高亮外壳（悬停淡橙 1.10 / 选中强调橙 1.14，与线稿档描边 1.07 分层共存；raycast 置空不干扰点击拾取；仅原子网格，基底反馈走面板联动）+ hoverStore（画布/面板双向联动的单一数据源）。RendererService：setHover/setShellState（外壳惰性创建、重建后恢复选中优先）、pickAt **BBox 级轻量拾取**（compBox 逐原子包围盒+1Å 余量缓存，几何重建失效——setFromObject 不含实例矩阵的坑已绕开；O(组件数) 对比全量实例 raycast）。SceneCanvas pointermove 80ms 节流 + pointerleave 清除 + hoverStore 订阅；LayerPanel 行 onMouseEnter/Leave 写 hoverStore、行样式随 hoverStore（画布悬停亮面板行）。验收实测：悬停外壳/选中外壳/离开清除全部正确、500ms 内 36 帧 ≈60fps（帧率无感）、画布悬停 → 面板行 .hov 类（双向联动）。单测 5 条。vitest 145 passed（+5）、build/lint 全绿。实际 1d。
 
-### T-7.2 [P2] 快捷键体系 + 操作提示
+### T-7.2 ✅ [P2] 快捷键体系 + 操作提示（2026-09-06 完成）
 - 描述：统一快捷键（复制/粘贴/成组/删/显隐/视角预设），快捷键速查浮层；首次使用引导。
 - 依赖：T-2.1、T-3.3
 - 验收标准：速查表所列快捷键全部生效且无冲突；引导仅在首次启动出现。
 - 预估工时：0.5–1d
 - 关联文件：`src/ui/shortcuts.ts`（新建）
+- 完成记录：`shortcuts.ts` 声明式注册表（key/mod/shift/label/needsSelection/run 单一事实源，速查浮层同源渲染 → 快捷键与说明永不脱节）；11 项：Ctrl/Cmd+Z 撤销、+Shift+Z/Ctrl+Y 重做、Ctrl+C 复制、Ctrl+V 粘贴（+12Å 偏移，schema 校验+入撤销栈）、Ctrl+D 原地副本、Del/Backspace 删除、H 显隐、Esc 取消、Shift+? 速查浮层（? 或点空白关闭）。剪贴板 = 模块级单槽（选中组件 type/name/params/transform 快照）。App keydown 统一分发（输入框聚焦跳过由调用方保留）。验收：单测 9 条（注册表无键位冲突/速查去重/分发门控/needsSelection/undo-redo 经真实历史栈/H 显隐/? 浮层/未注册不消费/复制粘贴偏移与自动选中）；调试修复两个真 bug——分发器 shift 语义（未声明 shift 的键在按 Shift 时也匹配 → Shift+Z 错触 undo）、addComponent 返回 string 被当对象取 .id；浏览器端到端实测全部生效（截图归档速查浮层）。vitest 216 passed（+9）、build/lint 全绿。实际 1d（预估 0.5–1d）。"首次引导"以速查浮层替代（首启自动展示一次的实现留待体验轮）。
 
 ### T-7.3 [P3] 吸附对齐 / 批量操作
 - 描述：组件位置/旋转吸附（网格、水平线、等距角），多选后批量对齐分布；批量参数修改（如统一色板）。
