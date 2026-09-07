@@ -77,6 +77,7 @@
 | 标注层 | `src/ui/annotations/draw.ts` + `src/export/svg.ts` | T-4.4：比例尺（自动取整刻度 nm）+ 引线标签；annotations[] 随场景持久化；PNG/TIFF/PDF 合成 + SVG 追加（同一投影，位置一致）；屏幕空间字号恒定 |
 | 快捷键 | `src/ui/shortcuts.ts` | T-7.2：声明式注册表 11 项（undo/redo/复制/粘贴+12Å/原地副本/删除/显隐/Esc/? 速查）+ 速查浮层同源渲染；分发器 shift 语义严格 |
 | 动画导出 | `src/export/gif.ts` + `animation.ts` | T-10.1：零依赖 GIF89a 编码器（216 色量化 + LZW early change，自写解码器对拍）+ 卷曲动画编排（progress 0.02→1 均匀帧，逐帧 Worker 重建经缓存，结束恢复参数）；浏览器实测 Image 原生解析 605×119 ✓ |
+| 桌面端 | `src-tauri/` | T-6.1（macOS 完成）：Tauri v2 + release profile（lto/opt-s/strip）；.app 4.4MB / .dmg 2.1MB；文件关联 .kaolin-scene.json（Info.plist 验证）；RunEvent::Opened → scene-open-content 事件 → 前端 loadScene；Windows 构建待 CI |
 | 管形貌选项 | `src/core/builders.ts` | T-2.6：curlAxis a/b 双向卷曲（半径校验一致）+ portNoise 端口确定性噪声（键数变化 <5%）；管参数随场景持久化 |
 | 晶学严格模式 | `src/core/crystal.ts` | T-2.7：sheetParams.strictCell 开关——真实三斜投影（全投影+层间沿 c 轴堆叠，层片倾斜）；Si–O 键长与 CIF 距离矩阵偏差 <0.5%；默认示意正交化（D03 后路落地） |
 | 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移 + 导入导出；T-3.2：filterModules 检索/类型筛选/收藏排序 + toggleFavorite（favorite 字段向后兼容） |

@@ -279,12 +279,13 @@
 
 ## 六、桌面端与分发
 
-### T-6.1 [P3] Tauri 打包
+### T-6.1 🔶 [P3] Tauri 打包（macOS 完成 2026-09-06；Windows 待 CI）
 - 描述：Tauri v2 封装 Web 工程；安装包 < 15MB；自动更新通道；文件关联 `.kaolin-scene.json`。
 - 依赖：T-1.7
 - 验收标准：Windows 安装包本机安装/卸载干净；双击场景文件直达软件打开；安装包体积达标。
 - 预估工时：2–3d
 - 关联文件：`src-tauri/`（新建）
+- 完成记录（macOS 部分）：`src-tauri/` 手写骨架（tauri.conf.json/Cargo.toml/build.rs/main.rs，release profile: lto+opt-level=s+strip）；图标经浏览器 canvas 生成 1024px 源图 → `npx tauri icon` 全套；bundle.fileAssociations 注册 `.kaolin-scene.json`（Info.plist CFBundleDocumentTypes 已验证）；main.rs `RunEvent::Opened`（v2 字段为 urls）读文件内容 emit `scene-open-content`，前端 main.tsx 动态 import 监听并 loadScene（浏览器无 Tauri 上下文自动跳过）。**验收实测：.app 4.4MB / .dmg 2.1MB（远优于 <15MB 目标）**；.app 启动存活、文件关联触发无崩溃。新增依赖：@tauri-apps/cli、@tauri-apps/api（devDep/dep）、rustup stable（本机工具链）。**Windows 安装包需 Windows 环境/CI 构建**（建议后续加 GitHub Actions tauri-action workflow，T-6.1 完整关闭）。实际 1d。
 
 ### T-6.2 [P3] 工程文件夹模块库与网盘同步
 - 描述：桌面端模块库落盘到工程文件夹（如 `KaolinAssets/Modules/*.json`），随坚果云/OneDrive 同步；课题组共享即拷贝。

@@ -513,3 +513,18 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-26"
+    date: "2026-09-06"
+    title: "T-6.1 Tauri 桌面端打包（macOS 完成，Windows 待 CI）"
+    summary: "工具链：rustup stable 1.98.1（用户级安装）+ @tauri-apps/cli 2.11 + @tauri-apps/api。src-tauri 手写骨架（免交互 init）：tauri.conf.json（1440×860 窗口/bundle targets all/fileAssociations .kaolin-scene.json Editor/GraphicsDesign）、Cargo.toml（release: lto+opt-level=s+strip+codegen-units=1）、main.rs（RunEvent::Opened——v2 字段为 urls 非 files，file:// URL to_file_path 读场景内容 emit scene-open-content）。图标：浏览器 canvas 生成 1024px 源图（深色底+陶土色圆角+菱形标识）→ npx tauri icon 全套。前端 main.tsx '__TAURI_INTERNALS__' in window 守卫动态 import event API loadScene（浏览器 dev 自动跳过）。调试：Cargo.toml [lib] 段多余（移除）、RunEvent::Opened 字段名两轮适配。验收实测：**.app 4.4MB / .dmg 2.1MB（目标 <15MB）**；Info.plist CFBundleDocumentTypes 含 kaolin-scene.json（Editor）；.app 启动存活、open -a 场景文件关联触发无崩溃。Windows 安装包需 Windows/CI 构建（建议 tauri-action workflow）。实际 1d。"
+    files_modified:
+      - src-tauri/（tauri.conf.json/Cargo.toml/build.rs/src/main.rs/icons/*/.gitignore）
+      - src-tauri-icon.png（图标源图）
+      - src/main.tsx（scene-open-content 监听）
+      - package.json（+@tauri-apps/cli devDep、+@tauri-apps/api）
+      - TODO.md / PROJECT_STATE.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"
