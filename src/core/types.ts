@@ -6,6 +6,7 @@
  */
 import type { z } from 'zod';
 import type {
+  annotationSchema,
   componentSchema,
   componentTypeEnum,
   moleculeParamsSchema,
@@ -41,6 +42,9 @@ export type SceneDocument = z.infer<typeof sceneDocumentSchema>;
 
 /** 全局色板设置（T-4.2） */
 export type PaletteSetting = z.infer<typeof paletteSettingSchema>;
+
+/** 标注（T-4.4）：比例尺 / 文本标签 */
+export type Annotation = z.infer<typeof annotationSchema>;
 
 /** 模块库条目（单组件模块；组合模块 T-3.1 扩展） */
 export type ModuleEntry = z.infer<typeof moduleSchema>;

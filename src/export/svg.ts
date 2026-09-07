@@ -169,3 +169,72 @@ export function sceneToSVG(
   parts.push('</svg>');
   return parts.join('\n');
 }
+
+/* ---------- 标注层（T-4.4）：与位图同一投影 → 位置一致 ---------- */
+
+export interface SvgAnnotation {
+  type: 'scalebar' | 'label';
+  text?: string;
+  worldLen?: number;
+  target?: [number, number, number];
+  offset?: [number, number];
+  visible?: boolean;
+}
+
+export interface SvgAnnotationOptions {
+  width: number;
+  height: number;
+  /** 世界 → 像素（与组件图元同一投影链） */
+  project: (p: [number, number, number]) => { x: number; y: number; visible: boolean };
+  pxPerA: number;
+  annotations: SvgAnnotation[];
+  strokeWidth?: number;
+}
+
+const SCALE_STEPS = [1, 2, 5, 10, 20, 50, 100];
+const SB_MAX_PX = 160;
+const SB_MARGIN = 24;
+
+/** 生成标注 SVG 片段（比例尺 + 文本引线），字体大小为屏幕空间像素（不随缩放变化） */
+export function annotationsToSVG(o: SvgAnnotationOptions): string {
+  const { width: W, height: H } = o;
+  const parts: string[] = [];
+  for (const a of o.annotations) {
+    if (a.visible === false) continue;
+    if (a.type === 'scalebar') {
+      let len = a.worldLen ?? 0;
+      for (const cand of SCALE_STEPS) if (cand * o.pxPerA <= SB_MAX_PX) len = cand;
+      if (!len) continue;
+      const px = len * o.pxPerA;
+      if (px < 4) continue;
+      const x1 = SB_MARGIN;
+      const y = H - SB_MARGIN;
+      const x2 = x1 + px;
+      const nm = len >= 10 ? Math.round(len / 10) : Math.round(len * 10) / 100;
+      parts.push(
+        `<g id="scalebar">` +
+          `<line x1="${fmt(x1)}" y1="${fmt(y)}" x2="${fmt(x2)}" y2="${fmt(y)}" stroke="#2b2f33" stroke-width="2"/>` +
+          `<line x1="${fmt(x1)}" y1="${fmt(y - 5)}" x2="${fmt(x1)}" y2="${fmt(y + 5)}" stroke="#2b2f33" stroke-width="2"/>` +
+          `<line x1="${fmt(x2)}" y1="${fmt(y - 5)}" x2="${fmt(x2)}" y2="${fmt(y + 5)}" stroke="#2b2f33" stroke-width="2"/>` +
+          `<text x="${fmt((x1 + x2) / 2)}" y="${fmt(y - 10)}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#2b2f33">${esc(nm + ' nm')}</text>` +
+          `</g>`,
+      );
+    } else if (a.type === 'label' && a.target && a.text) {
+      const p = o.project(a.target);
+      if (!p.visible) continue;
+      const [dx, dy] = a.offset ?? [14, -14];
+      const tx = p.x + dx;
+      const ty = p.y + dy;
+      const anchor = dx < 0 ? 'end' : 'start';
+      parts.push(
+        `<g id="label-${esc(a.text).slice(0, 8)}">` +
+          `<line x1="${fmt(p.x)}" y1="${fmt(p.y)}" x2="${fmt(tx - 2)}" y2="${fmt(ty + 2)}" stroke="#2b2f33" stroke-width="1"/>` +
+          `<circle cx="${fmt(p.x)}" cy="${fmt(p.y)}" r="2.5" fill="#2b2f33"/>` +
+          `<text x="${fmt(tx)}" y="${fmt(ty)}" text-anchor="${anchor}" font-family="system-ui, sans-serif" font-size="13" fill="#1a1d21" stroke="white" stroke-width="3" paint-order="stroke">${esc(a.text)}</text>` +
+          `</g>`,
+      );
+    }
+  }
+  void W;
+  return parts.join('\n');
+}

@@ -74,6 +74,7 @@
 | 网格缓存 | `src/core/cache.ts` | T-2.9：内容寻址缓存引擎（kind+参数指纹+CIF 指纹，LRU 40 条）+ 预烘焙 10 管组合；实测命中实例化 14ms（验收 <50ms） vs 未命中 94ms |
 | PDF 导出 | `src/export/pdf.ts` | T-5.2：jsPDF 页面物理尺寸 = 设定 cm 数（MediaBox pt 精确换算），位图满幅嵌入 |
 | 对账脚本 | `scripts/check_library_state.py` | T-8.2：必需文件/文档新鲜度/种子库完整性/git 状态/内核基线五组检查（--with-tests 可选）；退出码 0/1 |
+| 标注层 | `src/ui/annotations/draw.ts` + `src/export/svg.ts` | T-4.4：比例尺（自动取整刻度 nm）+ 引线标签；annotations[] 随场景持久化；PNG/TIFF/PDF 合成 + SVG 追加（同一投影，位置一致）；屏幕空间字号恒定 |
 | 管形貌选项 | `src/core/builders.ts` | T-2.6：curlAxis a/b 双向卷曲（半径校验一致）+ portNoise 端口确定性噪声（键数变化 <5%）；管参数随场景持久化 |
 | 晶学严格模式 | `src/core/crystal.ts` | T-2.7：sheetParams.strictCell 开关——真实三斜投影（全投影+层间沿 c 轴堆叠，层片倾斜）；Si–O 键长与 CIF 距离矩阵偏差 <0.5%；默认示意正交化（D03 后路落地） |
 | 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移 + 导入导出；T-3.2：filterModules 检索/类型筛选/收藏排序 + toggleFavorite（favorite 字段向后兼容） |

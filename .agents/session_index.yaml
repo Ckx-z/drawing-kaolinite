@@ -468,3 +468,21 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-06-23"
+    date: "2026-09-06"
+    title: "T-4.4 标注层 —— P2 全部收官"
+    summary: "标注 = 场景数据（annotationSchema scalebar/label，annotations[] 随场景 JSON 持久化，旧文件兼容——D02 存参数不存网格）。显示：SceneCanvas 叠加透明 canvas rAF 重绘；ui/annotations/draw.ts 纯 Canvas 2D（比例尺自动取整刻度 {1,2,5,10,20,50,100}A ≤160px nm 计；标签锚点圆+引线+白描边文本）。导出：PNG/TIFF/PDF snapshotWithOverlay 离屏合成；SVG annotationsToSVG 追加（svg.ts，并行会话实现）——与位图同一 projectToScreen 投影位置一致；字号屏幕空间恒定。ParamPanel 标注区（添加/文本编辑/显隐/删除）；TopBar 四格式透传。关键修复：projectToScreen 投影链 bug——projectionMatrix 必须作用于视空间坐标（原实现作用于世界坐标 → 标签永远被剔除；scalebar 无投影不受影响，故此前只表现为标签缺失）。验收：单测 5 条（schema 往返/缺省/非法拒绝/SVG 刻度换算与投影剔除/双导出结构）；浏览器实测比例尺 10nm/5nm 随缩放自适应重取、标签引线渲染、SVG id=scalebar y=H-24 与位图同语义、PNG 合成。vitest 207 passed（+5）、build/lint 全绿。实际 1.5d（双会话协作）。**P2 全部收官。**"
+    files_modified:
+      - src/core/schema.ts（annotationSchema）/ src/core/types.ts（Annotation）
+      - src/state/sceneStore.ts（annotations 状态/add/update/remove/序列化）
+      - src/ui/annotations/draw.ts（新建）
+      - src/render/RendererService.ts（projectToScreen/pxPerAAtTarget/snapshotWithOverlay + 修复投影链）
+      - src/export/svg.ts（annotationsToSVG，并行会话）
+      - src/ui/SceneCanvas.tsx / ParamPanel.tsx / TopBar.tsx
+      - src/export/annotations.test.ts（新建，5 条）
+      - TODO.md / PROJECT_STATE.md / DATA_DICT.md / .agents/* / DAILY_LOG/2026-09-06*.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

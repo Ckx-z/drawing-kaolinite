@@ -59,7 +59,7 @@ export default function TopBar() {
   const onExportPNG = (): void => {
     const svc = rendererRef.current;
     if (!svc) return;
-    const { dataUrl, width, height } = svc.exportPNG({ dpi, alpha });
+    const { dataUrl, width, height } = svc.exportPNG({ dpi, alpha, annotations: sceneStore.getState().annotations });
     download(dataUrl, `kaolin-16cm-${dpi}dpi.png`);
     flash(`已导出 ${width} × ${height} px（16cm @ ${dpi}dpi${alpha ? '，透明底' : ''}）`);
   };
@@ -83,7 +83,7 @@ export default function TopBar() {
   const onExportSVG = (): void => {
     const svc = rendererRef.current;
     if (!svc) return;
-    const svg = svc.exportSVG({ background: alpha ? undefined : '#F4F5F7', strokeWidth: 1 });
+    const svg = svc.exportSVG({ background: alpha ? undefined : '#F4F5F7', strokeWidth: 1, annotations: sceneStore.getState().annotations });
     const blob = new Blob([svg], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
     download(url, 'kaolin-scene.svg');
@@ -95,7 +95,7 @@ export default function TopBar() {
   const onExportPDF = (): void => {
     const svc = rendererRef.current;
     if (!svc) return;
-    const { blob, widthCM, heightCM } = svc.exportPDF({ dpi, alpha });
+    const { blob, widthCM, heightCM } = svc.exportPDF({ dpi, alpha, annotations: sceneStore.getState().annotations });
     const url = URL.createObjectURL(blob);
     download(url, `kaolin-${widthCM}x${heightCM}cm.pdf`);
     setTimeout(() => URL.revokeObjectURL(url), 3000);
@@ -106,7 +106,7 @@ export default function TopBar() {
   const onExportTIFF = (): void => {
     const svc = rendererRef.current;
     if (!svc) return;
-    const { blob, width, height, degraded, effectiveDpi } = svc.exportTIFF({ dpi, alpha });
+    const { blob, width, height, degraded, effectiveDpi } = svc.exportTIFF({ dpi, alpha, annotations: sceneStore.getState().annotations });
     const url = URL.createObjectURL(blob);
     download(url, `kaolin-16cm-${Math.round(effectiveDpi)}dpi.tiff`);
     setTimeout(() => URL.revokeObjectURL(url), 3000);

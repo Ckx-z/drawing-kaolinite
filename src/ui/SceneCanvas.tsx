@@ -8,11 +8,57 @@ import { useEffect, useRef } from 'react';
 import kaoliniteCif from '../../data/kaolinite.cif?raw';
 import { createCachedEngine, defaultTubePrebakeRequests, prebake } from '../core/cache';
 import { createWorkerEngine } from '../core/worker';
+import { drawAnnotations } from './annotations/draw';
 import { RendererService } from '../render/RendererService';
 import { hoverStore } from '../render/highlight';
 import { bindRenderer } from '../state/rendererBinding';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
+
+/** 叠加 canvas：随渲染画布同尺寸；rAF 重绘标注（与渲染同步即可） */
+function AnnotationOverlay(): React.ReactElement {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    let raf = 0;
+    const loop = (): void => {
+      const cv = ref.current;
+      const svc = rendererRef.current;
+      if (cv && svc) {
+        if (cv.width !== svc.renderer.domElement.width || cv.height !== svc.renderer.domElement.height) {
+          cv.width = svc.renderer.domElement.width;
+          cv.height = svc.renderer.domElement.height;
+        }
+        const ctx = cv.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, cv.width, cv.height);
+          const s = sceneStore.getState();
+          const dpr = svc.renderer.getPixelRatio();
+          const W = cv.clientWidth || cv.width / dpr;
+          const H = cv.clientHeight || cv.height / dpr;
+          ctx.scale(dpr, dpr);
+          drawAnnotations({
+            ctx,
+            width: W,
+            height: H,
+            annotations: s.annotations,
+            project: (p) => svc.projectToScreen(p, W, H),
+            pxPerAAtTarget: svc.pxPerAAtTarget(H),
+          });
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+        }
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return (
+    <canvas
+      ref={ref}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+    />
+  );
+}
 
 export default function SceneCanvas() {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -69,5 +115,9 @@ export default function SceneCanvas() {
     };
   }, []);
 
-  return <div ref={hostRef} className="canvas-host" />;
+  return (
+    <div ref={hostRef} className="canvas-host" style={{ position: 'relative' }}>
+      <AnnotationOverlay />
+    </div>
+  );
 }

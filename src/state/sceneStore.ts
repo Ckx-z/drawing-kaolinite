@@ -22,6 +22,7 @@ import {
   transformSchema,
 } from '../core/schema';
 import type {
+  Annotation,
   AnyParams,
   ComponentType,
   PaletteSetting,
@@ -53,6 +54,13 @@ export interface SceneState {
   selectionId: string | null;
   /** 全局色板设置（T-4.2；随场景 JSON 持久化） */
   palette: PaletteSetting;
+  /** 标注层（T-4.4；随场景 JSON 持久化） */
+  annotations: Annotation[];
+  /** 新增标注（自动错位偏移），返回 id */
+  addAnnotation: (a: Omit<Annotation, 'visible'> & { visible?: boolean }) => number;
+  /** 按 id（数组下标）更新标注 */
+  updateAnnotation: (index: number, patch: Partial<Annotation>) => void;
+  removeAnnotation: (index: number) => void;
   /** 设置色板（整体替换；渲染重着色由调用方经 rendererRef 触发或绑定层同步） */
   setPalette: (p: PaletteSetting) => void;
   /** 新增组件（默认参数 + 类型命名），返回新 id */
@@ -92,8 +100,23 @@ export function createSceneStore(): SceneStore {
     components: [],
     selectionId: null,
     palette: {},
+    annotations: [],
 
     setPalette: (p) => set({ palette: p }),
+
+    addAnnotation: (a) => {
+      const next = [...get().annotations, { visible: true, ...a }];
+      set({ annotations: next });
+      return next.length - 1;
+    },
+    updateAnnotation: (index, patch) => {
+      set({
+        annotations: get().annotations.map((a, i) => (i === index ? { ...a, ...patch } : a)),
+      });
+    },
+    removeAnnotation: (index) => {
+      set({ annotations: get().annotations.filter((_, i) => i !== index) });
+    },
 
     addComponent: (type, opts) => {
       const id = uid();
@@ -223,11 +246,13 @@ export function createSceneStore(): SceneStore {
 
     toSceneDocument: () => {
       const palette = get().palette;
+      const annotations = get().annotations;
       return sceneDocumentSchema.parse({
         format: SCENE_FORMAT,
         saved: new Date().toISOString(),
         components: get().components.map((c) => ({ ...c, locked: c.locked ?? false })),
         ...(palette.id || palette.overrides ? { palette } : {}),
+        ...(annotations.length ? { annotations } : {}),
       });
     },
 
@@ -238,10 +263,11 @@ export function createSceneStore(): SceneStore {
         components: doc.components as SceneEntry[],
         selectionId: null,
         palette: doc.palette ?? {}, // T-4.2：旧场景文件无 palette → 回默认色板
+        annotations: doc.annotations ?? [], // T-4.4：旧场景无标注 → 空
       });
     },
 
-    clear: () => set({ components: [], selectionId: null }),
+    clear: () => set({ components: [], selectionId: null, annotations: [] }),
   }));
 }
 

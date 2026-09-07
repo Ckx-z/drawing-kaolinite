@@ -19,7 +19,8 @@ import {
   buildParticle,
 } from '../core/builders';
 import type { GeometryData } from '../core/geometry';
-import type { MoleculeParams, SceneComponent, Transform } from '../core/types';
+import type { Annotation, MoleculeParams, SceneComponent, Transform } from '../core/types';
+import { drawAnnotations } from '../ui/annotations/draw';
 import { createCachedEngine } from '../core/cache';
 import {
   createGeometryEngine,
@@ -30,7 +31,7 @@ import { pngToPdf } from '../export/pdf';
 import { encodeTIFF, resolveExportSize } from '../export/tiff';
 import { smilesTo3D } from '../core/molecules/smiles';
 import { presetPosition, type CameraPreset } from './postfx';
-import { sceneToSVG, type SvgAtom, type SvgComponentInput } from '../export/svg';
+import { annotationsToSVG, sceneToSVG, type SvgAtom, type SvgComponentInput } from '../export/svg';
 import { getElement } from '../core/elements';
 import { activeColorFor } from './palette';
 import { addAtoms, addBonds, recolorAtomMesh } from './instanced';
@@ -68,6 +69,8 @@ export interface ExportOptions {
   widthCM?: number;
   /** 透明底 */
   alpha?: boolean;
+  /** 标注层（T-4.4）：位图导出时叠画 */
+  annotations?: Annotation[];
 }
 
 /** SVG 导出的原子显示半径基准（与 instanced.ts 同款约定） */
@@ -455,8 +458,57 @@ export class RendererService {
   }
 
   /**
+   * 世界坐标 → 屏幕像素（当前渲染尺寸），含视锥外/相机后方剔除。
+   * 交互叠加与导出合成共用（导出时以离屏 W/H 调用 → 位置一致，T-4.4）。
+   */
+  projectToScreen(p: [number, number, number], W: number, H: number): { x: number; y: number; visible: boolean } {
+    // 投影链：world → view（matrixWorldInverse）→ clip（projectionMatrix）→ NDC。
+    // 注意 projectionMatrix 必须作用于视空间坐标（作用于世界坐标是无效链路）。
+    const v = new THREE.Vector3(p[0], p[1], p[2]);
+    const view = v.applyMatrix4(this.camera.matrixWorldInverse);
+    const dist = -view.z;
+    if (dist < this.camera.near) return { x: 0, y: 0, visible: false };
+    const ndc = view.applyMatrix4(this.camera.projectionMatrix);
+    if (ndc.z < -1 || ndc.z > 1 || Math.abs(ndc.x) > 1 || Math.abs(ndc.y) > 1)
+      return { x: 0, y: 0, visible: false };
+    return {
+      x: ((ndc.x + 1) / 2) * W,
+      y: ((1 - ndc.y) / 2) * H,
+      visible: true,
+    };
+  }
+
+  /** 目标点处每 Å 像素数（比例尺刻度换算） */
+  pxPerAAtTarget(H: number): number {
+    const dist = this.camera.position.distanceTo(this.orbit.target);
+    const tanHalf = Math.tan((this.camera.fov * Math.PI) / 360);
+    return H / 2 / (Math.max(dist, 1e-3) * tanHalf);
+  }
+
+  /** 离屏渲染帧 + 标注叠画 → 2D 画布（PNG/TIFF/PDF 共用；annotations 可选） */
+  snapshotWithOverlay(w: number, h: number, annotations: Annotation[]): HTMLCanvasElement {
+    const oc = document.createElement('canvas');
+    oc.width = w;
+    oc.height = h;
+    const ctx = oc.getContext('2d');
+    if (!ctx) throw new Error('无法创建 2D 画布');
+    ctx.drawImage(this.renderer.domElement, 0, 0, w, h);
+    if (annotations.length) {
+      drawAnnotations({
+        ctx,
+        width: w,
+        height: h,
+        annotations,
+        project: (p) => this.projectToScreen(p, w, h),
+        pxPerAAtTarget: this.pxPerAAtTarget(h),
+      });
+    }
+    return oc;
+  }
+
+  /**
    * 高分辨率 PNG 导出：px = cm × dpi / 2.54（16cm@300dpi → 1890px 宽）。
-   * 离屏改尺寸渲染一帧 → toDataURL → 恢复原尺寸。返回尺寸供 UI 提示。
+   * 离屏改尺寸渲染一帧 → 叠加标注 → toDataURL → 恢复原尺寸。返回尺寸供 UI 提示。
    */
   exportPNG(opts: ExportOptions): { dataUrl: string; width: number; height: number } {
     const { w, h } = resolveExportSize(
@@ -468,8 +520,8 @@ export class RendererService {
     );
     const st = this.beginOffscreen(w, h, opts.alpha ?? false);
     try {
-      const dataUrl = this.renderer.domElement.toDataURL('image/png');
-      return { dataUrl, width: w, height: h };
+      const canvas = this.snapshotWithOverlay(w, h, opts.annotations ?? []);
+      return { dataUrl: canvas.toDataURL('image/png'), width: w, height: h };
     } finally {
       this.endOffscreen(st);
     }
@@ -496,12 +548,9 @@ export class RendererService {
     );
     const st = this.beginOffscreen(plan.w, plan.h, opts.alpha ?? false);
     try {
-      const oc = document.createElement('canvas');
-      oc.width = plan.w;
-      oc.height = plan.h;
+      const oc = this.snapshotWithOverlay(plan.w, plan.h, opts.annotations ?? []);
       const ctx = oc.getContext('2d');
       if (!ctx) throw new Error('无法创建 2D 画布（TIFF 导出）');
-      ctx.drawImage(this.renderer.domElement, 0, 0, plan.w, plan.h);
       const img = ctx.getImageData(0, 0, plan.w, plan.h);
       const buf = encodeTIFF(new Uint8Array(img.data), plan.w, plan.h, plan.effectiveDpi);
       return {
@@ -558,7 +607,7 @@ export class RendererService {
    * 分组 SVG 矢量导出（T-5.3）：从原子/键数据直接生成（线稿档画风，平色+描边），
    * 每组件 <g id="组件名">。原子/键世界坐标 = 局部坐标经组件变换（含缩放半径）。
    */
-  exportSVG(opts?: { background?: string; strokeWidth?: number }): string {
+  exportSVG(opts?: { background?: string; strokeWidth?: number; annotations?: Annotation[] }): string {
     this.scene.updateMatrixWorld(true);
     const size = this.renderer.getSize(new THREE.Vector2());
     const comps: SvgComponentInput[] = [];
@@ -594,7 +643,7 @@ export class RendererService {
         bondColor: '#8f959c',
       });
     }
-    return sceneToSVG(comps, this.camera, {
+    const svgBody = sceneToSVG(comps, this.camera, {
       width: size.x,
       height: size.y,
       background: opts?.background,
@@ -605,6 +654,16 @@ export class RendererService {
       }, {}),
       fallbackColor: '#9AA0A6',
     });
+    const annotations = opts?.annotations ?? [];
+    if (!annotations.length) return svgBody;
+    const annotSvg = annotationsToSVG({
+      width: size.x,
+      height: size.y,
+      annotations,
+      pxPerA: this.pxPerAAtTarget(size.y),
+      project: (p) => this.projectToScreen(p, size.x, size.y),
+    });
+    return svgBody.replace('</svg>', `${annotSvg}\n</svg>`);
   }
 
   /**
@@ -679,7 +738,7 @@ export class RendererService {
     const hCM = (wCM * h) / w;
     const st = this.beginOffscreen(w, h, opts.alpha ?? false);
     try {
-      const dataUrl = this.renderer.domElement.toDataURL('image/png');
+      const dataUrl = this.snapshotWithOverlay(w, h, opts.annotations ?? []).toDataURL('image/png');
       return { blob: pngToPdf(dataUrl, wCM, hCM), widthCM: wCM, heightCM: hCM };
     } finally {
       this.endOffscreen(st);

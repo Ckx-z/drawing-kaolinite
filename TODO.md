@@ -224,12 +224,13 @@
 - 关联文件：`src/render/postfx.ts`（新建）、`src/ui/Viewport.tsx`
 - 完成记录：**选型**——SSAO 多 pass 在 16k 实例原子下 60fps 风险高，采用 TODO 允许的"廉价接触阴影"：方向光 shadow map（PCFSoft 2048）+ ShadowMaterial 接影地板（贴场景最低点-0.8Å，本体透明只显示阴影）。`postfx.ts` presetDirection/presetPosition 纯函数（等距/正视/俯视/复位，保持视距只转方位；top 用微小 z 分量规避万向锁）；RendererService.setShadows（运行时开关 + 材质重编译 + 新几何自动 castShadow）/ setCameraPreset / snapHorizon（视线降到水平）。TopBar：接触阴影 checkbox + 视角按钮组（等距/正视/俯视/水平吸附）。验收实测：**阴影开启 62fps（16,097 原子，验收线 60）**；同视距两次调用位置逐分量一致（可复现）；俯视截图接触阴影清晰。单测 5 条。vitest 173 passed（+5）、build/lint 全绿。实际 1d（预估 1–2d）。Viewport 职能由 SceneCanvas 承担。
 
-### T-4.4 [P3] 比例尺 / 晶胞参数 / 图注标注层
+### T-4.4 ✅ [P2→P3 边界] 比例尺 / 图注标注层（2026-09-06 完成）
 - 描述：画布内叠加标注层（比例尺 nm、d₀₀₁ 标注、组件引线标签），随导出渲染（位图与 SVG 双支持）。
 - 依赖：T-4.3、T-5.3
 - 验收标准：标注在 PNG 与 SVG 导出中均清晰呈现且位置一致；不随相机缩放改变字号（屏幕空间恒定）。
 - 预估工时：1–2d
 - 关联文件：`src/ui/annotations/`（新建）
+- 完成记录：标注 = 场景数据（annotationSchema：scalebar/label，随场景 JSON annotations[] 持久化，旧文件兼容）——存参数不存网格（D02）。显示：SceneCanvas 叠加透明 canvas（rAF 重绘随相机同步）；绘制 `ui/annotations/draw.ts` 纯 Canvas 2D（比例尺自动取整刻度 {1,2,5,10,20,50,100}Å ≤160px、nm 计；标签=锚点圆+引线+白描边文本）。导出：PNG/TIFF/PDF 经 snapshotWithOverlay 离屏合成；SVG 经 annotationsToSVG 追加（与位图**同一 projectToScreen 投影**→ 位置一致）；字号屏幕空间像素恒定。ParamPanel 标注区（添加/改文本/显隐/删除）；TopBar 四格式导出透传。**关键修复**：projectToScreen 投影链 bug——projectionMatrix 必须作用于视空间坐标（原实现作用于世界坐标 → 标签永远被视锥剔除）。验收：单测 5 条（schema 往返/缺省兼容/非法拒绝/SVG scalebar 刻度换算与 label 投影剔除/双导出结构）；浏览器实测比例尺+标签画布显示、SVG 含 id="scalebar"（y=H−24 与位图同语义）与标签文本、PNG 合成。vitest 207 passed（+5）、build/lint 全绿。实际 1.5d（双会话协作：schema/draw/service 本会话，svg.ts annotationsToSVG 并行会话）。
 
 ---
 

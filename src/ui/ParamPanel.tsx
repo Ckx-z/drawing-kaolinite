@@ -141,6 +141,79 @@ function NumCell(props: { label: string; value: number; step: number; onSet: (v:
   );
 }
 
+/**
+ * 标注层区（T-4.4）：比例尺 / 文本标签（引线锚定选中组件的世界坐标）。
+ * 标注存场景 JSON（annotations），交互显示走 SceneCanvas 叠加 canvas。
+ */
+function AnnotationSection() {
+  const annotations = useStore(sceneStore, (s) => s.annotations);
+  const selected = useStore(sceneStore, (s) => s.components.find((c) => c.id === s.selectionId) ?? null);
+  const [, force] = useState(0);
+  const addScalebar = (): void => {
+    sceneStore.getState().addAnnotation({ type: 'scalebar' });
+    force((n) => n + 1);
+  };
+  const addLabel = (): void => {
+    const s = sceneStore.getState();
+    if (!selected) return;
+    s.addAnnotation({
+      type: 'label',
+      text: selected.name,
+      target: selected.transform.position,
+      offset: [14, -14],
+    });
+    force((n) => n + 1);
+  };
+  return (
+    <>
+      <div className="subhead">标 注</div>
+      <div className="btnrow">
+        <button className="mini" onClick={addScalebar} title="比例尺（左下角，按当前缩放自动取整刻度，nm 计）">
+          + 比例尺
+        </button>
+        <button
+          className="mini"
+          onClick={addLabel}
+          disabled={!selected}
+          title={selected ? '为选中组件添加文本标签（引线锚定其位置）' : '先选中一个组件'}
+        >
+          + 标签
+        </button>
+      </div>
+      {annotations.map((a, i) => (
+        <div className="ctl" key={i}>
+          <div className="row">
+            <label>{a.type === 'scalebar' ? '比例尺' : `标签：${a.text ?? ''}`}</label>
+            <button
+              className="mini"
+              onClick={() => {
+                sceneStore.getState().updateAnnotation(i, { visible: a.visible === false });
+              }}
+            >
+              {a.visible === false ? '显示' : '隐藏'}
+            </button>
+            <button
+              className="mini"
+              onClick={() => {
+                sceneStore.getState().removeAnnotation(i);
+              }}
+            >
+              删除
+            </button>
+          </div>
+          {a.type === 'label' && (
+            <input
+              value={a.text ?? ''}
+              onChange={(e) => sceneStore.getState().updateAnnotation(i, { text: e.target.value })}
+              placeholder="标注文本（如 d₀₀₁ = 1.0 nm）"
+            />
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function ParamPanel() {
   const selected = useStore(sceneStore, (s) => s.components.find((c) => c.id === s.selectionId) ?? null);
   const [gizmoMode, setGizmoMode] = useState<'translate' | 'rotate'>('translate');
@@ -155,6 +228,7 @@ export default function ParamPanel() {
           组件之间相互独立，可分层、分步自由组合。
         </p>
         <PaletteSection />
+        <AnnotationSection />
         <h3>图层</h3>
         <p className="hint">画布为空。</p>
       </section>
@@ -212,6 +286,7 @@ export default function ParamPanel() {
       </div>
 
       <PaletteSection />
+      <AnnotationSection />
     </section>
   );
 }

@@ -151,12 +151,27 @@ export const paletteSettingSchema = z.strictObject({
   overrides: z.record(z.string(), z.string().regex(/^#[0-9a-fA-F]{6}$/)).optional(),
 });
 
+/** 标注层（T-4.4）：比例尺 / 文本标签（引线锚定世界坐标）；屏幕空间字号恒定 */
+export const annotationSchema = z.strictObject({
+  type: z.enum(['scalebar', 'label']),
+  /** label：文本内容（如 "d₀₀₁ = 1.0 nm"） */
+  text: z.string().optional(),
+  /** scalebar：刻度长度（Å）；label：锚定的世界坐标 */
+  worldLen: z.number().positive().optional(),
+  target: z.tuple([z.number(), z.number(), z.number()]).optional(),
+  /** label：文本相对锚点的屏幕偏移（px） */
+  offset: z.tuple([z.number(), z.number()]).optional(),
+  visible: z.boolean().default(true),
+});
+
 export const sceneDocumentSchema = z.strictObject({
   format: z.literal(SCENE_FORMAT),
   saved: z.iso.datetime(),
   components: z.array(componentSchema),
   // T-4.2：旧场景文件无此字段 → 缺省合法（向后兼容）
   palette: paletteSettingSchema.optional(),
+  // T-4.4：标注层（旧场景缺省合法）
+  annotations: z.array(annotationSchema).optional(),
 });
 
 /* ---------- 模块库条目（单组件模块 + 组合模块 T-3.1） ---------- */
