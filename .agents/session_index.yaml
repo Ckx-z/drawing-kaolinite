@@ -528,3 +528,20 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-08-27"
+    date: "2026-09-08"
+    title: "用户报障修复：素材库点击无效 + 漂浮符号 + 画布空白（双根因）"
+    summary: "只读调查定位两个叠加根因：(A) canvas-host 内联 position:relative 覆盖 CSS absolute + setSize(...,false) 无 CSS 尺寸 → Retina 下画布 2 倍宽/高度指数膨胀盖住右栏，漂浮符号=ParamPanel 7 个 number input 箭头；(B) tauri:// 自定义协议下 module Worker chunk 静默加载失败（无 error 事件）→ build Promise 永久 pending → 几何永不渲染零报错。修复：删内联样式+CSS 钉死 canvas 100%+overflow:hidden（body/.canvas/顶栏 wrap）；worker 改 ?worker&inline（data URL 零 fetch）+4s 握手超时回退主线程 computeGeometry+error 置 dead；cache.ts dbReady 门（Dexie open 4s 竞速）+全部 Dexie 操作 try/catch 降级直通；prebake 按 ready 门控。验收：233 tests 全绿（+3 握手测试）、lint/build 过、dist 无 module worker 构造、浏览器实测点击卡片 6→7 组件自动选中 +232 原子、bodyScrollW=viewport、截图三栏正常；重打包 .app 并以 WKWebView IndexedDB 24.8MB geometry 缓存回填为证（Promise resolve 才会回填）。教训记 D10。"
+    files_modified:
+      - src/ui/SceneCanvas.tsx
+      - src/index.css
+      - src/core/worker.ts
+      - src/core/geometryWorker.ts
+      - src/core/cache.ts
+      - src/core/worker.test.ts
+      - DECISIONS.md（D10）/ PROJECT_STATE.md / .agents/session_index.yaml / DAILY_LOG/2026-09-08*.md
+    decisions_made: ["D10"]
+    commits: []
+    blockers: []
+    status: "completed"

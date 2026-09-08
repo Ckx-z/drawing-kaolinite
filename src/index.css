@@ -23,6 +23,7 @@ body {
   background: var(--bg);
   color: var(--txt);
   user-select: none;
+  overflow: hidden; /* 全屏三栏应用：窗口级滚动条永远是布局 bug（各面板内部自带滚动） */
 }
 
 .app {
@@ -34,10 +35,11 @@ body {
 /* ---------- 顶栏 ---------- */
 .topbar {
   display: flex;
+  flex-wrap: wrap; /* 窄窗口时按钮组换行收纳，不撑破视口 */
   align-items: center;
-  gap: 14px;
-  height: 46px;
-  padding: 0 14px;
+  gap: 8px 14px;
+  min-height: 46px;
+  padding: 6px 14px;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
   flex: none;
@@ -205,6 +207,7 @@ input[type='number'] {
   background: #f4f5f7;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 .canvas-host {
   position: absolute;
@@ -212,6 +215,10 @@ input[type='number'] {
 }
 .canvas-host canvas {
   display: block;
+  /* 显示尺寸钉死为容器尺寸：WebGL 画布的 width/height 属性是含 dpr 的像素数，
+     若无 CSS 约束会按固有尺寸参与布局，Retina 下 2 倍溢出盖住右栏 */
+  width: 100%;
+  height: 100%;
 }
 
 /* ---------- 参数面板 ---------- */

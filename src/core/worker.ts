@@ -17,6 +17,7 @@ import {
   buildMolecule,
   buildParticle,
 } from './builders';
+import GeometryWorker from './geometryWorker?worker&inline';
 import type { GeometryData } from './geometry';
 import { smilesTo3D } from './molecules/smiles';
 import type { MoleculeParams, ParticleParams, SheetParams, TubeParams } from './types';
@@ -43,7 +44,9 @@ export interface WorkerRequest {
 
 export type WorkerResponse =
   | { id: number; ok: true; result: GeometryResult }
-  | { id: number; ok: false; error: string };
+  | { id: number; ok: false; error: string }
+  /** Worker 脚本加载成功后自报（握手用；id 字段缺省不影响 pending 匹配） */
+  | { ready: true };
 
 /** 统一计算入口（主线程同步引擎与 Worker 脚本共用） */
 export function computeGeometry(req: GeometryRequest): GeometryResult {
@@ -73,6 +76,8 @@ export function computeGeometry(req: GeometryRequest): GeometryResult {
 export interface GeometryEngine {
   build(req: GeometryRequest): Promise<GeometryResult>;
   dispose(): void;
+  /** Worker 引擎专有：false = Worker 加载失败已回退主线程（同步引擎无此字段） */
+  ready?: Promise<boolean>;
 }
 
 /** 主线程同步引擎：Node 单测 / Worker 不可用时的回退 */
@@ -94,19 +99,45 @@ export interface WorkerLike {
 export type SpawnWorker = () => WorkerLike;
 
 const defaultSpawn: SpawnWorker = () => {
-  // Vite 的模块 Worker：geometryWorker.ts 是独立入口，import.meta.url 保证路径正确
-  return new Worker(new URL('./geometryWorker.ts', import.meta.url), { type: 'module' });
+  // 内联 Worker（?worker&inline）：worker 代码以 base64 内联进主包，运行时由
+  // blob URL 实例化，不发起二次 fetch —— Tauri 打包后以 tauri:// 自定义协议
+  // 运行，module Worker 的独立 chunk 会静默加载失败（不触发 error 事件）
+  return new GeometryWorker() as unknown as WorkerLike;
 };
+
+/** Worker 就绪握手超时：超时判定加载失败，永久回退主线程计算 */
+const READY_TIMEOUT_MS = 4000;
 
 /** Worker 引擎：主线程只做 postMessage/收结果，几何计算在子线程 */
 export function createWorkerEngine(spawn: SpawnWorker = defaultSpawn): GeometryEngine {
   let seq = 0;
   let disposed = false;
+  let dead = false; // Worker 已不可用（加载失败/运行中崩溃）→ 后续构建回退主线程
   const pending = new Map<number, { resolve: (r: GeometryResult) => void; reject: (e: Error) => void }>();
   const worker = spawn();
 
+  // 握手：geometryWorker 入口自报 ready；任何消息到达即视为就绪。超时则永久
+  // 回退主线程（computeGeometry 与 Worker 脚本共用同一份逻辑，结果逐位一致）。
+  let settleReady!: (ok: boolean) => void;
+  const ready = new Promise<boolean>((resolve) => {
+    settleReady = (ok) => resolve(ok);
+  });
+  const readyTimer = setTimeout(() => {
+    dead = true;
+    settleReady(false);
+    console.warn('几何 Worker 4s 未就绪，已回退主线程计算（大场景参数拖动可能掉帧）');
+    try {
+      worker.terminate();
+    } catch {
+      /* 假 Worker 可能没有 terminate 实现 */
+    }
+  }, READY_TIMEOUT_MS);
+
   worker.addEventListener('message', (ev) => {
+    clearTimeout(readyTimer);
+    settleReady(true);
     const res = ev.data;
+    if (!('id' in res)) return; // ready 自报（握手），无对应在途请求
     const p = pending.get(res.id);
     if (!p) return; // 过期/未知响应（如已 dispose）静默丢弃
     pending.delete(res.id);
@@ -114,6 +145,9 @@ export function createWorkerEngine(spawn: SpawnWorker = defaultSpawn): GeometryE
     else p.reject(new Error(res.error));
   });
   worker.addEventListener('error', (ev) => {
+    dead = true; // Worker 已挂：后续 postMessage 不会有人应答，必须回退
+    clearTimeout(readyTimer);
+    settleReady(false);
     const err = new Error(`几何 Worker 异常：${String((ev as { message?: string })?.message ?? ev)}`);
     for (const p of pending.values()) p.reject(err);
     pending.clear();
@@ -126,17 +160,28 @@ export function createWorkerEngine(spawn: SpawnWorker = defaultSpawn): GeometryE
           reject(new Error('几何引擎已释放'));
           return;
         }
+        if (dead) {
+          try {
+            resolve(computeGeometry(req));
+          } catch (err) {
+            reject(err as Error);
+          }
+          return;
+        }
         const id = ++seq;
         pending.set(id, { resolve, reject });
         worker.postMessage({ id, req });
       }),
     dispose: () => {
       disposed = true;
+      clearTimeout(readyTimer);
+      settleReady(false);
       const err = new Error('几何引擎已释放');
       for (const p of pending.values()) p.reject(err);
       pending.clear();
       worker.terminate();
     },
+    ready,
   };
 }
 

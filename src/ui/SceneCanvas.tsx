@@ -93,11 +93,16 @@ export default function SceneCanvas() {
     hoverStore.getState().setHover(null);
 
     // T-2.9 预烘焙：空闲 4s 后后台预生成常用埃洛石管参数组合进 IndexedDB
-    // （每浏览器一次；独立 Worker 引擎，与画布引擎共享磁盘缓存）
+    // （每浏览器一次；独立 Worker 引擎，与画布引擎共享磁盘缓存。
+    //   Worker 加载失败（ready=false）时跳过——主线程同步预烘焙会造成明显卡顿）
     const prebakeTimer = setTimeout(() => {
-      if (localStorage.getItem('kaolin_prebake_v2')) return;  // v2：T-2.6 新参数字段入指纹
-      const engine = createCachedEngine(createWorkerEngine());
-      void prebake(engine, defaultTubePrebakeRequests(kaoliniteCif))
+      if (localStorage.getItem('kaolin_prebake_v2')) return;
+      const inner = createWorkerEngine();
+      const engine = createCachedEngine(inner);
+      void (inner.ready ?? Promise.resolve(true))
+        .then((ok) =>
+          ok ? prebake(engine, defaultTubePrebakeRequests(kaoliniteCif)) : Promise.resolve(0),
+        )
         .then((n) => {
           if (n > 0) localStorage.setItem('kaolin_prebake_v2', String(n));
         })
@@ -116,7 +121,7 @@ export default function SceneCanvas() {
   }, []);
 
   return (
-    <div ref={hostRef} className="canvas-host" style={{ position: 'relative' }}>
+    <div ref={hostRef} className="canvas-host">
       <AnnotationOverlay />
     </div>
   );

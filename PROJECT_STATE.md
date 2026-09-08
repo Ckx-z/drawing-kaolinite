@@ -1,7 +1,7 @@
 # PROJECT_STATE — 项目当前状态
 
 > ⭐ **这是每次会话的第一份必读文件**。会话开头读它进入状态，结尾更新它。
-> 最后更新：2026-09-06（T-2.7 晶学严格模式完成；P2 已完成 12 条，剩余 T-2.5 / PDF / 对账脚本）
+> 最后更新：2026-09-08（用户报障修复：素材库点击无效双根因——布局回归 + tauri:// 下 module Worker 静默加载失败；见 DAILY_LOG/2026-09-08.md 与 D10）
 
 ---
 
@@ -86,8 +86,9 @@
 | 种子模块库 | `data/seed-modules.json` | kaolin-modules/v1 全量备份（M2~M8 共 9 条含缩略图，33KB）；模块面板「导入」即可整套恢复/分发 |
 | 三维 Demo | `demo/index.html` | 双击可用；生产版功能对照基准 |
 | CIF 种子库 | `data/*.cif` | 高岭石/地开石/珍珠石/蒙脱石/伊利石 |
-| 决策日志 | `DECISIONS.md` | D01–D08 |
+| 决策日志 | `DECISIONS.md` | D01–D10（D10：桌面端 Worker 内联 + 异步挂起必须可回退） |
 | 参数字典 | `DATA_DICT.md` | 五类组件参数 + 场景 JSON schema |
+| 桌面端稳定性 | `src/core/worker.ts` + `cache.ts` + `index.css` | 2026-09-08 修复：Worker `?worker&inline`（data URL，零运行时 fetch）+ 4s 握手超时回退主线程 + IndexedDB 4s 门直通 + canvas CSS 100% 钉死/body overflow:hidden/顶栏 wrap；233 tests |
 
 ---
 *本文件每次会话结束时检查更新（见 AGENTS.md 结尾清单）。*

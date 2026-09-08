@@ -60,8 +60,46 @@ function getDB(): CacheDB {
   return dbInstance;
 }
 
+/* ---------- 存储可用性门 ----------
+ * Tauri 打包后以 tauri:// 自定义协议运行，WKWebView 下 IndexedDB open 可能
+ * 永久挂起（不 resolve 也不 reject）——若无门控，build 会卡死在第一次 get。
+ * 策略：open 与 4s 超时竞速；超时/失败 → 本会话跳过缓存直通 inner。
+ * 所有 Dexie 操作均 try/catch 降级：缓存故障绝不污染构建结果。
+ */
+let storageBroken = false;
+let dbReadyPromise: Promise<void> | null = null;
+
+function dbReady(): Promise<void> {
+  if (!dbReadyPromise) {
+    let settled = false;
+    dbReadyPromise = Promise.race([
+      getDB().open().then(
+        () => {
+          settled = true;
+        },
+        () => {
+          settled = true;
+          storageBroken = true; // API 缺失/被策略拒绝 → 本会话直通
+        },
+      ),
+      new Promise<void>((resolve) => {
+        setTimeout(() => {
+          if (!settled) {
+            storageBroken = true;
+            console.warn('IndexedDB 4s 未打开，本会话跳过几何缓存（直通构建）');
+          }
+          resolve();
+        }, 4000);
+      }),
+    ]);
+  }
+  return dbReadyPromise;
+}
+
 /** 测试/开发辅助：清空几何缓存 */
 export async function clearGeometryCache(): Promise<void> {
+  await dbReady();
+  if (storageBroken) return;
   await getDB().geometry.clear();
 }
 
@@ -86,29 +124,43 @@ export function createCachedEngine(
   return {
     async build(req: GeometryRequest): Promise<GeometryResult> {
       const key = cacheKey(req);
-      const hit = await getDB().geometry.get(key);
+      await dbReady();
+      let hit: GeoCacheRow | undefined;
+      if (!storageBroken) {
+        try {
+          hit = await getDB().geometry.get(key);
+        } catch {
+          hit = undefined; // 读失败按未命中处理
+        }
+      }
       if (hit) {
         // touch（LRU 新鲜度）不阻塞返回（15k 原子命中 <50ms 验收）
-        void getDB()
-          .geometry.update(key, { createdAt: now() })
-          .catch(() => undefined);
+        if (!storageBroken) {
+          getDB()
+            .geometry.update(key, { createdAt: now() })
+            .catch(() => undefined);
+        }
         return { atoms: hit.atoms, bonds: hit.bonds };
       }
       const result = await inner.build(req);
-      if (result.atoms.length <= maxCacheAtoms) {
-        const row: GeoCacheRow = {
-          key,
-          kind: req.kind,
-          atoms: result.atoms,
-          bonds: result.bonds,
-          createdAt: now(),
-        };
-        await getDB().geometry.put(row);
-        // LRU：超限淘汰最旧
-        const count = await getDB().geometry.count();
-        if (count > limit) {
-          const oldest = await getDB().geometry.orderBy('createdAt').limit(count - limit).primaryKeys();
-          await getDB().geometry.bulkDelete(oldest);
+      if (!storageBroken && result.atoms.length <= maxCacheAtoms) {
+        try {
+          const row: GeoCacheRow = {
+            key,
+            kind: req.kind,
+            atoms: result.atoms,
+            bonds: result.bonds,
+            createdAt: now(),
+          };
+          await getDB().geometry.put(row);
+          // LRU：超限淘汰最旧
+          const count = await getDB().geometry.count();
+          if (count > limit) {
+            const oldest = await getDB().geometry.orderBy('createdAt').limit(count - limit).primaryKeys();
+            await getDB().geometry.bulkDelete(oldest);
+          }
+        } catch {
+          /* 缓存写失败不影响构建结果 */
         }
       }
       return result;

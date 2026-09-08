@@ -10,7 +10,7 @@
  *  - 工厂回退：无 Worker 环境返回同步引擎。
  * 主线程不被阻塞的最终确认由浏览器实测（15k 原子管生成 ~200ms 在子线程执行）。
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   computeGeometry,
@@ -121,6 +121,46 @@ describe('Worker 引擎：异步语义与协议编解码（假 Worker）', () =>
     const engine = createWorkerEngine(() => worker);
     engine.dispose();
     await expect(engine.build({ kind: 'molecule', cifText: '', params: { kind: 'H₂O' } })).rejects.toThrow();
+  });
+});
+
+describe('Worker 就绪握手（Tauri 自定义协议下静默加载失败的防御）', () => {
+  it('Worker 无人应答（无 ready/结果/error）→ 4s 超时 ready=false，build 回退主线程仍出结果', async () => {
+    vi.useFakeTimers();
+    try {
+      const silent: WorkerLike = {
+        postMessage: () => undefined, // 无人应答：模拟脚本加载失败且无 error 事件
+        addEventListener: () => undefined,
+        terminate: () => undefined,
+      };
+      const engine = createWorkerEngine(() => silent);
+      const readyP = engine.ready!;
+      await vi.advanceTimersByTimeAsync(4000);
+      await expect(readyP).resolves.toBe(false);
+      // dead 后 build 直接主线程计算（computeGeometry 共用，结果与子线程逐位一致）
+      const result = await engine.build(DOUBLE_WALL_TUBE);
+      expect(result.atoms.length).toBe(computeGeometry(DOUBLE_WALL_TUBE).atoms.length);
+      engine.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('Worker 正常响应 → 任何消息到达即就绪，ready=true', async () => {
+    const { worker } = fakeSpawn();
+    const engine = createWorkerEngine(() => worker);
+    await engine.build({ kind: 'molecule', cifText: '', params: { kind: 'H₂O' } });
+    await expect(engine.ready!).resolves.toBe(true);
+    engine.dispose();
+  });
+
+  it('握手期间正常收到的结果不受影响（先 build 后超时窗口内完成）', async () => {
+    const { worker } = fakeSpawn();
+    const engine = createWorkerEngine(() => worker);
+    const result = await engine.build({ kind: 'molecule', cifText: '', params: { kind: 'O₂' } });
+    expect(result.atoms).toHaveLength(2);
+    await expect(engine.ready!).resolves.toBe(true);
+    engine.dispose();
   });
 });
 

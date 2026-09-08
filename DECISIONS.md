@@ -70,3 +70,9 @@
 - **为什么**：RDKit WASM 约 10MB 依赖 + 懒加载/locateFile 复杂度 + minimal-lib 3D API 可用性存疑；内置方案零依赖、离线、确定性、Node 可单测，示意级精度满足机理图场景。
 - **考虑过**：坚持 RDKit WASM（真实 ETKDG 构象，但依赖与集成风险大）；仅支持内置分子库（不满足"任意分子"诉求）。
 - **何时复盘**：用户反馈某类分子构象明显不合理时（尤其稠环/大环），优先评估换装 RDKit。
+
+## D10 — 桌面端运行环境约束：Worker 内联 + 挂起必须可回退（2026-09-08）
+- **决策**：几何 Worker 以 `?worker&inline`（data URL）内联进主包，不做运行时二次 fetch；所有异步依赖（Worker 消息、IndexedDB open）必须有超时回退路径（Worker 4s 握手 → 主线程 computeGeometry；IndexedDB 4s 门 → 直通构建）。
+- **为什么**：Tauri 打包后 WKWebView 以 `tauri://localhost` 自定义协议运行，module Worker 独立 chunk 静默加载失败（不触发 error 事件）→ build Promise 永久 pending → 画布全空且零报错（2026-09-08 用户报障根因之一）；IndexedDB open 同类挂起风险。dev 模式（http origin）完全无法暴露此类故障。
+- **考虑过**：`worker.format: 'iife'`（仍需运行时 fetch chunk，自定义协议下不保证）；仅加超时回退不内联（功能正确但打包版永远走慢路径）。
+- **何时复盘**：若内联导致主包体积问题（当前 +~200KB 可忽略），或 Tauri 官方修复自定义协议 worker 加载。
