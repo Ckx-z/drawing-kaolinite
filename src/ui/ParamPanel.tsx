@@ -233,9 +233,150 @@ function AnnotationSection() {
   );
 }
 
+/**
+ * 图元样式区（T-11.4）：图元选中时显示（与组件参数区互斥——选择本身互斥）。
+ * 文本/字号/颜色/线宽/线型/旋转 + Z 序 + 编组。
+ */
+function ShapeSection() {
+  const shapes = useStore(sceneStore, (s) => s.shapes);
+  const selIds = useStore(sceneStore, (s) => s.shapeSelectionIds);
+  const shape = shapes.find((s) => s.id === selIds[selIds.length - 1]) ?? null;
+  if (!shape) return null;
+  const upd = (patch: Partial<typeof shape>): void => sceneStore.getState().updateShape(shape.id, patch as never);
+  const isLine = shape.type === 'arrow' || shape.type === 'line';
+
+  return (
+    <section className="right-section">
+      <h3>
+        图元<span className="tip">（{shape.type === 'text' ? shape.text.slice(0, 8) : TYPE_LABEL[shape.type]}{selIds.length > 1 ? ` 等 ${selIds.length} 项` : ''}）</span>
+      </h3>
+
+      {shape.type === 'text' && (
+        <>
+          <div className="ctl">
+            <div className="row">
+              <label>文本内容</label>
+            </div>
+            <input
+              value={shape.text}
+              onChange={(e) => upd({ text: e.target.value } as never)}
+              placeholder="双击画布文本也可编辑"
+            />
+          </div>
+          <div className="ctl">
+            <div className="row">
+              <label>字号</label>
+              <span className="val">{shape.fontSize}px</span>
+            </div>
+            <input type="range" min={8} max={72} step={1} value={shape.fontSize}
+              onChange={(e) => upd({ fontSize: parseFloat(e.target.value) } as never)} />
+          </div>
+          <div className="ctl">
+            <div className="row">
+              <label>文字颜色</label>
+            </div>
+            <input type="color" value={shape.color} onChange={(e) => upd({ color: e.target.value } as never)} style={{ width: '100%', height: 26 }} />
+          </div>
+        </>
+      )}
+
+      <div className="ctl">
+        <div className="row">
+          <label>描边色</label>
+        </div>
+        <input type="color" value={shape.stroke} onChange={(e) => upd({ stroke: e.target.value })} style={{ width: '100%', height: 26 }} />
+      </div>
+      {!isLine && shape.type !== 'text' && (
+        <div className="ctl">
+          <div className="row">
+            <label>填充色</label>
+            <label className="chk">
+              <input type="checkbox" checked={shape.fill !== 'none'}
+                onChange={(e) => upd({ fill: e.target.checked ? '#ffffff' : 'none' })} />
+              填充
+            </label>
+          </div>
+          {shape.fill !== 'none' && (
+            <input type="color" value={shape.fill} onChange={(e) => upd({ fill: e.target.value })} style={{ width: '100%', height: 26 }} />
+          )}
+        </div>
+      )}
+      <div className="ctl">
+        <div className="row">
+          <label>线宽</label>
+          <span className="val">{shape.lineWidth}px</span>
+        </div>
+        <input type="range" min={0.5} max={12} step={0.5} value={shape.lineWidth}
+          onChange={(e) => upd({ lineWidth: parseFloat(e.target.value) })} />
+      </div>
+      <div className="ctl">
+        <div className="row">
+          <label>线型</label>
+        </div>
+        <select value={shape.dash} onChange={(e) => upd({ dash: e.target.value as 'solid' | 'dashed' })}>
+          <option value="solid">实线</option>
+          <option value="dashed">虚线</option>
+        </select>
+      </div>
+      {!isLine && (
+        <div className="ctl">
+          <div className="row">
+            <label>旋转</label>
+            <span className="val">{Math.round(shape.rotation)}°</span>
+          </div>
+          <input type="range" min={-180} max={180} step={1} value={shape.rotation}
+            onChange={(e) => upd({ rotation: parseFloat(e.target.value) })} />
+        </div>
+      )}
+
+      <div className="btnrow">
+        <button className="mini" onClick={() => sceneStore.getState().moveShapeOrder(shape.id, 'front')}>⤒ 最前</button>
+        <button className="mini" onClick={() => sceneStore.getState().moveShapeOrder(shape.id, 'forward')}>↑ 前移</button>
+        <button className="mini" onClick={() => sceneStore.getState().moveShapeOrder(shape.id, 'backward')}>↓ 后移</button>
+        <button className="mini" onClick={() => sceneStore.getState().moveShapeOrder(shape.id, 'back')}>⤓ 最后</button>
+      </div>
+      <div className="btnrow" style={{ marginTop: 6 }}>
+        {selIds.length > 1 && !shape.group && (
+          <button className="mini" onClick={() => sceneStore.getState().groupShapes(selIds)}>编组（{selIds.length} 项）</button>
+        )}
+        {shape.group && (
+          <>
+            <span className="hint" style={{ alignSelf: 'center' }}>已编组</span>
+            <button className="mini" onClick={() => sceneStore.getState().ungroupShapes(selIds)}>解散编组</button>
+          </>
+        )}
+        <button className="mini" onClick={() => sceneStore.getState().updateShape(shape.id, { locked: !shape.locked })}>
+          {shape.locked ? '解锁' : '锁定'}
+        </button>
+        <button className="mini" onClick={() => sceneStore.getState().removeShape(shape.id)}>删除</button>
+      </div>
+    </section>
+  );
+}
+
+const TYPE_LABEL: Record<string, string> = {
+  rect: '矩形',
+  ellipse: '椭圆',
+  arrow: '箭头',
+  line: '连线',
+  text: '文本',
+};
+
 export default function ParamPanel() {
   const selected = useStore(sceneStore, (s) => s.components.find((c) => c.id === s.selectionId) ?? null);
+  const hasShapeSel = useStore(sceneStore, (s) => s.shapeSelectionIds.length > 0);
   const [gizmoMode, setGizmoMode] = useState<'translate' | 'rotate'>('translate');
+
+  // T-11.4：图元选中时优先显示图元样式区（选择互斥 → 组件参数区隐藏）
+  if (hasShapeSel) {
+    return (
+      <>
+        <ShapeSection />
+        <PaletteSection />
+        <AnnotationSection />
+      </>
+    );
+  }
 
   if (!selected) {
     return (
@@ -245,6 +386,8 @@ export default function ParamPanel() {
           点击画布中的组件，或从左侧素材库添加。
           <br />
           组件之间相互独立，可分层、分步自由组合。
+          <br />
+          顶栏图元工具（V/R/O/A/L/T）可画机理图箭头与说明。
         </p>
         <PaletteSection />
         <AnnotationSection />

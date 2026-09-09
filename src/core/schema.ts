@@ -10,6 +10,7 @@
  * - 全部对象用 strictObject：未知字段（拼写错误）当场拒绝，科研数据正确性优先。
  */
 import { z } from 'zod';
+import { shapeSchema } from './shapes/schema';
 
 /* ---------- 通用 ---------- */
 
@@ -195,6 +196,8 @@ export const sceneDocumentSchema = z.strictObject({
   palette: paletteSettingSchema.optional(),
   // T-4.4：标注层（旧场景缺省合法）
   annotations: z.array(annotationSchema).optional(),
+  // T-11.1：机理图图元层（旧场景缺省合法）
+  shapes: z.array(shapeSchema).optional(),
 });
 
 /* ---------- 模块库条目（单组件模块 + 组合模块 T-3.1） ---------- */

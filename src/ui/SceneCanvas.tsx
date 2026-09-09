@@ -9,13 +9,15 @@ import kaoliniteCif from '../../data/kaolinite.cif?raw';
 import { createCachedEngine, defaultTubePrebakeRequests, prebake } from '../core/cache';
 import { createWorkerEngine } from '../core/worker';
 import { drawAnnotations } from './annotations/draw';
+import { drawDraft, drawShapes } from './shapes/draw';
+import { createShapeInteraction } from './shapes/interaction';
 import { RendererService } from '../render/RendererService';
 import { hoverStore } from '../render/highlight';
 import { bindRenderer } from '../state/rendererBinding';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
 
-/** 叠加 canvas：随渲染画布同尺寸；rAF 重绘标注（与渲染同步即可） */
+/** 叠加 canvas：随渲染画布同尺寸；rAF 重绘标注 + 图元（与渲染同步即可） */
 function AnnotationOverlay(): React.ReactElement {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -44,6 +46,17 @@ function AnnotationOverlay(): React.ReactElement {
             project: (p) => svc.projectToScreen(p, W, H),
             pxPerAAtTarget: svc.pxPerAAtTarget(H),
           });
+          // T-11.1 机理图图元层（画在标注之上；图元层坐标 == 视口逻辑像素）
+          drawShapes({
+            ctx,
+            width: W,
+            height: H,
+            shapes: s.shapes,
+            components: s.components,
+            project: (p) => svc.projectToScreen(p, W, H),
+            selectionId: s.shapeSelectionIds.at(-1) ?? null,
+          });
+          drawDraft(ctx);
           ctx.setTransform(1, 0, 0, 1, 0, 0);
         }
       }
@@ -88,6 +101,9 @@ export default function SceneCanvas() {
     const dom = svc.renderer.domElement;
     dom.addEventListener('pointermove', onMove);
     dom.addEventListener('pointerleave', onLeave);
+
+    // T-11.2 图元交互：capture 阶段挂在 3D canvas 上（命中即拦截，空白透传 3D）
+    const disposeShapes = createShapeInteraction(dom);
     // 图层面板悬停 → 渲染外壳（双向联动的另一半；面板自身样式由 hoverStore 驱动）
     const unhover = hoverStore.subscribe(({ id }) => svc.setHover(id));
     hoverStore.getState().setHover(null);
@@ -113,6 +129,7 @@ export default function SceneCanvas() {
       clearTimeout(prebakeTimer);
       unbind();
       unhover();
+      disposeShapes();
       dom.removeEventListener('pointermove', onMove);
       dom.removeEventListener('pointerleave', onLeave);
       rendererRef.current = null;

@@ -33,11 +33,14 @@ export interface ShortcutHost {
   history: { undo(): boolean; redo(): boolean };
   /** 请求切换速查浮层（App 设置 React 状态） */
   toggleCheatSheet: () => void;
+  /** T-11：切换图元工具（工具快捷键 V/R/O/A/L/T） */
+  setShapeTool?: (tool: SceneState['tool']) => void;
 }
 
-/* ---------- 剪贴板（模块级单槽） ---------- */
+/* ---------- 剪贴板（模块级双槽：组件 / 图元） ---------- */
 
-interface Clip {
+interface ComponentClip {
+  kind: 'component';
   type: string;
   name: string;
   params: Record<string, unknown>;
@@ -48,7 +51,12 @@ interface Clip {
   };
 }
 
-let clip: Clip | null = null;
+interface ShapeClip {
+  kind: 'shape';
+  shapes: Array<Record<string, unknown>>; // 同组多选拷贝（组标记清除）
+}
+
+let clip: ComponentClip | ShapeClip | null = null;
 
 /** 测试辅助：清空剪贴板 */
 export function clearShortcutClipboard(): void {
@@ -57,19 +65,45 @@ export function clearShortcutClipboard(): void {
 
 function copySelected(host: ShortcutHost): void {
   const s = host.getState();
+  // 图元优先（图元选中时 Ctrl+C 拷图元）
+  if (s.shapeSelectionIds.length) {
+    const picked = s.shapes.filter((sh) => s.shapeSelectionIds.includes(sh.id) && !sh.locked);
+    if (!picked.length) return;
+    clip = {
+      kind: 'shape',
+      shapes: picked.map((sh) => {
+        const copy: Record<string, unknown> = structuredClone({ ...sh });
+        delete copy.id;
+        delete copy.group; // 副本脱离原组
+        return copy;
+      }),
+    };
+    return;
+  }
   const sel = s.components.find((c) => c.id === s.selectionId);
   if (!sel) return;
   clip = {
+    kind: 'component',
     type: sel.type,
     name: sel.name,
     params: structuredClone(sel.params),
-    transform: structuredClone(sel.transform as Clip['transform']),
+    transform: structuredClone(sel.transform as ComponentClip['transform']),
   };
 }
 
 function pasteClipboard(host: ShortcutHost, offset: boolean): void {
   if (!clip) return;
   const s = host.getState();
+  if (clip.kind === 'shape') {
+    const ids: string[] = [];
+    for (const sh of clip.shapes) {
+      const d = offset ? 12 : 0;
+      const id = s.addShape({ ...sh, x: (sh.x as number) + d, y: (sh.y as number) + d } as never);
+      ids.push(id);
+    }
+    s.selectShapes(ids);
+    return;
+  }
   const t = clip.transform;
   const pos: [number, number, number] = offset
     ? [t.position[0] + 12, t.position[1] + 12, t.position[2]]
@@ -113,14 +147,14 @@ export const SHORTCUTS: ShortcutDef[] = [
     },
   },
   {
-    key: 'delete', needsSelection: true, label: '删除选中组件',
+    key: 'delete', needsSelection: true, label: '删除选中组件 / 图元',
     run: ({ host }) => {
       const id = host.getState().selectionId;
       if (id) host.getState().removeComponent(id);
     },
   },
   {
-    key: 'backspace', needsSelection: true, label: '删除选中组件',
+    key: 'backspace', needsSelection: true, label: '删除选中组件 / 图元',
     run: ({ host }) => {
       const id = host.getState().selectionId;
       if (id) host.getState().removeComponent(id);
@@ -135,9 +169,11 @@ export const SHORTCUTS: ShortcutDef[] = [
     },
   },
   {
-    key: 'escape', label: '取消选中 / 关闭浮层',
+    key: 'escape', label: '取消选中 / 关闭浮层 / 回选择工具',
     run: ({ host, toggleCheatSheet }) => {
       host.getState().select(null);
+      host.getState().selectShape(null);
+      host.getState().setTool('select');
       toggleCheatSheet();
     },
   },
@@ -145,6 +181,13 @@ export const SHORTCUTS: ShortcutDef[] = [
     key: '?', mod: 'none', shift: true, label: '快捷键速查',
     run: ({ toggleCheatSheet }) => toggleCheatSheet(),
   },
+  // T-11.2 图元工具快捷键（无修饰单字母，输入框聚焦时由分发守卫拦截）
+  { key: 'v', mod: 'none', label: '选择工具', run: ({ host }) => host.setShapeTool?.('select') },
+  { key: 'r', mod: 'none', label: '绘制矩形', run: ({ host }) => host.setShapeTool?.('rect') },
+  { key: 'o', mod: 'none', label: '绘制椭圆', run: ({ host }) => host.setShapeTool?.('ellipse') },
+  { key: 'a', mod: 'none', label: '绘制箭头', run: ({ host }) => host.setShapeTool?.('arrow') },
+  { key: 'l', mod: 'none', label: '绘制连线', run: ({ host }) => host.setShapeTool?.('line') },
+  { key: 't', mod: 'none', label: '绘制文本', run: ({ host }) => host.setShapeTool?.('text') },
 ];
 
 /** 去重显示（delete/backspace 与 y/z 重做合并展示用） */

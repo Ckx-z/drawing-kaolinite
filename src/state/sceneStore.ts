@@ -21,6 +21,13 @@ import {
   sceneDocumentSchema,
   transformSchema,
 } from '../core/schema';
+import {
+  SHAPE_DEFAULTS,
+  SHAPE_TOOLS,
+  shapeSchema,
+  type SceneShape,
+  type ShapeTool,
+} from '../core/shapes/schema';
 import type {
   Annotation,
   AnyParams,
@@ -87,6 +94,32 @@ export interface SceneState {
   /** 载入场景（对象或 JSON 文本均可；经校验 + normalizeScene 补 id）并清空选择 */
   loadScene: (raw: unknown | string) => void;
   clear: () => void;
+
+  /* ---------- 机理图图元层（T-11.1） ---------- */
+  /** 图元列表（数组顺序 = Z 序） */
+  shapes: SceneShape[];
+  /** 图元选中 id 列表（末位为主选；与组件 selectionId 互斥） */
+  shapeSelectionIds: string[];
+  /** 当前图元工具（select 时图元命中优先、空白透传 3D 拾取） */
+  tool: ShapeTool;
+  /** 新增图元（默认样式 + 调用方几何；schema 校验），返回 id */
+  addShape: (partial: Partial<SceneShape> & { type: SceneShape['type'] }) => string;
+  /** 合并更新图元（整体经 shapeSchema 校验，非法抛错且状态不变） */
+  updateShape: (id: string, patch: Partial<SceneShape>) => void;
+  removeShape: (id: string) => void;
+  /** 选中图元（单选语义；锁定图元不可选；与组件选中互斥）。null = 清空 */
+  selectShape: (id: string | null) => void;
+  /** Ctrl/⌘+点击切换累加（多选；编组/整体移动用） */
+  toggleShapeSelection: (id: string) => void;
+  /** 批量选中（框选/图层多选） */
+  selectShapes: (ids: string[]) => void;
+  setTool: (tool: ShapeTool) => void;
+  /** Z 序调整：'front'/'back' 置顶置底，'forward'/'backward' 升降一级 */
+  moveShapeOrder: (id: string, dir: 'front' | 'back' | 'forward' | 'backward') => void;
+  /** 多选图元编组（T-11.4；组内整体移动），返回组 id */
+  groupShapes: (ids: string[]) => string | null;
+  /** 解散图元编组 */
+  ungroupShapes: (ids: string[]) => void;
 }
 
 export type SceneStore = StoreApi<SceneState>;
@@ -94,13 +127,18 @@ export type SceneStore = StoreApi<SceneState>;
 export function createSceneStore(): SceneStore {
   let seq = 0;
   let groupSeq = 0;
+  let shapeSeq = 0;
   const uid = (): string => `c${++seq}`;
+  const shapeUid = (): string => `s${++shapeSeq}`;
 
   return createStore<SceneState>()((set, get) => ({
     components: [],
     selectionId: null,
     palette: {},
     annotations: [],
+    shapes: [],
+    shapeSelectionIds: [],
+    tool: 'select',
 
     setPalette: (p) => set({ palette: p }),
 
@@ -138,8 +176,23 @@ export function createSceneStore(): SceneStore {
     removeComponent: (id) => {
       const rest = get().components.filter((c) => c.id !== id);
       if (rest.length === get().components.length) return;
+      // T-11.3 级联：锚定该组件的箭头/连线端点退化为 free（保留几何端点）
+      const shapes = get().shapes.map((s) => {
+        if (s.type !== 'arrow' && s.type !== 'line') return s;
+        let changed = false;
+        const anchors = { ...s.anchors };
+        for (const end of ['start', 'end'] as const) {
+          const a = anchors[end];
+          if (a.kind === 'component' && a.id === id) {
+            anchors[end] = { kind: 'free' };
+            changed = true;
+          }
+        }
+        return changed ? ({ ...s, anchors } as SceneShape) : s;
+      });
       set({
         components: rest,
+        shapes,
         selectionId: get().selectionId === id ? null : get().selectionId,
       });
     },
@@ -150,7 +203,7 @@ export function createSceneStore(): SceneStore {
         const comp = get().components.find((c) => c.id === id);
         if (!comp || comp.locked) return;
       }
-      set({ selectionId: id });
+      set({ selectionId: id, shapeSelectionIds: id !== null ? [] : get().shapeSelectionIds });
     },
 
     setVisibility: (id, visible) => {
@@ -247,12 +300,14 @@ export function createSceneStore(): SceneStore {
     toSceneDocument: () => {
       const palette = get().palette;
       const annotations = get().annotations;
+      const shapes = get().shapes;
       return sceneDocumentSchema.parse({
         format: SCENE_FORMAT,
         saved: new Date().toISOString(),
         components: get().components.map((c) => ({ ...c, locked: c.locked ?? false })),
         ...(palette.id || palette.overrides ? { palette } : {}),
         ...(annotations.length ? { annotations } : {}),
+        ...(shapes.length ? { shapes } : {}),
       });
     },
 
@@ -264,10 +319,136 @@ export function createSceneStore(): SceneStore {
         selectionId: null,
         palette: doc.palette ?? {}, // T-4.2：旧场景文件无 palette → 回默认色板
         annotations: doc.annotations ?? [], // T-4.4：旧场景无标注 → 空
+        shapes: (doc.shapes ?? []).map((s) => shapeSchema.parse(s)), // T-11.1：补默认字段
+        shapeSelectionIds: [],
+        tool: 'select',
       });
     },
 
-    clear: () => set({ components: [], selectionId: null, annotations: [] }),
+    clear: () =>
+      set({ components: [], selectionId: null, annotations: [], shapes: [], shapeSelectionIds: [], tool: 'select' }),
+
+    /* ---------- 图元层写操作（T-11.1；模式与组件写操作一致） ---------- */
+
+    addShape: (partial) => {
+      const id = shapeUid();
+      const type = partial.type;
+      const base = SHAPE_DEFAULTS[type];
+      const raw = {
+        ...base,
+        ...partial,
+        id,
+        x: partial.x ?? 80,
+        y: partial.y ?? 80,
+        rotation: partial.rotation ?? 0,
+        visible: partial.visible ?? true,
+        locked: false,
+      };
+      const shape = shapeSchema.parse(raw) as SceneShape; // 几何/样式越界在此拦截
+      set({ shapes: [...get().shapes, shape] });
+      return id;
+    },
+
+    updateShape: (id, patch) => {
+      const target = get().shapes.find((s) => s.id === id);
+      if (!target) return;
+      const merged = { ...target, ...patch } as SceneShape;
+      const parsed = shapeSchema.parse(merged) as SceneShape; // 非法样式抛 ZodError，状态不变
+      set({ shapes: get().shapes.map((s) => (s.id === id ? parsed : s)) });
+    },
+
+    removeShape: (id) => {
+      const rest = get().shapes.filter((s) => s.id !== id);
+      if (rest.length === get().shapes.length) return;
+      // 级联：锚定该图元的箭头/连线端点退化为 free（保留当前几何端点，S2/S3 拖拽可重接）
+      const removed = get().shapes.find((s) => s.id === id);
+      const shapes = rest.map((s) => {
+        if (s.type !== 'arrow' && s.type !== 'line') return s;
+        let changed = false;
+        const anchors = { ...s.anchors };
+        for (const end of ['start', 'end'] as const) {
+          const a = anchors[end];
+          if (a.kind === 'shape' && a.id === id) {
+            anchors[end] = { kind: 'free' };
+            changed = true;
+          }
+        }
+        return changed ? ({ ...s, anchors } as SceneShape) : s;
+      });
+      set({
+        shapes,
+        shapeSelectionIds: get().shapeSelectionIds.filter((sid) => sid !== id),
+      });
+      void removed; // （锁定校验等后续扩展点）
+    },
+
+    selectShape: (id) => {
+      if (id !== null) {
+        const shape = get().shapes.find((s) => s.id === id);
+        if (!shape || shape.locked) return;
+        set({ shapeSelectionIds: [id], selectionId: null });
+        return;
+      }
+      set({ shapeSelectionIds: [] });
+    },
+
+    toggleShapeSelection: (id) => {
+      const shape = get().shapes.find((s) => s.id === id);
+      if (!shape || shape.locked) return;
+      const cur = get().shapeSelectionIds;
+      set({
+        shapeSelectionIds: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id],
+        selectionId: null,
+      });
+    },
+
+    selectShapes: (ids) => {
+      const lock = new Set(get().shapes.filter((s) => s.locked).map((s) => s.id));
+      const next = ids.filter((id) => !lock.has(id));
+      set({ shapeSelectionIds: next, selectionId: next.length ? null : get().selectionId });
+    },
+
+    setTool: (tool) => {
+      if (!(SHAPE_TOOLS as readonly string[]).includes(tool)) return;
+      set({ tool });
+    },
+
+    moveShapeOrder: (id, dir) => {
+      const shapes = [...get().shapes];
+      const i = shapes.findIndex((s) => s.id === id);
+      if (i < 0) return;
+      const [item] = shapes.splice(i, 1);
+      if (!item) return;
+      const j =
+        dir === 'front' ? shapes.length
+        : dir === 'back' ? 0
+        : dir === 'forward' ? Math.min(shapes.length, i + 1)
+        : Math.max(0, i - 1);
+      shapes.splice(j, 0, item);
+      set({ shapes });
+    },
+
+    groupShapes: (ids) => {
+      if (ids.length < 2) return null;
+      const gid = `sg${++groupSeq}`;
+      const wanted = new Set(ids);
+      set({
+        shapes: get().shapes.map((s) => (wanted.has(s.id) ? ({ ...s, group: gid } as SceneShape) : s)),
+      });
+      return gid;
+    },
+
+    ungroupShapes: (ids) => {
+      const wanted = new Set(ids);
+      set({
+        shapes: get().shapes.map((s) => {
+          if (!wanted.has(s.id) || !s.group) return s;
+          const rest = { ...s };
+          delete rest.group;
+          return rest as SceneShape;
+        }),
+      });
+    },
   }));
 }
 

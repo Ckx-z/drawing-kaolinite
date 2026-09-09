@@ -31,8 +31,10 @@ import { pngToPdf } from '../export/pdf';
 import { encodeTIFF, resolveExportSize } from '../export/tiff';
 import { smilesTo3D } from '../core/molecules/smiles';
 import { formulaTo3D } from '../core/molecules/formula';
+import type { SceneShape } from '../core/shapes/schema';
+import { drawShapes } from '../ui/shapes/draw';
 import { presetPosition, type CameraPreset } from './postfx';
-import { annotationsToSVG, sceneToSVG, type SvgAtom, type SvgComponentInput } from '../export/svg';
+import { annotationsToSVG, sceneToSVG, shapesToSVG, type SvgAtom, type SvgComponentInput } from '../export/svg';
 import { getElement } from '../core/elements';
 import { activeColorFor } from './palette';
 import { addAtoms, addBonds, recolorAtomMesh } from './instanced';
@@ -72,6 +74,8 @@ export interface ExportOptions {
   alpha?: boolean;
   /** 标注层（T-4.4）：位图导出时叠画 */
   annotations?: Annotation[];
+  /** 机理图图元层（T-11.5）：位图/SVG 导出时叠画（视口坐标按比例换算） */
+  shapes?: SceneShape[];
 }
 
 /** SVG 导出的原子显示半径基准（与 instanced.ts 同款约定） */
@@ -502,8 +506,8 @@ export class RendererService {
     return H / 2 / (Math.max(dist, 1e-3) * tanHalf);
   }
 
-  /** 离屏渲染帧 + 标注叠画 → 2D 画布（PNG/TIFF/PDF 共用；annotations 可选） */
-  snapshotWithOverlay(w: number, h: number, annotations: Annotation[]): HTMLCanvasElement {
+  /** 离屏渲染帧 + 标注/图元叠画 → 2D 画布（PNG/TIFF/PDF 共用；annotations/shapes 可选） */
+  snapshotWithOverlay(w: number, h: number, annotations: Annotation[], shapes?: SceneShape[]): HTMLCanvasElement {
     const oc = document.createElement('canvas');
     oc.width = w;
     oc.height = h;
@@ -519,6 +523,27 @@ export class RendererService {
         project: (p) => this.projectToScreen(p, w, h),
         pxPerAAtTarget: this.pxPerAAtTarget(h),
       });
+    }
+    // T-11.5 图元层：图元坐标 = 视口逻辑像素 → 按导出/视口比例放大；
+    // component 锚定投影在离屏坐标下解析后除以 scale 折回视口坐标系，保持一致
+    if (shapes?.length) {
+      const vw = this.container.clientWidth || 1;
+      const vh = this.container.clientHeight || 1;
+      const scale = w / vw;
+      ctx.save();
+      ctx.scale(scale, scale);
+      drawShapes({
+        ctx,
+        width: vw,
+        height: vh,
+        shapes,
+        components: [...this.records.values()].map((r) => r.comp),
+        project: (p) => {
+          const r = this.projectToScreen(p, w, h);
+          return { x: r.x / scale, y: r.y / scale, visible: r.visible };
+        },
+      });
+      ctx.restore();
     }
     return oc;
   }
@@ -537,7 +562,7 @@ export class RendererService {
     );
     const st = this.beginOffscreen(w, h, opts.alpha ?? false);
     try {
-      const canvas = this.snapshotWithOverlay(w, h, opts.annotations ?? []);
+      const canvas = this.snapshotWithOverlay(w, h, opts.annotations ?? [], opts.shapes);
       return { dataUrl: canvas.toDataURL('image/png'), width: w, height: h };
     } finally {
       this.endOffscreen(st);
@@ -565,7 +590,7 @@ export class RendererService {
     );
     const st = this.beginOffscreen(plan.w, plan.h, opts.alpha ?? false);
     try {
-      const oc = this.snapshotWithOverlay(plan.w, plan.h, opts.annotations ?? []);
+      const oc = this.snapshotWithOverlay(plan.w, plan.h, opts.annotations ?? [], opts.shapes);
       const ctx = oc.getContext('2d');
       if (!ctx) throw new Error('无法创建 2D 画布（TIFF 导出）');
       const img = ctx.getImageData(0, 0, plan.w, plan.h);
@@ -624,7 +649,7 @@ export class RendererService {
    * 分组 SVG 矢量导出（T-5.3）：从原子/键数据直接生成（线稿档画风，平色+描边），
    * 每组件 <g id="组件名">。原子/键世界坐标 = 局部坐标经组件变换（含缩放半径）。
    */
-  exportSVG(opts?: { background?: string; strokeWidth?: number; annotations?: Annotation[] }): string {
+  exportSVG(opts?: { background?: string; strokeWidth?: number; annotations?: Annotation[]; shapes?: SceneShape[] }): string {
     this.scene.updateMatrixWorld(true);
     const size = this.renderer.getSize(new THREE.Vector2());
     const comps: SvgComponentInput[] = [];
@@ -672,15 +697,31 @@ export class RendererService {
       fallbackColor: '#9AA0A6',
     });
     const annotations = opts?.annotations ?? [];
-    if (!annotations.length) return svgBody;
-    const annotSvg = annotationsToSVG({
-      width: size.x,
-      height: size.y,
-      annotations,
-      pxPerA: this.pxPerAAtTarget(size.y),
-      project: (p) => this.projectToScreen(p, size.x, size.y),
-    });
-    return svgBody.replace('</svg>', `${annotSvg}\n</svg>`);
+    let extra = '';
+    if (annotations.length) {
+      extra += annotationsToSVG({
+        width: size.x,
+        height: size.y,
+        annotations,
+        pxPerA: this.pxPerAAtTarget(size.y),
+        project: (p) => this.projectToScreen(p, size.x, size.y),
+      });
+    }
+    // T-11.5 图元层（视口坐标 × scale = 导出坐标）
+    const shapes = opts?.shapes ?? [];
+    if (shapes.length) {
+      const vw = this.container.clientWidth || 1;
+      extra += (extra ? '\n' : '') + shapesToSVG({
+        width: size.x,
+        height: size.y,
+        scale: size.x / vw,
+        shapes,
+        components: [...this.records.values()].map((r) => r.comp),
+        project: (p) => this.projectToScreen(p, size.x, size.y),
+      });
+    }
+    if (!extra) return svgBody;
+    return svgBody.replace('</svg>', `${extra}\n</svg>`);
   }
 
   /**
@@ -815,7 +856,7 @@ export class RendererService {
     const hCM = (wCM * h) / w;
     const st = this.beginOffscreen(w, h, opts.alpha ?? false);
     try {
-      const dataUrl = this.snapshotWithOverlay(w, h, opts.annotations ?? []).toDataURL('image/png');
+      const dataUrl = this.snapshotWithOverlay(w, h, opts.annotations ?? [], opts.shapes).toDataURL('image/png');
       return { blob: pngToPdf(dataUrl, wCM, hCM), widthCM: wCM, heightCM: hCM };
     } finally {
       this.endOffscreen(st);

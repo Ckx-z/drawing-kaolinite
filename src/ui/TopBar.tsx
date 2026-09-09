@@ -4,13 +4,42 @@
  * 修复打包版 <a download> 无效；浏览器 = showSaveFilePicker / 传统下载）。
  */
 import { useRef, useState } from 'react';
+import { useStore } from 'zustand';
 import { exportCurlAnimation } from '../export/animation';
 import { buildLayerPngs } from '../export/layers';
+import { SHAPE_TOOLS, type ShapeTool } from '../core/shapes/schema';
 import { moduleEntryFromComponent, moduleEntryFromScene, saveModule } from '../state/moduleLibrary';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
 import { loadPresetScene } from './preset';
 import { dataUrlToBlob, saveBlob, saveBlobs, saveText } from './saveFile';
+
+/** T-11.2 图元工具组（激活态随 store.tool；快捷键 V/R/O/A/L/T 同源） */
+const TOOL_LABELS: Record<ShapeTool, string> = {
+  select: '➚ 选择',
+  rect: '▭ 矩形',
+  ellipse: '◯ 椭圆',
+  arrow: '→ 箭头',
+  line: '— 连线',
+  text: 'T 文本',
+};
+
+function ShapeToolGroup() {
+  const tool = useStore(sceneStore, (s) => s.tool);
+  return (
+    <div className="tb-group" title="机理图图元工具（快捷键 V/R/O/A/L/T；绘制后自动回选择工具）">
+      {SHAPE_TOOLS.map((t) => (
+        <button
+          key={t}
+          className={`mini${tool === t ? ' on' : ''}`}
+          onClick={() => sceneStore.getState().setTool(t)}
+        >
+          {TOOL_LABELS[t]}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function TopBar() {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -52,7 +81,7 @@ export default function TopBar() {
   const onExportPNG = async (): Promise<void> => {
     const svc = rendererRef.current;
     if (!svc) return;
-    const { dataUrl, width, height } = svc.exportPNG({ dpi, alpha, annotations: sceneStore.getState().annotations });
+    const { dataUrl, width, height } = svc.exportPNG({ dpi, alpha, annotations: sceneStore.getState().annotations, shapes: sceneStore.getState().shapes });
     const ok = await saveBlob(`kaolin-16cm-${dpi}dpi.png`, await dataUrlToBlob(dataUrl));
     if (ok) flash(`已导出 ${width} × ${height} px（16cm @ ${dpi}dpi${alpha ? '，透明底' : ''}）`);
   };
@@ -76,7 +105,7 @@ export default function TopBar() {
   const onExportSVG = async (): Promise<void> => {
     const svc = rendererRef.current;
     if (!svc) return;
-    const svg = svc.exportSVG({ background: alpha ? undefined : '#F4F5F7', strokeWidth: 1, annotations: sceneStore.getState().annotations });
+    const svg = svc.exportSVG({ background: alpha ? undefined : '#F4F5F7', strokeWidth: 1, annotations: sceneStore.getState().annotations, shapes: sceneStore.getState().shapes });
     const ok = await saveText('kaolin-scene.svg', svg, 'image/svg+xml');
     if (ok) flash('已导出分组 SVG（每组件一个分组，PPT 转形状后可逐组件编辑）');
   };
@@ -85,7 +114,7 @@ export default function TopBar() {
   const onExportPDF = async (): Promise<void> => {
     const svc = rendererRef.current;
     if (!svc) return;
-    const { blob, widthCM, heightCM } = svc.exportPDF({ dpi, alpha, annotations: sceneStore.getState().annotations });
+    const { blob, widthCM, heightCM } = svc.exportPDF({ dpi, alpha, annotations: sceneStore.getState().annotations, shapes: sceneStore.getState().shapes });
     const ok = await saveBlob(`kaolin-${widthCM}x${heightCM}cm.pdf`, blob);
     if (ok) flash(`已导出 PDF（页面 ${widthCM} × ${heightCM} cm @ ${dpi}dpi 位图${alpha ? '，透明底' : ''}）`);
   };
@@ -120,7 +149,7 @@ export default function TopBar() {
   const onExportTIFF = async (): Promise<void> => {
     const svc = rendererRef.current;
     if (!svc) return;
-    const { blob, width, height, degraded, effectiveDpi } = svc.exportTIFF({ dpi, alpha, annotations: sceneStore.getState().annotations });
+    const { blob, width, height, degraded, effectiveDpi } = svc.exportTIFF({ dpi, alpha, annotations: sceneStore.getState().annotations, shapes: sceneStore.getState().shapes });
     const ok = await saveBlob(`kaolin-16cm-${Math.round(effectiveDpi)}dpi.tiff`, blob);
     if (!ok) return;
     flash(
@@ -170,6 +199,7 @@ export default function TopBar() {
           示例场景
         </button>
       </div>
+      <ShapeToolGroup />
       <div className="tb-group">
         <button onClick={onSaveScene}>保存场景</button>
         <button onClick={onOpenScene}>打开场景</button>

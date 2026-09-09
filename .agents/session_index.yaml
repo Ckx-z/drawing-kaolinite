@@ -567,3 +567,20 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-10-29"
+    date: "2026-09-10"
+    title: "T-11 机理图图元层一期（S1-S5）：五件套图元 + 锚定跟随 + 撤销 + 五格式导出"
+    summary: "按批准计划完成一期叠加形态：core/shapes/schema.ts 判别联合（rect/ellipse/text/arrow/line + anchors free|shape|component，Z序=数组序，编组=group）；store shapes/shapeSelectionIds/tool 写操作（双向删除级联锚定退化、groupShapes、moveShapeOrder）；ui/shapes/draw.ts（同构绘制+resolveLineEnds 每帧投影跟随+裁剪夹边）+ hit.ts 命中 + interaction.ts（capture 挂 3D canvas 事件分流 stopImmediatePropagation；idle/draw/move组感知/resize/link 状态机；snapAnchor 绘制即连接；文本双击浮层）；shortcuts 工具键 V/R/O/A/L/T + 剪贴板组件/图元双槽；commands Snapshot 扩 shapes/annotations/palette（偿还标注撤销欠债）+ TRACKED+8；ParamPanel ShapeSection + LayerPanel 图元分区；svg.ts shapesToSVG + snapshotWithOverlay scale 换算（图元坐标=视口逻辑像素）+ TopBar 透传。踩坑：zod 嵌套对象整体缺省需对象级 default；TS 闭包 let 窄化函数调用后重置（const 定格）；undo 测试插桩错位排查。验收：264 tests（+16）全绿；浏览器实测绘制/拖拽(+50+30精确)/微调/删除撤销/箭头锚定 component:c7+视角旋转40°投影(520,307)→(419,335)跟随/SVG shape-* 分组/场景往返/PNG；截图视觉确认；tauri build 重打包。二期 T-11.6~11.8（纯2D模式/对齐吸附/模板库）待启动。"
+    files_modified:
+      - src/core/shapes/schema.ts + schema.test.ts（新增）
+      - src/core/schema.ts（sceneDocument shapes）
+      - src/state/sceneStore.ts / commands.ts / history.ts
+      - src/ui/shapes/draw.ts / hit.ts / interaction.ts / draft.ts（新增）
+      - src/ui/SceneCanvas.tsx / App.tsx / TopBar.tsx / ParamPanel.tsx / LayerPanel.tsx / shortcuts.ts
+      - src/export/svg.ts（shapesToSVG）/ src/render/RendererService.ts（透传+scale）
+      - TODO.md（T-11 系列）/ DAILY_LOG/2026-09-10*.md / PROJECT_STATE.md
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

@@ -49,14 +49,26 @@ const TRACKED = [
   'renameComponent',
   'loadScene',
   'clear',
+  // T-11.4：图元层写操作 + 标注/色板（偿还"标注不可撤销"欠债）
+  'addShape',
+  'updateShape',
+  'removeShape',
+  'moveShapeOrder',
+  'addAnnotation',
+  'updateAnnotation',
+  'removeAnnotation',
+  'setPalette',
 ] as const;
 
 type TrackedName = (typeof TRACKED)[number];
 
-/** 参数/变换的连续编辑合并键；其余操作返回 null（每条独立成命令） */
+/** 参数/变换/图元的连续编辑合并键；其余操作返回 null（每条独立成命令） */
 function coalesceKey(name: TrackedName, args: unknown[]): string | null {
   if (name === 'updateParams') return `updateParams:${String(args[0])}`;
   if (name === 'setTransform') return `setTransform:${String(args[0])}`;
+  if (name === 'updateShape') return `updateShape:${String(args[0])}`; // 拖拽/手柄/微调整段合并
+  if (name === 'updateAnnotation') return `updateAnnotation:${String(args[0])}`;
+  if (name === 'setPalette') return 'setPalette';
   return null;
 }
 

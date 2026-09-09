@@ -238,3 +238,100 @@ export function annotationsToSVG(o: SvgAnnotationOptions): string {
   void W;
   return parts.join('\n');
 }
+
+/* ---------- 机理图图元层（T-11.5）：shapesToSVG，与 ui/shapes/draw 同构 ---------- */
+
+import type { SceneShape } from '../core/shapes/schema';
+
+export interface SvgShapeOptions {
+  /** 离屏导出尺寸（px） */
+  width: number;
+  height: number;
+  /** 图元层（视口）坐标 → 导出坐标比例 = 导出宽 / 视口宽 */
+  scale: number;
+  shapes: SceneShape[];
+  /** component 锚定解析（世界 → 离屏 px） */
+  components: Array<{ id: string; transform: { position: [number, number, number] } }>;
+  project: (p: [number, number, number]) => { x: number; y: number; visible: boolean };
+}
+
+/** 端点解析（视口坐标系；与 ui/shapes/draw.resolveEndpoint 同语义，独立实现避免 UI 依赖） */
+function svgEndpoint(
+  anchor: { kind: string; id?: string; side?: string },
+  fallback: { x: number; y: number },
+  shapes: SceneShape[],
+  components: SvgShapeOptions['components'],
+  project: SvgShapeOptions['project'],
+): { x: number; y: number } {
+  if (anchor.kind === 'shape' && anchor.id) {
+    const t = shapes.find((s) => s.id === anchor.id);
+    if (t) {
+      const bx = Math.min(t.x, t.x + t.w);
+      const by = Math.min(t.y, t.y + t.h);
+      return {
+        x: Math.min(Math.max(fallback.x, bx), bx + Math.abs(t.w)),
+        y: Math.min(Math.max(fallback.y, by), by + Math.abs(t.h)),
+      };
+    }
+  }
+  if (anchor.kind === 'component' && anchor.id) {
+    const c = components.find((x) => x.id === anchor.id);
+    if (c) {
+      const p = project(c.transform.position);
+      return { x: p.x, y: p.y };
+    }
+  }
+  return fallback;
+}
+
+/** 生成图元层 SVG 片段（每图元一个 g，矢量可编辑；坐标已乘 scale 到导出空间） */
+export function shapesToSVG(o: SvgShapeOptions): string {
+  const s = o.scale;
+  const parts: string[] = [];
+  for (const sh of o.shapes) {
+    if (sh.visible === false) continue;
+    const w = fmt(Math.abs(sh.w) * s);
+    const h = fmt(Math.abs(sh.h) * s);
+    const x0 = fmt(Math.min(sh.x, sh.x + sh.w) * s);
+    const y0 = fmt(Math.min(sh.y, sh.y + sh.h) * s);
+    const stroke = `stroke="${sh.stroke}" stroke-width="${fmt(sh.lineWidth * s)}"${sh.dash === 'dashed' ? ` stroke-dasharray="${fmt(7 * s)},${fmt(5 * s)}"` : ''}`;
+    const fill = sh.fill === 'none' ? 'none' : sh.fill;
+    const gid = `shape-${sh.type}-${sh.id}`;
+    if (sh.type === 'rect') {
+      const rot = sh.rotation ? ` transform="rotate(${fmt(sh.rotation)} ${fmt((sh.x + sh.w / 2) * s)} ${fmt((sh.y + sh.h / 2) * s)})"` : '';
+      parts.push(`<g id="${gid}"><rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="${fill}" ${stroke}${rot}/></g>`);
+    } else if (sh.type === 'ellipse') {
+      const cx = fmt((Math.min(sh.x, sh.x + sh.w) + Math.abs(sh.w) / 2) * s);
+      const cy = fmt((Math.min(sh.y, sh.y + sh.h) + Math.abs(sh.h) / 2) * s);
+      parts.push(`<g id="${gid}"><ellipse cx="${cx}" cy="${cy}" rx="${fmt((Math.abs(sh.w) / 2) * s)}" ry="${fmt((Math.abs(sh.h) / 2) * s)}" fill="${fill}" ${stroke}/></g>`);
+    } else if (sh.type === 'text') {
+      const lines = sh.text.split('\n');
+      const anchor = sh.align === 'center' ? 'middle' : 'start';
+      const tx = sh.align === 'center' ? fmt((Math.min(sh.x, sh.x + sh.w) + Math.abs(sh.w) / 2) * s) : x0;
+      const tspans = lines
+        .map((ln, i) => `<tspan x="${tx}" dy="${i === 0 ? fmt(sh.fontSize * s * 0.8) : fmt(sh.fontSize * s * 1.3)}">${esc(ln)}</tspan>`)
+        .join('');
+      parts.push(
+        `<g id="${gid}"><text font-family="system-ui, sans-serif" font-size="${fmt(sh.fontSize * s)}" fill="${sh.color}" text-anchor="${anchor}"${sh.outline ? ` stroke="white" stroke-width="${fmt(3 * s)}" paint-order="stroke"` : ''}>${tspans}</text></g>`,
+      );
+    } else {
+      // arrow / line
+      const start = svgEndpoint(sh.anchors.start, { x: sh.x, y: sh.y }, o.shapes, o.components, o.project);
+      const end = svgEndpoint(sh.anchors.end, { x: sh.x + sh.w, y: sh.y + sh.h }, o.shapes, o.components, o.project);
+      const sx = fmt(start.x * s);
+      const sy = fmt(start.y * s);
+      const ex = fmt(end.x * s);
+      const ey = fmt(end.y * s);
+      let body = `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" ${stroke}/>`;
+      if (sh.type === 'arrow') {
+        const head = sh.headSize * s;
+        const ang = Math.atan2(end.y - start.y, end.x - start.x);
+        const p1 = { x: end.x * s - head * Math.cos(ang - Math.PI / 6), y: end.y * s - head * Math.sin(ang - Math.PI / 6) };
+        const p2 = { x: end.x * s - head * Math.cos(ang + Math.PI / 6), y: end.y * s - head * Math.sin(ang + Math.PI / 6) };
+        body += `<polygon points="${fmt(end.x * s)},${fmt(end.y * s)} ${fmt(p1.x)},${fmt(p1.y)} ${fmt(p2.x)},${fmt(p2.y)}" fill="${sh.stroke}"/>`;
+      }
+      parts.push(`<g id="${gid}">${body}</g>`);
+    }
+  }
+  return parts.join('\n');
+}

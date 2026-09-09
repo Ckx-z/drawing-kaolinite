@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { rendererRef } from '../state/rendererRef';
 import { sceneHistory, sceneStore } from '../state/sceneStore';
+import { deleteSelectedShapes, nudgeSelectedShapes } from './shapes/interaction';
 import LayerPanel from './LayerPanel';
 import LibraryPanel from './LibraryPanel';
 import ParamPanel from './ParamPanel';
@@ -30,6 +31,7 @@ export default function App() {
       getState: () => sceneStore.getState(),
       history: sceneHistory,
       toggleCheatSheet: () => setCheat((v) => !v),
+      setShapeTool: (tool) => sceneStore.getState().setTool(tool),
     };
 
     // 方向键平移视角：按住连续、松开停止（rAF 帧循环，帧率无关的速度感）
@@ -51,10 +53,24 @@ export default function App() {
     const onKey = (e: KeyboardEvent): void => {
       const tag = (document.activeElement?.tagName ?? '').toLowerCase();
       if (tag === 'input' || tag === 'select' || tag === 'textarea') return; // 输入框内方向键正常编辑文本
+      // T-11.2：图元选中时方向键 = 微调图元（Shift 大步 10px）；否则平移视角
       if (e.key.startsWith('Arrow')) {
         e.preventDefault(); // 阻止页面滚动，不进入快捷键分发
+        if (nudgeSelectedShapes(
+          (e.key === 'ArrowLeft' ? -1 : 0) + (e.key === 'ArrowRight' ? 1 : 0),
+          (e.key === 'ArrowUp' ? -1 : 0) + (e.key === 'ArrowDown' ? 1 : 0),
+          e.shiftKey ? 10 : 1,
+        )) {
+          return; // 已消费（图元微调）
+        }
         arrows.add(e.key.toLowerCase());
         if (!panRaf) panRaf = requestAnimationFrame(panLoop);
+        return;
+      }
+      // T-11.2：图元选中时 Delete 优先删图元
+      if ((e.key === 'Delete' || e.key === 'Backspace') && sceneStore.getState().shapeSelectionIds.length) {
+        e.preventDefault();
+        deleteSelectedShapes();
         return;
       }
       handleShortcut(e, host);
