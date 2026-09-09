@@ -19,6 +19,7 @@ import {
 } from './builders';
 import GeometryWorker from './geometryWorker?worker&inline';
 import type { GeometryData } from './geometry';
+import { formulaTo3D } from './molecules/formula';
 import { smilesTo3D } from './molecules/smiles';
 import type { MoleculeParams, ParticleParams, SheetParams, TubeParams } from './types';
 
@@ -65,6 +66,10 @@ export function computeGeometry(req: GeometryRequest): GeometryResult {
       if (mp.smiles) {
         const mol = smilesTo3D(mp.smiles); // T-2.8：SMILES 分子在 Worker 内确定性构建
         return { atoms: mol.atoms, bonds: mol.bonds.map(([i, j]) => [i, j]) };
+      }
+      if (mp.formula) {
+        const mol = formulaTo3D(mp.formula); // 2026-09-08：化学式团簇（大小写不敏感输入的规范串）
+        return { atoms: mol.atoms, bonds: mol.bonds };
       }
       return buildMolecule(mp.kind);
     }

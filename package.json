@@ -14,6 +14,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@tauri-apps/plugin-dialog": "^2.7.3",
     "dexie": "^4.4.5",
     "jspdf": "^4.2.1",
     "react": "^19.1.0",

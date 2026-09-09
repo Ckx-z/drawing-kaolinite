@@ -123,6 +123,25 @@ function CheckControl(props: { compId: string; def: ParamDef; checked: boolean }
   );
 }
 
+/** toggle：字符串枚举开关（如 atomMode 'full'/'single' ↔ 勾选态） */
+function ToggleControl(props: { compId: string; def: ParamDef; value: string }) {
+  const { compId, def, value } = props;
+  const on = def.on ?? '';
+  const off = def.off ?? '';
+  return (
+    <div className="ctl">
+      <label className="chk">
+        <input
+          type="checkbox"
+          checked={value === on}
+          onChange={(e) => sceneStore.getState().updateParams(compId, { [def.key]: e.target.checked ? on : off } as never)}
+        />
+        {def.label}
+      </label>
+    </div>
+  );
+}
+
 function NumCell(props: { label: string; value: number; step: number; onSet: (v: number) => void }) {
   const { label, value, step, onSet } = props;
   return (
@@ -251,8 +270,10 @@ export default function ParamPanel() {
         参数<span className="tip">（{selected.name}）</span>
       </h3>
       {PARAM_DEFS[selected.type].map((def) => {
+        if (def.when && !def.when(selected.params as Record<string, unknown>)) return null; // 条件显隐
         const v = (selected.params as Record<string, unknown>)[def.key];
         if (def.type === 'select') return <SelectControl key={def.key} compId={selected.id} def={def} value={String(v)} />;
+        if (def.type === 'toggle') return <ToggleControl key={def.key} compId={selected.id} def={def} value={String(v)} />;
         if (def.type === 'checkbox')
           return <CheckControl key={def.key} compId={selected.id} def={def} checked={Boolean(v)} />;
         return <RangeControl key={def.key} compId={selected.id} def={def} value={Number(v)} />;

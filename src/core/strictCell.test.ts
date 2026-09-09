@@ -43,7 +43,7 @@ function theoreticalSiOBondLengths(): Set<number> {
 describe('晶学严格模式（T-2.7）', () => {
   it('严格模式：全部 Si–O 键长落在 CIF 距离矩阵理论集合内（偏差 <0.5%）', () => {
     const sheet = buildKaoliniteSheet(cifText, {
-      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell: true,
+      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell: true, atomMode: 'full', singleEl: 'Si'
     });
     const theoretical = theoreticalSiOBondLengths();
     // built 片层中的 Si 原子（O-H 氢已补，但 Si 的最近邻 O 键仍在）
@@ -72,7 +72,7 @@ describe('晶学严格模式（T-2.7）', () => {
   it('倾斜呈现：双层堆叠的层间位移方向——严格模式沿倾斜 c 轴（x 位移 ≈ d001·cosβ），示意模式纯 z', () => {
     const layerXShift = (strictCell: boolean): number => {
       const sheet = buildKaoliniteSheet(cifText, {
-        Lx: 60, Ly: 50, layers: 2, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell,
+        Lx: 60, Ly: 50, layers: 2, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell, atomMode: 'full', singleEl: 'Si'
       });
       const zs = sheet.atoms.map((a) => a.z).sort((x, y) => x - y);
       const mid = (zs[zs.length - 1] + zs[0]) / 2;
@@ -90,11 +90,11 @@ describe('晶学严格模式（T-2.7）', () => {
 
   it('默认（缺省 strictCell）仍为示意模式：原子数 = 基线 2448', () => {
     const dflt = buildKaoliniteSheet(cifText, {
-      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell: false
+      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell: false, atomMode: 'full', singleEl: 'Si'
     });
     expect(dflt.atoms).toHaveLength(2448);
     const explicitFalse = buildKaoliniteSheet(cifText, {
-      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell: false,
+      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell: false, atomMode: 'full', singleEl: 'Si'
     });
     expect(JSON.stringify(dflt.atoms)).toBe(JSON.stringify(explicitFalse.atoms));
   });
@@ -102,7 +102,7 @@ describe('晶学严格模式（T-2.7）', () => {
   it('schema 兼容：旧场景文件无 strictCell 字段可解析（默认 false）', async () => {
     const { sheetParamsSchema } = await import('./schema');
     const res = sheetParamsSchema.parse({
-      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell: false
+      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell: false, atomMode: 'full', singleEl: 'Si'
     });
     expect(res.strictCell).toBe(false);
   });

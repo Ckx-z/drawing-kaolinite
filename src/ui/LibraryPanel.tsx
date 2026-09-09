@@ -4,7 +4,8 @@
  */
 import { useState } from 'react';
 import { useStore } from 'zustand';
-import { SmilesError, smilesTo3D } from '../core/molecules/smiles';
+import { formulaTo3D } from '../core/molecules/formula';
+import { smilesTo3D } from '../core/molecules/smiles';
 import type { ComponentType } from '../core/types';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
@@ -22,12 +23,16 @@ export default function LibraryPanel() {
     rendererRef.current?.frameComponent(id);
   };
 
-  /** T-2.8：SMILES 导入（本地预校验 → addComponent 经 schema 校验 → 渲染层确定性重建） */
-  const addSmiles = (): void => {
+  /**
+   * 分子导入（T-2.8 SMILES + 2026-09-08 化学式双路）：先按 SMILES 解析
+   * （CCO=乙醇），失败自动转化学式（大小写不敏感：si/SI → Si，fe2o3 → Fe2O3），
+   * 生成紧密团簇模型。两路都失败才报错。
+   */
+  const addMolecule = (): void => {
     const s = smiles.trim();
     if (!s) return;
     try {
-      smilesTo3D(s); // 预校验（非法即报错，不入库）
+      smilesTo3D(s); // 预校验（非法即抛错，不入库）
       const id = sceneStore.getState().addComponent('molecule', {
         name: s,
         params: { smiles: s, kind: 'H₂O' },
@@ -35,9 +40,24 @@ export default function LibraryPanel() {
       sceneStore.getState().select(id);
       rendererRef.current?.frameComponent(id);
       setSmiles('');
-      setSmilesMsg('已导入');
+      setSmilesMsg('已导入 SMILES 分子');
+      return;
+    } catch {
+      // 落入化学式分支
+    }
+    try {
+      const { canonical } = formulaTo3D(s); // 预校验（非法即抛错，不入库）
+      const id = sceneStore.getState().addComponent('molecule', {
+        name: canonical,
+        params: { formula: canonical, kind: 'H₂O' },
+      });
+      sceneStore.getState().select(id);
+      rendererRef.current?.frameComponent(id);
+      setSmiles('');
+      setSmilesMsg(`已导入化学式 ${canonical}`);
     } catch (err) {
-      setSmilesMsg(err instanceof SmilesError ? `✕ ${err.message}` : '✕ 导入失败');
+      const msg = err instanceof Error ? err.message : '导入失败';
+      setSmilesMsg(`✕ 无法识别为 SMILES 或化学式（${msg}）`);
     }
   };
 
@@ -64,12 +84,16 @@ export default function LibraryPanel() {
               setSmilesMsg('');
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') addSmiles();
+              if (e.key === 'Enter') addMolecule();
             }}
-            placeholder="SMILES 导入：CCO"
+            placeholder="SMILES / 化学式：CCO、Si、fe2o3"
             style={{ flex: 1, minWidth: 0 }}
           />
-          <button className="mini" onClick={addSmiles} title="输入 SMILES（如 CCO 乙醇、CC(=O)O 乙酸）导入 3D 分子">
+          <button
+            className="mini"
+            onClick={addMolecule}
+            title="先按 SMILES 解析（如 CCO 乙醇）；失败自动转化学式（大小写不敏感：si/SI → Si，fe2o3 → Fe2O3）"
+          >
             导入
           </button>
         </div>
@@ -77,7 +101,7 @@ export default function LibraryPanel() {
       </div>
       <ModulePanel />
       <h3 style={{ marginTop: 16 }}>提示</h3>
-      <p className="hint">点击卡片添加组件；点击画布选中；Delete 删除、Esc 取消选中；SMILES 输入后回车导入分子。</p>
+      <p className="hint">点击卡片添加组件；点击画布选中；Delete 删除、Esc 取消选中；SMILES / 化学式（如 Si、H2O）输入后回车导入。</p>
     </aside>
   );
 }

@@ -25,6 +25,21 @@ export function mulberry32(seed: number): () => number {
  * 管线：parseCIF → expandSymmetry → buildSlab(超胞)
  *       → [六角裁剪] → 补羟基氢 → 判键 → [边缘饱和]
  * ============================================================ */
+/**
+ * 单原子模式（2026-09-08）：忽略化学组成，全部原子统一为 singleEl——
+ * 机理图简化示意画法（"由重复的单一原子堆叠成结构"）。键网与几何不变，
+ * 仅替换元素标识（渲染层按 el 取半径/颜色 → 视觉即为单一原子堆叠）。
+ */
+function applyAtomMode<T extends GeometryData>(
+  g: T,
+  p: { atomMode?: 'full' | 'single'; singleEl?: string },
+): T {
+  if (p.atomMode === 'single' && p.singleEl) {
+    for (const a of g.atoms) a.el = p.singleEl;
+  }
+  return g;
+}
+
 export function buildKaoliniteSheet(cifText: string, p: SheetParams): GeometryData {
   const parsed = C.parseCIF(cifText);
   const na = Math.max(2, Math.round(p.Lx / parsed.cell.a));
@@ -39,7 +54,7 @@ export function buildKaoliniteSheet(cifText: string, p: SheetParams): GeometryDa
   atoms = C.addHydroxylHydrogens(atoms);
   const bonds = C.computeBonds(atoms);
   if (p.edgeH) atoms = C.saturateEdges(atoms, bonds);
-  return { atoms, bonds, meta: { na, nb } };
+  return applyAtomMode({ atoms, bonds, meta: { na, nb } }, p);
 }
 
 /* ============================================================
@@ -105,7 +120,7 @@ export function buildHalloysiteTube(cifText: string, p: TubeParams): GeometryDat
   }
 
   const bonds = C.computeBonds(rolled);
-  return { atoms: rolled, bonds, meta: { na, nb } };
+  return applyAtomMode({ atoms: rolled, bonds, meta: { na, nb } }, p);
 }
 
 export interface RollOptions {
@@ -236,7 +251,7 @@ export function buildParticle(p: ParticleParams): GeometryData {
       });
     }
   }
-  return { atoms, bonds: [], meta: { n: atoms.length } };
+  return applyAtomMode({ atoms, bonds: [], meta: { n: atoms.length } }, p);
 }
 
 /* ============================================================

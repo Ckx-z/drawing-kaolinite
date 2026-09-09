@@ -1,7 +1,7 @@
 # PROJECT_STATE — 项目当前状态
 
 > ⭐ **这是每次会话的第一份必读文件**。会话开头读它进入状态，结尾更新它。
-> 最后更新：2026-09-08（用户报障修复：素材库点击无效双根因——布局回归 + tauri:// 下 module Worker 静默加载失败；见 DAILY_LOG/2026-09-08.md 与 D10）
+> 最后更新：2026-09-09（四项需求交付：方向键平移 / 化学式导入（大小写不敏感）/ 单原子模式 / 导出原生保存对话框；248 tests）
 
 ---
 
@@ -89,6 +89,8 @@
 | 决策日志 | `DECISIONS.md` | D01–D10（D10：桌面端 Worker 内联 + 异步挂起必须可回退） |
 | 参数字典 | `DATA_DICT.md` | 五类组件参数 + 场景 JSON schema |
 | 桌面端稳定性 | `src/core/worker.ts` + `cache.ts` + `index.css` | 2026-09-08 修复：Worker `?worker&inline`（data URL，零运行时 fetch）+ 4s 握手超时回退主线程 + IndexedDB 4s 门直通 + canvas CSS 100% 钉死/body overflow:hidden/顶栏 wrap；233 tests |
+| 交互与导入增强 | `App.tsx`/`RendererService.panView` + `molecules/formula.ts` + `schema.ts` + `paramDefs.ts` | 2026-09-09：方向键平移（rAF 键集合，输入框守卫）；化学式导入（大小写归一 + 紧密团簇，params.formula 持久化，SMILES 优先双路）；单原子模式（atomMode/singleEl，片层/管/颗粒，toggle+when UI）；248 tests |
+| 导出保存对话框 | `src/ui/saveFile.ts` + `src-tauri`（save_file 命令 + tauri-plugin-dialog + capabilities） | 2026-09-09：桌面端 `<a download>` 无效的根治——原生保存对话框选路径后 Rust 写盘；分层 PNG 选目录批量写；取消静默；浏览器 showSaveFilePicker 优先 |
 
 ---
 *本文件每次会话结束时检查更新（见 AGENTS.md 结尾清单）。*

@@ -1,5 +1,7 @@
 /**
  * 顶部工具栏 —— T-1.6/T-1.7（对齐 demo：示例场景 / 保存场景 / 打开场景 / 导出 PNG / 清空）
+ * 2026-09-08：全部导出改走 saveFile.ts 统一入口（桌面 = 原生保存对话框 + Rust 写盘，
+ * 修复打包版 <a download> 无效；浏览器 = showSaveFilePicker / 传统下载）。
  */
 import { useRef, useState } from 'react';
 import { exportCurlAnimation } from '../export/animation';
@@ -8,13 +10,7 @@ import { moduleEntryFromComponent, moduleEntryFromScene, saveModule } from '../s
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
 import { loadPresetScene } from './preset';
-
-function download(href: string, filename: string): void {
-  const a = document.createElement('a');
-  a.href = href;
-  a.download = filename;
-  a.click();
-}
+import { dataUrlToBlob, saveBlob, saveBlobs, saveText } from './saveFile';
 
 export default function TopBar() {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -29,13 +25,9 @@ export default function TopBar() {
     setTimeout(() => setToast(''), 2600);
   };
 
-  const onSaveScene = (): void => {
-    const blob = new Blob([JSON.stringify(sceneStore.getState().toSceneDocument(), null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    download(url, 'kaolin-scene.json');
-    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  const onSaveScene = async (): Promise<void> => {
+    const json = JSON.stringify(sceneStore.getState().toSceneDocument(), null, 2);
+    if (await saveText('kaolin-scene.json', json, 'application/json')) flash('场景已保存');
   };
 
   const onOpenScene = (): void => fileRef.current?.click();
@@ -57,16 +49,16 @@ export default function TopBar() {
     e.target.value = '';
   };
 
-  const onExportPNG = (): void => {
+  const onExportPNG = async (): Promise<void> => {
     const svc = rendererRef.current;
     if (!svc) return;
     const { dataUrl, width, height } = svc.exportPNG({ dpi, alpha, annotations: sceneStore.getState().annotations });
-    download(dataUrl, `kaolin-16cm-${dpi}dpi.png`);
-    flash(`已导出 ${width} × ${height} px（16cm @ ${dpi}dpi${alpha ? '，透明底' : ''}）`);
+    const ok = await saveBlob(`kaolin-16cm-${dpi}dpi.png`, await dataUrlToBlob(dataUrl));
+    if (ok) flash(`已导出 ${width} × ${height} px（16cm @ ${dpi}dpi${alpha ? '，透明底' : ''}）`);
   };
 
   /** T-5.4：分层透明 PNG（每可见组件一张，按远→近叠放序；供 PPT 叠放编辑） */
-  const onExportLayeredPNG = (): void => {
+  const onExportLayeredPNG = async (): Promise<void> => {
     const svc = rendererRef.current;
     if (!svc) return;
     const layers = buildLayerPngs(svc, { dpi, widthCM: 16 });
@@ -74,33 +66,28 @@ export default function TopBar() {
       flash('画布为空，先添加组件再导出分层 PNG');
       return;
     }
-    layers.forEach((layer, i) => {
-      setTimeout(() => download(layer.dataUrl, layer.filename), i * 350);
-    });
-    flash(`已导出 ${layers.length} 张分层 PNG（远→近序号命名，PPT 按序叠放即还原）`);
+    const ok = await saveBlobs(
+      await Promise.all(layers.map((l) => dataUrlToBlob(l.dataUrl).then((blob) => ({ filename: l.filename, blob })))),
+    );
+    if (ok) flash(`已导出 ${layers.length} 张分层 PNG（远→近序号命名，PPT 按序叠放即还原）`);
   };
 
   /** T-5.3：分组 SVG 矢量导出（线稿档画风，PPT 转形状/取消组合逐组件编辑） */
-  const onExportSVG = (): void => {
+  const onExportSVG = async (): Promise<void> => {
     const svc = rendererRef.current;
     if (!svc) return;
     const svg = svc.exportSVG({ background: alpha ? undefined : '#F4F5F7', strokeWidth: 1, annotations: sceneStore.getState().annotations });
-    const blob = new Blob([svg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    download(url, 'kaolin-scene.svg');
-    setTimeout(() => URL.revokeObjectURL(url), 3000);
-    flash('已导出分组 SVG（每组件一个分组，PPT 转形状后可逐组件编辑）');
+    const ok = await saveText('kaolin-scene.svg', svg, 'image/svg+xml');
+    if (ok) flash('已导出分组 SVG（每组件一个分组，PPT 转形状后可逐组件编辑）');
   };
 
   /** T-5.2：PDF 导出（页面物理尺寸 = 设定 cm 数，位图满幅嵌入） */
-  const onExportPDF = (): void => {
+  const onExportPDF = async (): Promise<void> => {
     const svc = rendererRef.current;
     if (!svc) return;
     const { blob, widthCM, heightCM } = svc.exportPDF({ dpi, alpha, annotations: sceneStore.getState().annotations });
-    const url = URL.createObjectURL(blob);
-    download(url, `kaolin-${widthCM}x${heightCM}cm.pdf`);
-    setTimeout(() => URL.revokeObjectURL(url), 3000);
-    flash(`已导出 PDF（页面 ${widthCM} × ${heightCM} cm @ ${dpi}dpi 位图${alpha ? '，透明底' : ''}）`);
+    const ok = await saveBlob(`kaolin-${widthCM}x${heightCM}cm.pdf`, blob);
+    if (ok) flash(`已导出 PDF（页面 ${widthCM} × ${heightCM} cm @ ${dpi}dpi 位图${alpha ? '，透明底' : ''}）`);
   };
 
   /** T-10.1：卷曲动画 GIF（选中埃洛石管，progress 0→1 均匀取帧） */
@@ -125,18 +112,17 @@ export default function TopBar() {
       flash('动画导出失败');
       return;
     }
-    download(result.dataUrl, 'kaolin-curl-animation.gif');
-    flash(`已导出卷曲动画 GIF（${result.frames} 帧，片→管）`);
+    const ok = await saveBlob('kaolin-curl-animation.gif', await dataUrlToBlob(result.dataUrl));
+    if (ok) flash(`已导出卷曲动画 GIF（${result.frames} 帧，片→管）`);
   };
 
   /** T-5.1：期刊 TIFF（300dpi+ 硬要求，带物理分辨率元数据；超上限自动降级提示） */
-  const onExportTIFF = (): void => {
+  const onExportTIFF = async (): Promise<void> => {
     const svc = rendererRef.current;
     if (!svc) return;
     const { blob, width, height, degraded, effectiveDpi } = svc.exportTIFF({ dpi, alpha, annotations: sceneStore.getState().annotations });
-    const url = URL.createObjectURL(blob);
-    download(url, `kaolin-16cm-${Math.round(effectiveDpi)}dpi.tiff`);
-    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    const ok = await saveBlob(`kaolin-16cm-${Math.round(effectiveDpi)}dpi.tiff`, blob);
+    if (!ok) return;
     flash(
       degraded
         ? `分辨率超 GPU 上限，已降级 ${width} × ${height} px（有效 ${Math.round(effectiveDpi)}dpi）`

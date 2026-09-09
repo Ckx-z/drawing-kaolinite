@@ -31,13 +31,49 @@ export default function App() {
       history: sceneHistory,
       toggleCheatSheet: () => setCheat((v) => !v),
     };
+
+    // 方向键平移视角：按住连续、松开停止（rAF 帧循环，帧率无关的速度感）
+    const PAN_PX_PER_FRAME = 6; // ≈360 逻辑像素/秒 @60fps，适中
+    const arrows = new Set<string>();
+    let panRaf = 0;
+    const panLoop = (): void => {
+      if (!arrows.size) {
+        panRaf = 0;
+        return;
+      }
+      // 按键方向 = 画板内容移动方向（按 ← 内容左移），速度分解允许斜向
+      const dx = (arrows.has('arrowleft') ? 1 : 0) - (arrows.has('arrowright') ? 1 : 0);
+      const dy = (arrows.has('arrowdown') ? 1 : 0) - (arrows.has('arrowup') ? 1 : 0);
+      if (dx || dy) rendererRef.current?.panView(dx * PAN_PX_PER_FRAME, dy * PAN_PX_PER_FRAME);
+      panRaf = requestAnimationFrame(panLoop);
+    };
+
     const onKey = (e: KeyboardEvent): void => {
       const tag = (document.activeElement?.tagName ?? '').toLowerCase();
-      if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+      if (tag === 'input' || tag === 'select' || tag === 'textarea') return; // 输入框内方向键正常编辑文本
+      if (e.key.startsWith('Arrow')) {
+        e.preventDefault(); // 阻止页面滚动，不进入快捷键分发
+        arrows.add(e.key.toLowerCase());
+        if (!panRaf) panRaf = requestAnimationFrame(panLoop);
+        return;
+      }
       handleShortcut(e, host);
     };
+    const onKeyUp = (e: KeyboardEvent): void => {
+      arrows.delete(e.key.toLowerCase()); // 集合清空后循环自行停止
+    };
+    const onBlur = (): void => {
+      arrows.clear(); // 切走窗口时停住，避免回来后"卡键"持续平移
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
+      if (panRaf) cancelAnimationFrame(panRaf);
+    };
   }, []);
 
   return (

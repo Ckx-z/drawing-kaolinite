@@ -27,7 +27,7 @@ const CIF = readFileSync(new URL('../../data/kaolinite.cif', import.meta.url), '
 const DOUBLE_WALL_TUBE: GeometryRequest = {
   kind: 'halloysite_tube',
   cifText: CIF,
-  params: { innerR: 14, length: 100, walls: 2, d001: 10, progress: 1, taperDeg: 5, style: '空间填充', curlAxis: 'a' as const, portNoise: 0 },
+  params: { innerR: 14, length: 100, walls: 2, d001: 10, progress: 1, taperDeg: 5, style: '空间填充', curlAxis: 'a' as const, portNoise: 0,  atomMode: 'full', singleEl: 'Si'},
 };
 
 describe('协议一致性：computeGeometry 与 builders 直调逐位一致', () => {
@@ -38,10 +38,10 @@ describe('协议一致性：computeGeometry 与 builders 直调逐位一致', ()
   });
 
   it('四类素材请求均正确分发（片层/颗粒/分子）', () => {
-    const sheet = computeGeometry({ kind: 'kaolinite_sheet', cifText: CIF, params: { Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false, strictCell: false } });
+    const sheet = computeGeometry({ kind: 'kaolinite_sheet', cifText: CIF, params: { Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false, strictCell: false,  atomMode: 'full', singleEl: 'Si'} });
     expect(sheet.atoms.length).toBe(2448); // T-0.1 基线
 
-    const part = computeGeometry({ kind: 'nanoparticle', cifText: '', params: { radius: 9, grains: 150, seed: 7, mode: '簇装' } });
+    const part = computeGeometry({ kind: 'nanoparticle', cifText: '', params: { radius: 9, grains: 150, seed: 7, mode: '簇装',  atomMode: 'full', singleEl: 'Ce'} });
     expect(part.atoms.length).toBe(217);
 
     const mol = computeGeometry({ kind: 'molecule', cifText: '', params: { kind: 'H₂O' } });
@@ -93,7 +93,7 @@ describe('Worker 引擎：异步语义与协议编解码（假 Worker）', () =>
     const engine = createWorkerEngine(() => worker);
     const [mol, part] = await Promise.all([
       engine.build({ kind: 'molecule', cifText: '', params: { kind: 'CO₂' } }),
-      engine.build({ kind: 'nanoparticle', cifText: '', params: { radius: 5, grains: 40, seed: 3, mode: '簇装' } }),
+      engine.build({ kind: 'nanoparticle', cifText: '', params: { radius: 5, grains: 40, seed: 3, mode: '簇装',  atomMode: 'full', singleEl: 'Ce'} }),
     ]);
     expect(mol.atoms).toHaveLength(3); // CO₂
     expect(part.atoms.length).toBeGreaterThan(40);
@@ -104,7 +104,7 @@ describe('Worker 引擎：异步语义与协议编解码（假 Worker）', () =>
     const { worker } = fakeSpawn();
     const engine = createWorkerEngine(() => worker);
     await expect(
-      engine.build({ kind: 'kaolinite_sheet', cifText: '', params: { Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false, strictCell: false } }),
+      engine.build({ kind: 'kaolinite_sheet', cifText: '', params: { Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false, strictCell: false,  atomMode: 'full', singleEl: 'Si'} }),
     ).rejects.toThrow('CIF 数据未设置');
     engine.dispose();
   });
@@ -175,7 +175,7 @@ describe('工厂回退与同步引擎', () => {
   it('同步引擎直接可用（rendererBinding 风格的串行调用）', async () => {
     const engine = createSyncEngine();
     const a = await engine.build({ kind: 'molecule', cifText: '', params: { kind: 'O₂' } });
-    const b = await engine.build({ kind: 'nanoparticle', cifText: '', params: { radius: 9, grains: 150, seed: 7, mode: '簇装' } });
+    const b = await engine.build({ kind: 'nanoparticle', cifText: '', params: { radius: 9, grains: 150, seed: 7, mode: '簇装',  atomMode: 'full', singleEl: 'Ce'} });
     expect(a.atoms).toHaveLength(2);
     expect(b.atoms.length).toBe(217);
     engine.dispose();

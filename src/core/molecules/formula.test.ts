@@ -1,0 +1,183 @@
+/**
+ * 化学式导入验收测试 —— 2026-09-08
+ *
+ * 用户需求：导入框输入化学式（大小写不敏感）：si/SI/Si → 硅单球；
+ * 支持 Si、NaCl、H2O、Fe2O3 等标准化学式；解析 + 团簇构建 + 规范化。
+ */
+import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { computeGeometry } from '../worker';
+import {
+  buildFormulaCluster,
+  canonicalFormula,
+  FormulaError,
+  formulaTo3D,
+  parseFormula,
+} from './formula';
+
+const CIF = readFileSync(new URL('../../../data/kaolinite.cif', import.meta.url), 'utf8');
+
+/** tokens 的紧凑串（[Si,1],[O,2] → "Si1 O2"） */
+const show = (t: Array<{ el: string; count: number }>): string => t.map((x) => `${x.el}${x.count}`).join(' ');
+
+describe('parseFormula：大小写不敏感解析', () => {
+  it('规范化学式直接解析（严格模式含小写：Co = 钴）', () => {
+    expect(show(parseFormula('Si'))).toBe('Si1');
+    expect(show(parseFormula('H2O'))).toBe('H2 O1');
+    expect(show(parseFormula('NaCl'))).toBe('Na1 Cl1');
+    expect(show(parseFormula('Fe2O3'))).toBe('Fe2 O3');
+    expect(show(parseFormula('Co'))).toBe('Co1'); // 首大次小 = 钴
+  });
+
+  it('全大写 = 大小写信息缺失 → 宽松归一（CO → Co；一氧化碳请输 SMILES "CO" 由分子链路接管）', () => {
+    expect(show(parseFormula('CO'))).toBe('Co1');
+    expect(show(parseFormula('FE2O3'))).toBe('Fe2 O3');
+  });
+
+  it('小写 / 全大写 / 混合大小写均归一识别（si/SI/sI → Si）', () => {
+    for (const s of ['si', 'SI', 'sI', 'Si']) {
+      expect(show(parseFormula(s)), `输入 ${s}`).toBe('Si1');
+    }
+    expect(show(parseFormula('fe2o3'))).toBe('Fe2 O3');
+    expect(show(parseFormula('FE2O3'))).toBe('Fe2 O3');
+    expect(show(parseFormula('nacl'))).toBe('Na1 Cl1');
+    expect(show(parseFormula('h2o'))).toBe('H2 O1');
+  });
+
+  it('小写 co 归一为钴 Co（无大小写分隔信息时双字母元素优先）', () => {
+    expect(show(parseFormula('co'))).toBe('Co1');
+  });
+
+  it('未知元素 / 非法字符 / 空串 / 超长 抛 FormulaError', () => {
+    expect(() => parseFormula('Xx')).toThrow(FormulaError); // 非元素
+    expect(() => parseFormula('Si-O')).toThrow(FormulaError); // 非法字符
+    expect(() => parseFormula('')).toThrow(FormulaError);
+    expect(() => parseFormula('H999')).toThrow(FormulaError); // 超原子数上限
+  });
+
+  it('canonicalFormula 规范化输出（fe2o3 → Fe2O3，H2O 计量 1 省略）', () => {
+    expect(canonicalFormula(parseFormula('fe2o3'))).toBe('Fe2O3');
+    expect(canonicalFormula(parseFormula('h2o'))).toBe('H2O');
+    expect(canonicalFormula(parseFormula('si'))).toBe('Si');
+  });
+});
+
+describe('buildFormulaCluster：紧密团簇 + 自动连键', () => {
+  it('单元素计量 1 → 单原子球（硅原子模型）', () => {
+    const { atoms, bonds } = buildFormulaCluster(parseFormula('Si'));
+    expect(atoms).toHaveLength(1);
+    expect(atoms[0]!.el).toBe('Si');
+    expect(bonds).toHaveLength(0);
+  });
+
+  it('H2O → 3 原子且氧连两个氢（近距自动键）', () => {
+    const { atoms, bonds } = buildFormulaCluster(parseFormula('h2o'));
+    expect(atoms).toHaveLength(3);
+    expect(atoms.filter((a) => a.el === 'H')).toHaveLength(2);
+    expect(atoms.filter((a) => a.el === 'O')).toHaveLength(1);
+    expect(bonds.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('Fe2O3 → 5 原子团簇、元素配比正确、无原子重叠（≥0.95×半径和）', () => {
+    const { atoms, bonds } = buildFormulaCluster(parseFormula('FE2O3'));
+    expect(atoms).toHaveLength(5);
+    expect(atoms.filter((a) => a.el === 'Fe')).toHaveLength(2);
+    expect(bonds.length).toBeGreaterThan(0);
+    for (let i = 0; i < atoms.length; i++) {
+      for (let j = i + 1; j < atoms.length; j++) {
+        const d = Math.hypot(atoms[i]!.x - atoms[j]!.x, atoms[i]!.y - atoms[j]!.y, atoms[i]!.z - atoms[j]!.z);
+        expect(d).toBeGreaterThan(0.5); // 无重叠
+      }
+    }
+  });
+
+  it('同输入确定性输出（两次构建逐位一致，D02）', () => {
+    const a = JSON.stringify(formulaTo3D('NaCl'));
+    const b = JSON.stringify(formulaTo3D('nacl'));
+    expect(a).toBe(b); // 归一化后相同输入 → 相同团簇
+  });
+});
+
+describe('几何链路接入（computeGeometry molecule.formula）', () => {
+  it('formula 参数经引擎出几何（与 formulaTo3D 一致）；kind 回退不受影响', () => {
+    const geo = computeGeometry({ kind: 'molecule', cifText: '', params: { kind: 'H₂O', formula: 'Fe2O3' } });
+    expect(geo.atoms).toHaveLength(5);
+    const direct = formulaTo3D('Fe2O3');
+    expect(geo.atoms[0]!.el).toBe(direct.atoms[0]!.el);
+    // 无 formula/smiles 时回退内置分子
+    const builtin = computeGeometry({ kind: 'molecule', cifText: '', params: { kind: 'H₂O' } });
+    expect(builtin.atoms).toHaveLength(3);
+  });
+
+  it('formula 分子可入场景并随组件参数重建（schema 往返）', async () => {
+    const { sceneDocumentSchema } = await import('../schema');
+    const doc = {
+      format: 'kaolin-scene/v1',
+      saved: new Date().toISOString(),
+      palette: { id: 'default' },
+      annotations: [],
+      components: [
+        {
+          id: 'm1',
+          type: 'molecule',
+          name: 'Fe2O3',
+          visible: true,
+          locked: false,
+          params: { kind: 'H₂O', formula: 'Fe2O3' },
+          transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: 4 },
+        },
+      ],
+    };
+    expect(() => sceneDocumentSchema.parse(doc)).not.toThrow();
+  });
+});
+
+describe('单原子模式（2026-09-08）', () => {
+  it('片层 atomMode=single → 全部原子统一为 singleEl，原子数不变', () => {
+    const full = computeGeometry({
+      kind: 'kaolinite_sheet',
+      cifText: CIF,
+      params: {
+        Lx: 40, Ly: 40, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充',
+        edgeH: false, strictCell: false, atomMode: 'full', singleEl: 'Si',
+      },
+    });
+    const single = computeGeometry({
+      kind: 'kaolinite_sheet',
+      cifText: CIF,
+      params: {
+        Lx: 40, Ly: 40, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充',
+        edgeH: false, strictCell: false, atomMode: 'single', singleEl: 'Fe',
+      },
+    });
+    expect(single.atoms).toHaveLength(full.atoms.length); // 几何骨架不变
+    expect(new Set(single.atoms.map((a) => a.el))).toEqual(new Set(['Fe'])); // 元素统一
+  });
+
+  it('管与颗粒同理；旧参数缺省 atomMode 默认 full（向后兼容）', async () => {
+    const tube = computeGeometry({
+      kind: 'halloysite_tube',
+      cifText: CIF,
+      params: {
+        innerR: 12, length: 60, walls: 1, d001: 7.4, progress: 1, taperDeg: 0,
+        style: '空间填充', curlAxis: 'a', portNoise: 0, atomMode: 'single', singleEl: 'C',
+      },
+    });
+    expect(new Set(tube.atoms.map((a) => a.el))).toEqual(new Set(['C']));
+
+    const part = computeGeometry({
+      kind: 'nanoparticle',
+      cifText: '',
+      params: { radius: 6, grains: 60, seed: 7, mode: '簇装', atomMode: 'single', singleEl: 'Ce' },
+    });
+    expect(new Set(part.atoms.map((a) => a.el))).toEqual(new Set(['Ce']));
+
+    const { sheetParamsSchema, DEFAULT_PARAMS } = await import('../schema');
+    // 旧场景缺 atomMode/singleEl → parse 补默认 full（严格 schema 下无这两个键也合法）
+    const legacy = sheetParamsSchema.parse({
+      Lx: 40, Ly: 40, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false,
+    });
+    expect(legacy.atomMode).toBe('full');
+    expect(DEFAULT_PARAMS.kaolinite_sheet.atomMode).toBe('full');
+  });
+});

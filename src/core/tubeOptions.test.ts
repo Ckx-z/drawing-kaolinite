@@ -20,6 +20,8 @@ const BASE = {
   style: '空间填充' as const,
   curlAxis: 'a' as const,
   portNoise: 0,
+  atomMode: 'full' as const,
+  singleEl: 'Si',
 };
 
 /** 闭合管的内外半径（管轴在 y，圆心 z ≈ Rmid） */
@@ -36,7 +38,7 @@ function radiusRange(atoms: Array<{ x: number; z: number }>): [number, number] {
 
 describe('卷曲方向（T-2.6 验收：两种轴向半径校验一致）', () => {
   it("'a' 轴（基线）闭合管半径：内 ≈ 11.4Å、外 ≈ 23Å", () => {
-    const tube = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'a' });
+    const tube = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'a',  portNoise: 0, atomMode: 'full', singleEl: 'Si'});
     const [rmin, rmax] = radiusRange(tube.atoms);
     expect(rmin).toBeGreaterThan(10);
     expect(rmin).toBeLessThan(16);
@@ -45,8 +47,8 @@ describe('卷曲方向（T-2.6 验收：两种轴向半径校验一致）', () =
   });
 
   it("'b' 轴闭合管半径与 'a' 轴校验一致（同一容差区间）", () => {
-    const a = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'a' });
-    const b = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'b' });
+    const a = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'a',  portNoise: 0, atomMode: 'full', singleEl: 'Si'});
+    const b = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'b',  portNoise: 0, atomMode: 'full', singleEl: 'Si'});
     const [amin, amax] = radiusRange(a.atoms);
     const [bmin, bmax] = radiusRange(b.atoms);
     expect(bmin).toBeGreaterThan(10);
@@ -60,23 +62,23 @@ describe('卷曲方向（T-2.6 验收：两种轴向半径校验一致）', () =
   });
 
   it("'b' 轴与 'a' 轴输出不同（确实是两种构型）", () => {
-    const a = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'a' });
-    const b = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'b' });
+    const a = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'a',  portNoise: 0, atomMode: 'full', singleEl: 'Si'});
+    const b = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'b',  portNoise: 0, atomMode: 'full', singleEl: 'Si'});
     expect(JSON.stringify(a.atoms.slice(0, 5))).not.toBe(JSON.stringify(b.atoms.slice(0, 5)));
   });
 
   it("缺省 curlAxis = 'a'（向后兼容旧场景）", () => {
     const d = buildHalloysiteTube(CIF, { ...BASE });
-    const withA = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'a' });
+    const withA = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'a',  portNoise: 0, atomMode: 'full', singleEl: 'Si'});
     expect(JSON.stringify(d.atoms)).toBe(JSON.stringify(withA.atoms));
   });
 });
 
 describe('端口噪声（T-2.6 验收：键数变化 <5% + 确定性 + 幅值有界）', () => {
   it('portNoise=0.5：原子数不变、键数变化 <5%、确定性复现', () => {
-    const base = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'b' });
-    const n1 = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'b', portNoise: 0.5 });
-    const n2 = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'b', portNoise: 0.5 });
+    const base = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'b',  portNoise: 0, atomMode: 'full', singleEl: 'Si'});
+    const n1 = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'b', portNoise: 0.5,  atomMode: 'full', singleEl: 'Si'});
+    const n2 = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'b', portNoise: 0.5,  atomMode: 'full', singleEl: 'Si'});
 
     expect(n1.atoms.length).toBe(base.atoms.length);
     const delta = Math.abs(n1.bonds.length - base.bonds.length) / base.bonds.length;
@@ -85,9 +87,9 @@ describe('端口噪声（T-2.6 验收：键数变化 <5% + 确定性 + 幅值有
   });
 
   it('扰动幅值有界：端口原子位移 ≤ 2×幅度（含 xz 0.35 系数）', () => {
-    const base = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'a' });
+    const base = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'a',  portNoise: 0, atomMode: 'full', singleEl: 'Si'});
     const amp = 0.8;
-    const noisy = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'a', portNoise: amp });
+    const noisy = buildHalloysiteTube(CIF, { ...BASE, curlAxis: 'a', portNoise: amp,  atomMode: 'full', singleEl: 'Si'});
     let maxShift = 0;
     for (let i = 0; i < base.atoms.length; i++) {
       const a = base.atoms[i];
@@ -99,7 +101,7 @@ describe('端口噪声（T-2.6 验收：键数变化 <5% + 确定性 + 幅值有
   });
 
   it('portNoise=0 与无该字段输出逐位一致（默认关闭）', () => {
-    const off = buildHalloysiteTube(CIF, { ...BASE, portNoise: 0 });
+    const off = buildHalloysiteTube(CIF, { ...BASE, portNoise: 0,  curlAxis: 'a', atomMode: 'full', singleEl: 'Si'});
     const legacy = buildHalloysiteTube(CIF, { ...BASE });
     expect(JSON.stringify(off.atoms)).toBe(JSON.stringify(legacy.atoms));
   });

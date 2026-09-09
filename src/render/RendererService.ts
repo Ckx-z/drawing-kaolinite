@@ -30,6 +30,7 @@ import {
 import { pngToPdf } from '../export/pdf';
 import { encodeTIFF, resolveExportSize } from '../export/tiff';
 import { smilesTo3D } from '../core/molecules/smiles';
+import { formulaTo3D } from '../core/molecules/formula';
 import { presetPosition, type CameraPreset } from './postfx';
 import { annotationsToSVG, sceneToSVG, type SvgAtom, type SvgComponentInput } from '../export/svg';
 import { getElement } from '../core/elements';
@@ -165,6 +166,22 @@ export class RendererService {
   /** 片层/管生成所需的 CIF 文本（nanoparticle/molecule/substrate 不需要） */
   setCifText(text: string): void {
     this.cifText = text;
+  }
+
+  /**
+   * 视角平移（键盘方向键用）：屏幕像素语义，与鼠标右键拖拽 pan 同速感。
+   * 相机与观察目标沿相机 right/up 轴同步移动（OrbitControls.pan 的等价实现）。
+   */
+  panView(dxPx: number, dyPx: number): void {
+    const h = this.renderer.domElement.clientHeight || 1;
+    const offset = this.camera.position.clone().sub(this.orbit.target);
+    // 换算到目标距离处的视平面尺度（fov 决定像素↔世界距离比例）
+    const planeScale = (2 * offset.length() * Math.tan(((this.camera.fov / 2) * Math.PI) / 180)) / h;
+    const right = new THREE.Vector3().setFromMatrixColumn(this.camera.matrix, 0);
+    const up = new THREE.Vector3().setFromMatrixColumn(this.camera.matrix, 1);
+    const move = right.multiplyScalar(dxPx * planeScale).add(up.multiplyScalar(dyPx * planeScale));
+    this.camera.position.add(move);
+    this.orbit.target.add(move);
   }
 
   /* ---------- 组件生命周期 ---------- */
@@ -988,6 +1005,10 @@ export class RendererService {
         if (mp.smiles) {
           const mol = smilesTo3D(mp.smiles); // T-2.8：确定性重建（存参数不存网格）
           return { atoms: mol.atoms, bonds: mol.bonds.map(([i, j]) => [i, j]) };
+        }
+        if (mp.formula) {
+          const mol = formulaTo3D(mp.formula); // 2026-09-08：化学式团簇（与 Worker 路径同源）
+          return { atoms: mol.atoms, bonds: mol.bonds };
         }
         return buildMolecule(mp.kind);
       }

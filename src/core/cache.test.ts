@@ -188,7 +188,7 @@ describe('预烘焙', () => {
     };
     const engine = createCachedEngine(real);
     const done = await prebake(engine, [
-      { kind: 'kaolinite_sheet', cifText: '', params: { Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false, strictCell: false } },
+      { kind: 'kaolinite_sheet', cifText: '', params: { Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false, strictCell: false,  atomMode: 'full', singleEl: 'Si'} },
       REQ,
     ]);
     expect(done).toBe(1); // 失败跳过

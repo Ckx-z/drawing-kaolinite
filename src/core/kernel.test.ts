@@ -41,7 +41,7 @@ describe('片层切片（基线：60×50Å 单层 = 2448 原子 / 3372 键）', 
       d001: 7.4,
       shape: '矩形',
       style: '空间填充',
-      edgeH: false, strictCell: false
+      edgeH: false, strictCell: false, atomMode: 'full', singleEl: 'Si'
     });
     expect(sheet.atoms).toHaveLength(2448);
     expect(sheet.bonds).toHaveLength(3372);
@@ -55,7 +55,7 @@ describe('片层切片（基线：60×50Å 单层 = 2448 原子 / 3372 键）', 
       d001: 7.4,
       shape: '六角',
       style: '空间填充',
-      edgeH: true, strictCell: false
+      edgeH: true, strictCell: false, atomMode: 'full', singleEl: 'Si'
     });
     expect(hex.atoms).toHaveLength(2597);
     expect(hex.bonds).toHaveLength(3514);
@@ -69,7 +69,7 @@ describe('片层切片（基线：60×50Å 单层 = 2448 原子 / 3372 键）', 
       d001: 10,
       shape: '矩形',
       style: '空间填充',
-      edgeH: false, strictCell: false
+      edgeH: false, strictCell: false, atomMode: 'full', singleEl: 'Si'
     });
     // 3 层共享同一 na×nb 骨架：层内原子 3×，羟基氢 3×
     expect(tri.atoms.length).toBeGreaterThan(2448 * 2);
@@ -77,7 +77,7 @@ describe('片层切片（基线：60×50Å 单层 = 2448 原子 / 3372 键）', 
 });
 
 describe('卷曲成管（基线：闭合 7259 键 > 60% 半卷 6930 键，开口端自动断键）', () => {
-  const TUBE_PARAMS = { innerR: 14, length: 60, walls: 1, d001: 7.4, progress: 1, taperDeg: 0, style: '空间填充', curlAxis: 'a', portNoise: 0 } as const;
+  const TUBE_PARAMS = { innerR: 14, length: 60, walls: 1, d001: 7.4, progress: 1, taperDeg: 0, style: '空间填充', curlAxis: 'a', portNoise: 0,  atomMode: 'full', singleEl: 'Si'} as const;
 
   it('闭合管原子与键数', () => {
     const tube = buildHalloysiteTube(CIF, TUBE_PARAMS);
@@ -86,7 +86,7 @@ describe('卷曲成管（基线：闭合 7259 键 > 60% 半卷 6930 键，开口
   });
 
   it('60% 卷曲键数少于闭合管（断键机制生效）', () => {
-    const arc = buildHalloysiteTube(CIF, { ...TUBE_PARAMS, progress: 0.6 });
+    const arc = buildHalloysiteTube(CIF, { ...TUBE_PARAMS, progress: 0.6,  curlAxis: 'a', portNoise: 0, atomMode: 'full', singleEl: 'Si'});
     expect(arc.atoms).toHaveLength(4991);
     expect(arc.bonds).toHaveLength(6930);
     expect(arc.bonds.length).toBeLessThan(7259);
@@ -108,21 +108,21 @@ describe('卷曲成管（基线：闭合 7259 键 > 60% 半卷 6930 键，开口
   });
 
   it('双层壁（d001=10 水合）原子数显著大于单层', () => {
-    const wall2 = buildHalloysiteTube(CIF, { ...TUBE_PARAMS, walls: 2, d001: 10, length: 100 });
+    const wall2 = buildHalloysiteTube(CIF, { ...TUBE_PARAMS, walls: 2, d001: 10, length: 100,  curlAxis: 'a', portNoise: 0, atomMode: 'full', singleEl: 'Si'});
     expect(wall2.atoms.length).toBeGreaterThan(10000);
   });
 });
 
 describe('颗粒与分子', () => {
   it('簇装颗粒（基线：radius9 grains150 seed7 = 217 原子）', () => {
-    const part = buildParticle({ radius: 9, grains: 150, seed: 7, mode: '簇装' });
+    const part = buildParticle({ radius: 9, grains: 150, seed: 7, mode: '簇装',  atomMode: 'full', singleEl: 'Ce'});
     expect(part.atoms).toHaveLength(217);
     expect(part.bonds).toHaveLength(0);
   });
 
   it('同种子同颗粒形（确定性复现，模块复用的保证）', () => {
-    const a = buildParticle({ radius: 9, grains: 150, seed: 7, mode: '簇装' });
-    const b = buildParticle({ radius: 9, grains: 150, seed: 7, mode: '簇装' });
+    const a = buildParticle({ radius: 9, grains: 150, seed: 7, mode: '簇装',  atomMode: 'full', singleEl: 'Ce'});
+    const b = buildParticle({ radius: 9, grains: 150, seed: 7, mode: '簇装',  atomMode: 'full', singleEl: 'Ce'});
     expect(b).toEqual(a);
   });
 

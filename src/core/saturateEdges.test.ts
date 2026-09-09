@@ -12,7 +12,7 @@ import { computeBonds, saturateEdges } from './crystal';
 describe('边缘饱和位点（T-2.5 验收）', () => {
   it('开启 edgeH 后：无原子间距 < 0.9Å 碰撞；边缘 O 配位数全部 ≥ 2', () => {
     const sheet = buildKaoliniteSheet(cifText, {
-      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: true, strictCell: false,
+      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: true, strictCell: false, atomMode: 'full', singleEl: 'Si'
     });
     // 无碰撞
     let minD = Infinity;
@@ -61,7 +61,7 @@ describe('边缘饱和位点（T-2.5 验收）', () => {
 
   it('确定性：两次饱和输出逐位一致；H 标记 H*', () => {
     const sheet = buildKaoliniteSheet(cifText, {
-      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell: false,
+      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell: false, atomMode: 'full', singleEl: 'Si'
     });
     const rawBonds = computeBonds(sheet.atoms);
     const s1 = saturateEdges(sheet.atoms, rawBonds);
@@ -72,7 +72,7 @@ describe('边缘饱和位点（T-2.5 验收）', () => {
 
   it('1 配位 O 数量 = 新增 H 数量（每末端桥氧恰补 1 H）', () => {
     const sheet = buildKaoliniteSheet(cifText, {
-      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell: false,
+      Lx: 60, Ly: 50, layers: 1, d001: 7.4, shape: '矩形', style: '球棍', edgeH: false, strictCell: false, atomMode: 'full', singleEl: 'Si'
     });
     const rawBonds = computeBonds(sheet.atoms);
     const cnt = new Array<number>(sheet.atoms.length).fill(0);

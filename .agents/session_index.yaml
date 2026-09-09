@@ -545,3 +545,25 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+
+  - id: "2026-09-09-28"
+    date: "2026-09-09"
+    title: "四项需求交付：方向键平移 / 化学式导入 / 单原子模式 / 导出原生保存对话框"
+    summary: "①方向键平移：RendererService.panView（fov 像素→世界换算，相机+target 同步）+ App 键集合 rAF 循环（6px/帧，blur 清空，输入框守卫）。②化学式：新模块 molecules/formula.ts（严格/宽松双模式大小写归一，si/SI→Si，nacl→NaCl；贪心表面吸附团簇——紧凑主项+穿透惩罚，首版间隙最大化主项致原子脱离键程已修）+ 元素表扩 17 常用元素 + params.formula 持久化 + SMILES 优先双路输入。③单原子模式：sheet/tube/particle schema 加 atomMode/singleEl（default full 向后兼容）+ applyAtomMode 元素统一（骨架不变）+ ParamDef 新 toggle 类型与 when 条件显隐。④导出修复：根因=WKWebView a[download] 无效；saveFile.ts 统一入口（桌面 dialog save→invoke save_file，浏览器 showSaveFilePicker→a[download]，取消静默）+ main.rs save_file 命令（目录自动拼名）+ tauri-plugin-dialog + capabilities + TopBar 7 入口全接入。踩坑：批量字面量补丁的平衡花括号脚本误判回调体造成 47 处语法损坏，恢复后改单行+行级两轮精准处理；zod default 字段 infer 输出必填需 34 处补全。验收：248 测试全绿/lint/build 0 错；浏览器实测四场景（平移 46.96Å@500ms、守卫 0.000、si/FE2O3/NaCl 导入、CCO 不回归、单原子 Al/H/O/Si→Si、导出弹框+Escape 取消零报错）；tauri build 重打包成功，几何缓存 90MB 持续写入。"
+    files_modified:
+      - src/render/RendererService.ts（panView + molecule formula 分支）
+      - src/ui/App.tsx（方向键 rAF 平移）
+      - src/core/molecules/formula.ts（新增）+ formula.test.ts（新增）
+      - src/core/elements.ts（+17 元素）
+      - src/core/schema.ts（atomMode/singleEl/formula 字段 + DEFAULT_PARAMS）
+      - src/core/builders.ts（applyAtomMode）
+      - src/core/worker.ts / cache.ts（molecule formula 接入 + 预烘焙参数补全）
+      - src/ui/paramDefs.ts（toggle/when + ATOM_MODE_FIELDS）/ ParamPanel.tsx（ToggleControl + when）/ LibraryPanel.tsx（双路导入）
+      - src/ui/TopBar.tsx + src/ui/saveFile.ts（导出统一入口）
+      - src-tauri/（Cargo.toml + main.rs save_file + capabilities/default.json）
+      - 6 个测试文件 params 字面量补全
+      - DAILY_LOG/2026-09-09*.md / PROJECT_STATE.md / .agents/session_index.yaml
+    decisions_made: []
+    commits: []
+    blockers: []
+    status: "completed"

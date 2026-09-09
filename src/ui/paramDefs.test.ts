@@ -17,11 +17,23 @@ describe('PARAM_DEFS 与 DEFAULT_PARAMS/schema 一致性', () => {
   it('数字型参数：默认值落在 [min, max] 内', () => {
     for (const t of COMPONENT_TYPES) {
       for (const def of PARAM_DEFS[t]) {
-        if (def.type === 'select' || def.type === 'checkbox') continue;
+        if (def.type !== undefined) continue; // select/checkbox/toggle 非数字滑块
         const v = (DEFAULT_PARAMS[t] as Record<string, number>)[def.key];
         expect(v, `${t}.${def.key} 默认值缺失`).toBeDefined();
         expect(v, `${t}.${def.key}=${v} 低于 min=${def.min}`).toBeGreaterThanOrEqual(def.min ?? -Infinity);
         expect(v, `${t}.${def.key}=${v} 高于 max=${def.max}`).toBeLessThanOrEqual(def.max ?? Infinity);
+      }
+    }
+  });
+
+  it('toggle 型参数：on/off 值均合法且默认值为其一', () => {
+    for (const t of COMPONENT_TYPES) {
+      for (const def of PARAM_DEFS[t]) {
+        if (def.type !== 'toggle') continue;
+        expect(def.on, `${t}.${def.key} 缺少 on`).toBeDefined();
+        expect(def.off, `${t}.${def.key} 缺少 off`).toBeDefined();
+        const v = (DEFAULT_PARAMS[t] as Record<string, string>)[def.key];
+        expect([def.on, def.off], `${t}.${def.key} 默认值 ${v} 不是 on/off 之一`).toContain(v);
       }
     }
   });

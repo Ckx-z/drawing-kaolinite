@@ -32,6 +32,24 @@ export const ELEMENTS: Readonly<Record<string, ElementInfo>> = {
   Zn: { name: '锌', cov: 1.22, vdw: 1.39, color: '#9BA8B5' },
   S: { name: '硫', cov: 1.05, vdw: 1.8, color: '#D9B23A' },
   P: { name: '磷', cov: 1.07, vdw: 1.8, color: '#D97E4A' },
+  // 化学式导入（2026-09-08）补齐的常用元素；半径 Cordero 2008，配色延续期刊柔和系
+  F: { name: '氟', cov: 0.57, vdw: 1.47, color: '#9FC7A8' },
+  Cl: { name: '氯', cov: 1.02, vdw: 1.75, color: '#7FBF7F' },
+  Br: { name: '溴', cov: 1.2, vdw: 1.85, color: '#A0674B' },
+  I: { name: '碘', cov: 1.39, vdw: 1.98, color: '#8A6FA8' },
+  Li: { name: '锂', cov: 1.28, vdw: 1.82, color: '#CC8080' },
+  B: { name: '硼', cov: 0.84, vdw: 1.92, color: '#E5AF9F' },
+  V: { name: '钒', cov: 1.34, vdw: 2.02, color: '#A08FE0' },
+  Cr: { name: '铬', cov: 1.39, vdw: 2.05, color: '#8A99C7' },
+  Mn: { name: '锰', cov: 1.39, vdw: 2.05, color: '#9C7AC7' },
+  Co: { name: '钴', cov: 1.26, vdw: 2.0, color: '#D98BA0' },
+  Ni: { name: '镍', cov: 1.24, vdw: 1.63, color: '#7FBFA0' },
+  Cu: { name: '铜', cov: 1.32, vdw: 1.96, color: '#C77E4A' },
+  Zr: { name: '锆', cov: 1.75, vdw: 2.36, color: '#8FBFC9' },
+  Mo: { name: '钼', cov: 1.54, vdw: 2.17, color: '#7FAFD0' },
+  Ag: { name: '银', cov: 1.45, vdw: 2.11, color: '#C8C8D0' },
+  Sn: { name: '锡', cov: 1.46, vdw: 2.3, color: '#C8B0A0' },
+  Ba: { name: '钡', cov: 2.15, vdw: 2.68, color: '#8FC98F' },
 };
 
 /** 按元素符号取显示数据；未知元素返回 undefined（渲染层需回退色） */

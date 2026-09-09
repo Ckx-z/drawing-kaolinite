@@ -7,7 +7,11 @@ import type { ComponentType } from '../core/types';
 export interface ParamDef {
   key: string;
   label: string;
-  type?: 'select' | 'checkbox';
+  /** select 下拉 / checkbox 布尔勾选 / toggle 字符串枚举开关（on/off 映射） */
+  type?: 'select' | 'checkbox' | 'toggle';
+  /** toggle 型的 on/off 值（字符串枚举 ↔ 勾选态映射） */
+  on?: string;
+  off?: string;
   options?: readonly string[];
   min?: number;
   max?: number;
@@ -15,7 +19,21 @@ export interface ParamDef {
   unit?: string;
   /** 滑块值的显示格式（如卷曲进度显示百分比） */
   disp?: (v: number) => string;
+  /** 条件显隐（2026-09-08）：依赖其他参数时才渲染（如单原子模式的元素选择） */
+  when?: (params: Record<string, unknown>) => boolean;
 }
+
+/** 单原子模式共用 UI 字段（片层/管/颗粒；元素选择仅在开启时显示） */
+const ATOM_MODE_FIELDS: ParamDef[] = [
+  { key: 'atomMode', label: '单原子模式（单一原子堆叠示意）', type: 'toggle', on: 'single', off: 'full' },
+  {
+    key: 'singleEl',
+    label: '单原子元素',
+    type: 'select',
+    options: ['Si', 'Al', 'O', 'Fe', 'Ce', 'Ti', 'C'],
+    when: (p) => p.atomMode === 'single',
+  },
+];
 
 export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
   kaolinite_sheet: [
@@ -27,6 +45,7 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     { key: 'style', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
     { key: 'edgeH', label: '边缘羟基饱和（实验）', type: 'checkbox' },
     { key: 'strictCell', label: '晶学严格模式（保留 β/γ 夹角）', type: 'checkbox' },
+    ...ATOM_MODE_FIELDS,
   ],
   halloysite_tube: [
     { key: 'innerR', label: '内半径', unit: 'Å', min: 8, max: 40, step: 1 },
@@ -38,14 +57,25 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     { key: 'curlAxis', label: '卷曲方向', type: 'select', options: ['a', 'b'] },
     { key: 'portNoise', label: '端口噪声', unit: 'Å', min: 0, max: 2, step: 0.1 },
     { key: 'style', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
+    ...ATOM_MODE_FIELDS,
   ],
   nanoparticle: [
     { key: 'radius', label: '颗粒半径', unit: 'Å', min: 4, max: 20, step: 0.5 },
     { key: 'grains', label: '晶粒数量', min: 40, max: 400, step: 10 },
     { key: 'seed', label: '随机种子', min: 1, max: 99, step: 1 },
     { key: 'mode', label: '形态', type: 'select', options: ['簇装', '光滑'] },
+    ...ATOM_MODE_FIELDS,
   ],
-  molecule: [{ key: 'kind', label: '分子种类', type: 'select', options: ['H₂O', 'O₂', 'CO₂', 'N₂', 'Ca²⁺', 'Ce³⁺', '·OH (羟基自由基)'] }],
+  molecule: [
+    {
+      key: 'kind',
+      label: '分子种类',
+      type: 'select',
+      options: ['H₂O', 'O₂', 'CO₂', 'N₂', 'Ca²⁺', 'Ce³⁺', '·OH (羟基自由基)'],
+      // SMILES/化学式导入的分子几何由导入串决定，隐藏内置种类选择避免误导
+      when: (p) => !p.smiles && !p.formula,
+    },
+  ],
   rubber_substrate: [
     { key: 'Lx', label: '长', unit: 'Å', min: 40, max: 240, step: 10 },
     { key: 'Ly', label: '宽', unit: 'Å', min: 30, max: 200, step: 10 },

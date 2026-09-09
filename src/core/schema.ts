@@ -34,6 +34,18 @@ export const transformSchema = z.strictObject({
 /** 渲染风格（片层/管共用，molecule 固定球棍不暴露此参数） */
 const renderStyle = z.enum(['空间填充', '球棍']);
 
+/**
+ * 单原子模式（2026-09-08）：忽略化学组成，全部原子显示为同一种元素球
+ * （机理图简化示意画法——"由重复的单一原子堆叠成结构"）。默认 full 完整结构。
+ * singleEl 仅在 single 模式下有意义；随场景 JSON 持久化（每实例独立）。
+ */
+const atomMode = z.enum(['full', 'single']).default('full');
+const singleElOf = (fallback: string) =>
+  z
+    .string()
+    .refine((s) => /^[A-Z][a-z]?$/.test(s), '元素符号格式（首大写可选次小写）')
+    .default(fallback);
+
 /* ---------- 各类型 params（范围 = DATA_DICT §二~六 = demo PARAM_DEFS） ---------- */
 
 export const sheetParamsSchema = z.strictObject({
@@ -46,6 +58,9 @@ export const sheetParamsSchema = z.strictObject({
   edgeH: z.boolean(),
   // T-2.7：晶学严格模式（保留 β/γ 夹角的真实三斜投影）；默认示意正交化（D03）
   strictCell: z.boolean().default(false),
+  // 单原子模式（2026-09-08）：全部原子统一为 singleEl（简化示意）
+  atomMode,
+  singleEl: singleElOf('Si'),
   // D05 预留：showInterlayer（T-2.4 多矿物接入时启用，当前类型不暴露）
 });
 
@@ -60,6 +75,9 @@ export const tubeParamsSchema = z.strictObject({
   // T-2.6：卷曲方向（'a' 基线 / 'b' 真实轴向美感）与端口噪声幅度（0 = 关）
   curlAxis: z.enum(['a', 'b']).default('a'),
   portNoise: z.number().min(0).max(2).default(0),
+  // 单原子模式（2026-09-08）
+  atomMode,
+  singleEl: singleElOf('Si'),
 });
 
 export const particleParamsSchema = z.strictObject({
@@ -67,6 +85,9 @@ export const particleParamsSchema = z.strictObject({
   grains: z.number().int().min(40).max(400),
   seed: z.number().int().min(1).max(99),
   mode: z.enum(['簇装', '光滑']),
+  // 单原子模式（2026-09-08）：CeO₂ 团簇 → 单一元素团簇
+  atomMode,
+  singleEl: singleElOf('Ce'),
 });
 
 export const MOLECULE_KINDS = [
@@ -83,6 +104,8 @@ export const moleculeParamsSchema = z.strictObject({
   kind: z.enum(MOLECULE_KINDS),
   // T-2.8：SMILES 导入的分子（kind 保留为回退显示）；几何 = smilesTo3D(smiles) 确定性重建
   smiles: z.string().min(1).optional(),
+  // 2026-09-08：化学式导入（大小写不敏感，规范化串如 Fe2O3）；几何 = formulaTo3D 紧密团簇
+  formula: z.string().min(1).max(64).optional(),
 });
 
 export const substrateParamsSchema = z.strictObject({
@@ -226,6 +249,8 @@ export const DEFAULT_PARAMS = {
     style: '空间填充',
     edgeH: false,
     strictCell: false,
+    atomMode: 'full',
+    singleEl: 'Si',
   },
   halloysite_tube: {
     innerR: 14,
@@ -237,8 +262,10 @@ export const DEFAULT_PARAMS = {
     style: '空间填充',
     curlAxis: 'a' as const,
     portNoise: 0,
+    atomMode: 'full',
+    singleEl: 'Si',
   },
-  nanoparticle: { radius: 9, grains: 160, seed: 7, mode: '簇装' },
+  nanoparticle: { radius: 9, grains: 160, seed: 7, mode: '簇装', atomMode: 'full', singleEl: 'Ce' },
   molecule: { kind: 'H₂O' },
   rubber_substrate: { Lx: 140, Ly: 90, thickness: 5 },
 } as const;

@@ -209,6 +209,8 @@ export function defaultTubePrebakeRequests(cifText: string): GeometryRequest[] {
           style: '空间填充',
           curlAxis: 'a',
           portNoise: 0,
+          atomMode: 'full',
+          singleEl: 'Si',
         },
       });
     }
