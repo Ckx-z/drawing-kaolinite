@@ -228,7 +228,7 @@ describe('默认值工厂（与 DATA_DICT / demo DEFAULTS 一致）', () => {
         visible: true,
       })),
     });
-    expect(doc.components).toHaveLength(5);
+    expect(doc.components).toHaveLength(6);
     expect(moduleSchema.safeParse({ ...DEMO_SCENE, id: '' }).success).toBe(false);
   });
 });

@@ -16,6 +16,7 @@ import {
   buildHalloysiteTube,
   buildKaoliniteSheet,
   buildMolecule,
+  buildPackedLayers,
   buildParticle,
 } from '../core/builders';
 import type { GeometryData } from '../core/geometry';
@@ -1081,6 +1082,8 @@ export class RendererService {
       }
       case 'rubber_substrate':
         return null; // 基底走 THREE 挤出几何（substrate.ts）
+      case 'packed_layers':
+        return buildPackedLayers(comp.params);
     }
   }
 

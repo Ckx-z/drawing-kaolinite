@@ -7,8 +7,8 @@ import type { ComponentType } from '../core/types';
 export interface ParamDef {
   key: string;
   label: string;
-  /** select 下拉 / checkbox 布尔勾选 / toggle 字符串枚举开关（on/off 映射） */
-  type?: 'select' | 'checkbox' | 'toggle';
+  /** select 下拉 / checkbox 布尔勾选 / toggle 字符串枚举开关（on/off 映射）/ packedMask 密排层掩码网格 */
+  type?: 'select' | 'checkbox' | 'toggle' | 'packedMask';
   /** toggle 型的 on/off 值（字符串枚举 ↔ 勾选态映射） */
   on?: string;
   off?: string;
@@ -24,6 +24,9 @@ export interface ParamDef {
   when?: (params: Record<string, unknown>) => boolean;
 }
 
+/** 单原子可选元素（单原子模式与密排原子层共用） */
+const SINGLE_EL_OPTIONS = ['Si', 'Al', 'O', 'Fe', 'Ce', 'Ti', 'C'] as const;
+
 /** 单原子模式基础字段（片层/管/颗粒共用；元素选择仅在开启时显示） */
 const ATOM_MODE_BASE: ParamDef[] = [
   { key: 'atomMode', label: '单原子模式（单一原子堆叠示意）', type: 'toggle', on: 'single', off: 'full' },
@@ -31,7 +34,7 @@ const ATOM_MODE_BASE: ParamDef[] = [
     key: 'singleEl',
     label: '单原子元素',
     type: 'select',
-    options: ['Si', 'Al', 'O', 'Fe', 'Ce', 'Ti', 'C'],
+    options: SINGLE_EL_OPTIONS,
     when: (p) => p.atomMode === 'single',
   },
 ];
@@ -98,6 +101,18 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     { key: 'Ly', label: '宽', unit: 'Å', min: 30, max: 200, step: 10 },
     { key: 'thickness', label: '厚度', unit: 'Å', min: 2, max: 20, step: 1 },
   ],
+  packed_layers: [
+    { key: 'el', label: '原子元素', type: 'select', options: SINGLE_EL_OPTIONS },
+    { key: 'n', label: '每边原子数', min: 2, max: 12, step: 1 },
+    { key: 'layers', label: '堆叠层数', min: 1, max: 8, step: 1 },
+    { key: 'dist', label: '原子间距', unit: 'Å', min: 2, max: 8, step: 0.2 },
+    { key: 'stacking', label: '堆叠方式', type: 'select', options: ['AB', 'ABC'] },
+    {
+      key: 'mask',
+      label: '参与堆叠（第一层每个原子）',
+      type: 'packedMask',
+    },
+  ],
 };
 
 export interface LibraryItem {
@@ -113,4 +128,5 @@ export const LIB: LibraryItem[] = [
   { type: 'nanoparticle', icon: '⬤', name: '纳米颗粒 CeO₂', desc: '簇装小晶粒 / 光滑球 · 尺寸可调' },
   { type: 'molecule', icon: '✦', name: '小分子 / 离子', desc: 'H₂O · O₂ · CO₂ · N₂ · 阳离子' },
   { type: 'rubber_substrate', icon: '▭', name: '橡胶基底', desc: '圆角软质平板' },
+  { type: 'packed_layers', icon: '⬢', name: '密排原子层', desc: '六方/立方密排 · 逐原子堆叠开关 · 层数可调' },
 ];

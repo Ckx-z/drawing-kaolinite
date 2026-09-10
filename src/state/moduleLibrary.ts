@@ -191,7 +191,7 @@ export async function clearModuleLibrary(): Promise<void> {
 
 /* ---------- 检索 / 分类 / 收藏排序（T-3.2） ---------- */
 
-export type ModuleFilterType = 'all' | 'kaolinite_sheet' | 'halloysite_tube' | 'nanoparticle' | 'molecule' | 'rubber_substrate' | 'combined';
+export type ModuleFilterType = 'all' | 'kaolinite_sheet' | 'halloysite_tube' | 'nanoparticle' | 'molecule' | 'rubber_substrate' | 'packed_layers' | 'combined';
 
 export interface ModuleFilter {
   /** 关键词：命中名称或标签（不区分大小写）；空串 = 不过滤 */

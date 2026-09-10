@@ -7,7 +7,7 @@
  */
 import * as C from './crystal';
 import type { Atom, Bond, GeometryData } from './geometry';
-import type { MoleculeParams, ParticleParams, SheetParams, TubeParams } from './types';
+import type { MoleculeParams, PackedLayerParams, ParticleParams, SheetParams, TubeParams } from './types';
 
 /* 确定性伪随机（同一种子同一颗粒形，保证模块复现） */
 export function mulberry32(seed: number): () => number {
@@ -332,4 +332,85 @@ export function buildMolecule(kind: MoleculeParams['kind']): GeometryData {
     atoms: m.atoms.map((a) => ({ ...a })),
     bonds: m.bonds.map((b) => [...b] as Bond),
   };
+}
+
+/* ============================================================
+ * 素材 5：密排原子层（packed_layers，2026-09-10）
+ * 二维密排（三角网格）层 → ABAB 六方 / ABCABC 立方三维堆叠。
+ * 第一层每个原子可经 mask 单独设置"是否参与堆叠"：
+ * 不参与（'0'）的原子列只保留第一层（上方不生长 → 台阶/缺陷示意）。
+ *
+ * 几何推导（d = dist，硬球理想密排）：
+ *  - A 位格点（r 行 c 列）：x = (c + (r%2)·0.5)·d，y = r·(√3/2)·d
+ *  - 层间水平滑移：A→B = (d/2, √3·d/6)（上三角空位中心）；
+ *    ABC 的 C = 2×滑移 = (d, √3·d/3)（≡ 下三角空位中心，3s 为 A 格矢）
+ *  - 层间距 h = √(2/3)·d（密堆积最近邻距不变：√(h² + d²/3) = d）
+ *  - 掩码归属：上层格点坐在第一层空位上方（不与原子同心），
+ *    归属水平距离最近的第一层格点（平局取索引小者，确定性）；
+ *    该格点 mask 为 '0' → 此上层原子不生成。
+ * ============================================================ */
+export function buildPackedLayers(raw: PackedLayerParams): GeometryData {
+  // z.input 类型字段可空（字面量直调/旧数据缺键）：按 schema 默认值归一化
+  const p = {
+    el: raw.el ?? 'Si',
+    n: raw.n ?? 7,
+    layers: raw.layers ?? 3,
+    dist: raw.dist ?? 4,
+    stacking: raw.stacking ?? 'AB',
+    mask: raw.mask ?? '',
+  };
+  const d = p.dist;
+  const n = p.n;
+  const rowH = (Math.sqrt(3) / 2) * d;
+  const h = Math.sqrt(2 / 3) * d;
+  // 三种堆叠位的水平滑移（相对 A 位）
+  const shifts = {
+    A: { x: 0, y: 0 },
+    B: { x: d / 2, y: (Math.sqrt(3) * d) / 6 },
+    C: { x: d, y: (Math.sqrt(3) * d) / 3 },
+  } as const;
+  const shiftOf = (k: number): { x: number; y: number } =>
+    p.stacking === 'AB' ? (k % 2 === 0 ? shifts.A : shifts.B) : [shifts.A, shifts.B, shifts.C][k % 3]!;
+
+  // 第一层格点坐标（掩码归属与上层生成共用）
+  const ax = (r: number, c: number): number => (c + (r % 2) * 0.5) * d;
+  const ay = (r: number): number => r * rowH;
+  const joins = (i: number): boolean => p.mask.charAt(i) !== '0'; // 缺省/越界 = 参与
+
+  const atoms: Atom[] = [];
+  // 第 0 层：完整底座（"不参与"的原子也保留第一层）
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      atoms.push({ el: p.el, x: ax(r, c), y: ay(r), z: 0, layer: 0 });
+    }
+  }
+  // 第 1..layers-1 层：同 n×n 网格 + 层间滑移，按掩码归属裁剪
+  for (let k = 1; k < p.layers; k++) {
+    const s = shiftOf(k);
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        const px = ax(r, c) + s.x;
+        const py = ay(r) + s.y;
+        // 归属最近的第一层格点（n≤12 → n⁴ ≈ 2 万次距离计算，微不足道）
+        let best = -1;
+        let bestD2 = Infinity;
+        for (let rr = 0; rr < n; rr++) {
+          for (let cc = 0; cc < n; cc++) {
+            const dx = px - ax(rr, cc);
+            const dy = py - ay(rr);
+            const d2 = dx * dx + dy * dy;
+            if (d2 < bestD2 - 1e-9) {
+              bestD2 = d2;
+              best = rr * n + cc;
+            }
+          }
+        }
+        if (joins(best)) atoms.push({ el: p.el, x: px, y: py, z: k * h, layer: k });
+      }
+    }
+  }
+  // 居中（与片层一致的整体包围盒中心平移）
+  const centered = C.center(atoms).atoms;
+  const bonds = C.computeBonds(centered);
+  return { atoms: centered, bonds, meta: { n: p.n, layers: p.layers } };
 }

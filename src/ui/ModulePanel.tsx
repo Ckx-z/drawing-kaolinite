@@ -25,6 +25,7 @@ const TYPE_LABELS: Array<[ModuleFilterType, string]> = [
   ['nanoparticle', '颗粒'],
   ['molecule', '分子'],
   ['rubber_substrate', '基底'],
+  ['packed_layers', '密排层'],
   ['combined', '组合'],
 ];
 

@@ -20,6 +20,7 @@ export const COMPONENT_TYPES = [
   'nanoparticle',
   'molecule',
   'rubber_substrate',
+  'packed_layers',
 ] as const;
 
 export const componentTypeEnum = z.enum(COMPONENT_TYPES);
@@ -124,6 +125,37 @@ export const substrateParamsSchema = z.strictObject({
   thickness: z.number().min(2).max(20),
 });
 
+/**
+ * 密排原子层（2026-09-10）：二维密排（三角网格）原子层按 ABAB/ABCABC
+ * 堆叠成三维密排结构；第一层每个原子可单独设置"是否参与堆叠"
+ * （mask 掩码，不参与的原子列只保留第一层 → 台阶/缺陷示意）。
+ */
+export const packedLayerParamsSchema = z.strictObject({
+  /** 元素符号（天然单原子组件；校验同 singleEl） */
+  el: z
+    .string()
+    .refine((s) => /^[A-Z][a-z]?$/.test(s), '元素符号格式（首大写可选次小写）')
+    .default('Si'),
+  /** 每边原子数（第一层 n×n 格点；上限 12 保证面板网格逐个勾选可用） */
+  n: z.number().int().min(2).max(12).default(7),
+  /** 堆叠层数（Layer Count） */
+  layers: z.number().int().min(1).max(8).default(3),
+  /** 层内最近邻原子间距（Å）；层间距 = √(2/3)·dist（理想密堆积，不独立设参） */
+  dist: z.number().min(2).max(8).default(4),
+  /** 堆叠方式：AB = 六方密排（HCP）；ABC = 立方密排（FCC） */
+  stacking: z.enum(['AB', 'ABC']).default('AB'),
+  /**
+   * 第一层"参与堆叠"掩码：'0'/'1' 字符串，语义长度 n²（索引 i = 行 r×n+列 c），
+   * '0' = 该原子不参与堆叠（上方不生长）；缺省/越界位 = 参与。
+   * 空串 = 全部参与（出厂默认）。宽松长度：n 调整后旧掩码仍安全（按位读取）。
+   */
+  mask: z
+    .string()
+    .regex(/^[01]*$/, '掩码只能是 0/1 字符串')
+    .max(144)
+    .default(''),
+});
+
 /* ---------- 组件（type 判别联合） ---------- */
 
 const componentCommon = {
@@ -166,12 +198,19 @@ export const substrateComponentSchema = z.strictObject({
   ...componentCommon,
 });
 
+export const packedLayerComponentSchema = z.strictObject({
+  type: z.literal('packed_layers'),
+  params: packedLayerParamsSchema,
+  ...componentCommon,
+});
+
 export const componentSchema = z.discriminatedUnion('type', [
   sheetComponentSchema,
   tubeComponentSchema,
   particleComponentSchema,
   moleculeComponentSchema,
   substrateComponentSchema,
+  packedLayerComponentSchema,
 ]);
 
 /* ---------- 场景文档 kaolin-scene/v1 ---------- */
@@ -246,6 +285,11 @@ export const moduleSchema = z.discriminatedUnion('type', [
     params: substrateParamsSchema,
     ...moduleCommon,
   }),
+  z.strictObject({
+    type: z.literal('packed_layers'),
+    params: packedLayerParamsSchema,
+    ...moduleCommon,
+  }),
   combinedModuleSchema,
 ]);
 
@@ -282,6 +326,7 @@ export const DEFAULT_PARAMS = {
   nanoparticle: { radius: 9, grains: 160, seed: 7, mode: '簇装', atomMode: 'full', singleEl: 'Ce' },
   molecule: { kind: 'H₂O' },
   rubber_substrate: { Lx: 140, Ly: 90, thickness: 5 },
+  packed_layers: { el: 'Si', n: 7, layers: 3, dist: 4, stacking: 'AB', mask: '' },
 } as const;
 
 /** molecule 默认整体缩放 4（太小看不清），其余 1（demo DEFAULT_SCALE） */

@@ -602,3 +602,13 @@ sessions:
       - src/core/geometry.ts（Atom.layer）/ crystal.ts（层标记+groupByLayer）/ builders.ts（singleModeLayers）/ schema.ts（singleLayers）
       - src/core/types.ts（z.input）/ singleLayers.test.ts（新 14 条）
       - src/ui/paramDefs.ts（动态 min/max）/ ParamPanel.tsx（RangeControl 函数边界+钳制）/ paramDefs.test.ts
+  - id: "2026-09-10-32"
+    date: "2026-09-10"
+    title: "新组件类型「密排原子层」：逐原子堆叠布尔 + AB/ABC 密排三维生成"
+    summary: "用户需求：识别单原子属性+每原子参与堆叠布尔+层数生成二维密排层三维堆叠。新组件 packed_layers 全链路：buildPackedLayers 纯函数（A 位三角网格/B·C 层间滑移/层间距 √(2/3)d/掩码最近邻归属：'0' 格点上方不生长只留第一层）；schema packedLayerParamsSchema（el/n2-12/layers1-8/dist/stacking·mask ^[01]*$ 全默认）+判别联合+DEFAULT_PARAMS；worker/buildData/TYPE_NAMES/ModuleFilterType 分发；ParamPanel PackedMaskControl（n×n checkbox 网格→mask 字符串经 updateParams，自动撤销/持久化）+LIB 卡片。295 tests（+11）全绿；浏览器实测 147→关格 145→清空 49→撤销 147→ABC 2层 98。DATA_DICT 新增 §六b。"
+    files:
+      - src/core/builders.ts（buildPackedLayers）/ schema.ts（packedLayerParamsSchema）/ worker.ts / types.ts
+      - src/core/packedLayers.test.ts（新 11 条）
+      - src/ui/paramDefs.ts（packedMask 控件型+LIB）/ ParamPanel.tsx（PackedMaskControl）
+      - src/render/RendererService.ts（buildData case）/ sceneStore.ts（TYPE_NAMES）/ moduleLibrary.ts / ModulePanel.tsx
+      - DATA_DICT.md §六b

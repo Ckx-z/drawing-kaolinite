@@ -11,6 +11,7 @@ import type {
   componentTypeEnum,
   moleculeParamsSchema,
   moduleSchema,
+  packedLayerParamsSchema,
   paletteSettingSchema,
   particleParamsSchema,
   sceneDocumentSchema,
@@ -33,6 +34,7 @@ export type TubeParams = z.input<typeof tubeParamsSchema>;
 export type ParticleParams = z.input<typeof particleParamsSchema>;
 export type MoleculeParams = z.input<typeof moleculeParamsSchema>;
 export type SubstrateParams = z.input<typeof substrateParamsSchema>;
+export type PackedLayerParams = z.input<typeof packedLayerParamsSchema>;
 
 /** 组件判别联合： narrowing by `type` 字段 */
 export type SceneComponent = z.infer<typeof componentSchema>;
@@ -50,4 +52,4 @@ export type Annotation = z.infer<typeof annotationSchema>;
 export type ModuleEntry = z.infer<typeof moduleSchema>;
 
 /** 任意类型 params 的并集（ DEFAULT_PARAMS 索引用） */
-export type AnyParams = SheetParams | TubeParams | ParticleParams | MoleculeParams | SubstrateParams;
+export type AnyParams = SheetParams | TubeParams | ParticleParams | MoleculeParams | SubstrateParams | PackedLayerParams;

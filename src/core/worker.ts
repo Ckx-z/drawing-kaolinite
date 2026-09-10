@@ -15,17 +15,28 @@ import {
   buildHalloysiteTube,
   buildKaoliniteSheet,
   buildMolecule,
+  buildPackedLayers,
   buildParticle,
 } from './builders';
 import GeometryWorker from './geometryWorker?worker&inline';
 import type { GeometryData } from './geometry';
 import { formulaTo3D } from './molecules/formula';
 import { smilesTo3D } from './molecules/smiles';
-import type { MoleculeParams, ParticleParams, SheetParams, TubeParams } from './types';
+import type { MoleculeParams, PackedLayerParams, ParticleParams, SheetParams, TubeParams } from './types';
 
-export type GeometryKind = 'kaolinite_sheet' | 'halloysite_tube' | 'nanoparticle' | 'molecule';
+export type GeometryKind =
+  | 'kaolinite_sheet'
+  | 'halloysite_tube'
+  | 'nanoparticle'
+  | 'molecule'
+  | 'packed_layers';
 
-export type GeometryParams = SheetParams | TubeParams | ParticleParams | MoleculeParams;
+export type GeometryParams =
+  | SheetParams
+  | TubeParams
+  | ParticleParams
+  | MoleculeParams
+  | PackedLayerParams;
 
 export interface GeometryRequest {
   kind: GeometryKind;
@@ -73,6 +84,8 @@ export function computeGeometry(req: GeometryRequest): GeometryResult {
       }
       return buildMolecule(mp.kind);
     }
+    case 'packed_layers':
+      return buildPackedLayers(req.params as PackedLayerParams);
   }
 }
 

@@ -128,6 +128,70 @@ function CheckControl(props: { compId: string; def: ParamDef; checked: boolean }
   );
 }
 
+/**
+ * packedMask（2026-09-10 密排原子层）：第一层原子 n×n 网格编辑器，
+ * 每格 = 一个原子的"参与堆叠"布尔（☑ 参与 / ☐ 仅保留第一层）。
+ * 掩码存 '0'/'1' 字符串（缺省位 = 参与），toggle 即改写经 updateParams
+ * （自动获得撤销/重做与场景持久化）。
+ */
+function PackedMaskControl(props: { compId: string; params: Record<string, unknown> }) {
+  const { compId, params } = props;
+  const n = Number(params.n ?? 7);
+  const total = n * n;
+  const mask = String(params.mask ?? '');
+  const bit = (i: number): boolean => mask.charAt(i) !== '0'; // 缺省/越界 = 参与
+  const setMask = (next: string): void => {
+    sceneStore.getState().updateParams(compId, { mask: next } as never);
+  };
+  const toggle = (i: number): void => {
+    const arr = Array.from({ length: total }, (_, k) => (bit(k) ? '1' : '0'));
+    arr[i] = arr[i] === '1' ? '0' : '1';
+    setMask(arr.join(''));
+  };
+  return (
+    <div className="ctl">
+      <div className="row">
+        <label>参与堆叠（第一层每个原子）</label>
+        <span style={{ display: 'flex', gap: 4 }}>
+          <button className="mini" onClick={() => setMask('')} title="全部参与堆叠">
+            全选
+          </button>
+          <button
+            className="mini"
+            onClick={() => setMask('0'.repeat(total))}
+            title="全部只保留第一层（上层清空）"
+          >
+            清空
+          </button>
+        </span>
+      </div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${n}, 18px)`,
+          gap: 2,
+          width: 'fit-content',
+          padding: 6,
+          background: '#f1f5f9',
+          borderRadius: 6,
+        }}
+        title="☑ = 参与堆叠（该原子列向上生长） · ☐ = 仅保留第一层"
+      >
+        {Array.from({ length: total }, (_, i) => (
+          <input
+            key={i}
+            type="checkbox"
+            checked={bit(i)}
+            onChange={() => toggle(i)}
+            style={{ width: 14, height: 14, margin: 0, cursor: 'pointer' }}
+          />
+        ))}
+      </div>
+      <p className="hint">☑ 参与 · ☐ 仅第一层；勾选数：{Array.from({ length: total }, (_, k) => bit(k)).filter(Boolean).length}/{total}</p>
+    </div>
+  );
+}
+
 /** toggle：字符串枚举开关（如 atomMode 'full'/'single' ↔ 勾选态） */
 function ToggleControl(props: { compId: string; def: ParamDef; value: string }) {
   const { compId, def, value } = props;
@@ -424,6 +488,8 @@ export default function ParamPanel() {
         if (def.type === 'toggle') return <ToggleControl key={def.key} compId={selected.id} def={def} value={String(v)} />;
         if (def.type === 'checkbox')
           return <CheckControl key={def.key} compId={selected.id} def={def} checked={Boolean(v)} />;
+        if (def.type === 'packedMask')
+          return <PackedMaskControl key={def.key} compId={selected.id} params={selected.params as Record<string, unknown>} />;
         return (
           <RangeControl
             key={def.key}

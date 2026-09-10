@@ -47,6 +47,7 @@ export const TYPE_NAMES: Record<ComponentType, string> = {
   nanoparticle: '纳米颗粒',
   molecule: '分子',
   rubber_substrate: '橡胶基底',
+  packed_layers: '密排原子层',
 };
 
 export interface AddComponentOptions {
