@@ -3,14 +3,14 @@
  * 2026-09-08：全部导出改走 saveFile.ts 统一入口（桌面 = 原生保存对话框 + Rust 写盘，
  * 修复打包版 <a download> 无效；浏览器 = showSaveFilePicker / 传统下载）。
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { exportCurlAnimation } from '../export/animation';
 import { buildLayerPngs } from '../export/layers';
 import { SHAPE_TOOLS, type ShapeTool } from '../core/shapes/schema';
 import { moduleEntryFromComponent, moduleEntryFromScene, saveModule } from '../state/moduleLibrary';
 import { rendererRef } from '../state/rendererRef';
-import { sceneStore } from '../state/sceneStore';
+import { sceneHistory, sceneStore } from '../state/sceneStore';
 import { shapeViewStore } from './shapes/view';
 import { loadPresetScene } from './preset';
 import { dataUrlToBlob, saveBlob, saveBlobs, saveText } from './saveFile';
@@ -85,6 +85,9 @@ export default function TopBar() {
   const [mode, setMode] = useState<'render' | 'toon'>('render');
   const [shadows, setShadows] = useState(false);
   const [toast, setToast] = useState('');
+  // 后退/前进按钮禁用态：订阅历史栈变化（入栈/撤销/重做/清空都触发）
+  const [, bumpHistory] = useState(0);
+  useEffect(() => sceneHistory.subscribe(() => bumpHistory((v) => v + 1)), []);
 
   const flash = (msg: string): void => {
     setToast(msg);
@@ -252,6 +255,26 @@ export default function TopBar() {
       <div className="brand">
         <span className="logo">◈</span> Kaolin-Assets
         <em>高岭土机理图绘制软件 · 生产工程 v0.1.0</em>
+      </div>
+      <div className="tb-group" title="撤销/重做（快捷键 ⌘Z / ⇧⌘Z）——覆盖组件、参数、图元、标注、色板的全部编辑">
+        <button
+          disabled={!sceneHistory.canUndo()}
+          onClick={() => {
+            sceneHistory.undo();
+          }}
+          title="撤回上一步编辑（⌘Z）"
+        >
+          ↶ 后退
+        </button>
+        <button
+          disabled={!sceneHistory.canRedo()}
+          onClick={() => {
+            sceneHistory.redo();
+          }}
+          title="重做被撤回的一步（⇧⌘Z）"
+        >
+          ↷ 前进
+        </button>
       </div>
       <div className="tb-group">
         <button onClick={loadPresetScene} title="一键组合：埃洛石@CeO₂ 复合材料场景">

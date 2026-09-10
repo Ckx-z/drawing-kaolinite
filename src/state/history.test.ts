@@ -198,3 +198,39 @@ describe('应用单例：写操作自动入历史', () => {
     expect(store.getState().components).toHaveLength(1);
   });
 });
+
+describe('历史栈变化通知（2026-09-10：顶栏后退/前进按钮禁用态）', () => {
+  it('入栈/撤销/重做/清空各触发一次；退订后不再触发', () => {
+    const store = createSceneStore();
+    const history = attachHistory(store, { mergeWindowMs: 0 });
+    let n = 0;
+    const unsub = history.subscribe(() => {
+      n++;
+    });
+
+    store.getState().addComponent('molecule'); // 入栈 → 1
+    expect(n).toBe(1);
+    history.undo(); // → 2
+    expect(n).toBe(2);
+    history.redo(); // → 3
+    expect(n).toBe(3);
+    history.clearHistory(); // → 4
+    expect(n).toBe(4);
+    expect(history.canUndo()).toBe(false);
+
+    unsub();
+    store.getState().addComponent('molecule'); // 退订后不再通知
+    expect(n).toBe(4);
+  });
+
+  it('状态未变的写操作（目标不存在）不入栈也不通知', () => {
+    const store = createSceneStore();
+    const history = attachHistory(store);
+    let n = 0;
+    history.subscribe(() => {
+      n++;
+    });
+    store.getState().removeComponent('no-such-id'); // 静默 no-op
+    expect(n).toBe(0);
+  });
+});

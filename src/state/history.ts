@@ -39,6 +39,11 @@ export interface History {
    * fn 抛错时不入栈（状态可能已部分变更，与单条操作失败语义一致）
    */
   batch: (fn: () => void) => void;
+  /**
+   * 栈变化通知（2026-09-10：顶栏"后退/前进"按钮的禁用态驱动）：
+   * 入栈/撤销/重做/清空后触发；返回退订函数
+   */
+  subscribe: (fn: () => void) => () => void;
 }
 
 /** 需要 track 的写操作名（与 SceneState 方法签名逐一对应） */
@@ -85,6 +90,10 @@ export function attachHistory(store: SceneStore, opts?: HistoryOptions): History
   let undoStack: Command[] = [];
   let redoStack: Command[] = [];
   let recording = false; // undo/redo 回放期间暂停录制
+  const listeners = new Set<() => void>(); // 栈变化通知（UI 禁用态）
+  const notify = (): void => {
+    for (const fn of listeners) fn();
+  };
 
   const push = (cmd: Command): void => {
     // 与栈顶同 key 且在窗口内 → 合并（保留最早的 before，采用最新 after）
@@ -96,6 +105,7 @@ export function attachHistory(store: SceneStore, opts?: HistoryOptions): History
       if (undoStack.length > limit) undoStack.shift();
     }
     redoStack = []; // 新命令使重做分支失效
+    notify();
   };
 
   // 包装实例方法：快照 before → 原逻辑 → 快照 after → 入栈。
@@ -132,6 +142,7 @@ export function attachHistory(store: SceneStore, opts?: HistoryOptions): History
       }
       undoStack.pop();
       redoStack.push(cmd);
+      notify();
       return true;
     },
     redo: () => {
@@ -145,6 +156,7 @@ export function attachHistory(store: SceneStore, opts?: HistoryOptions): History
       }
       redoStack.pop();
       undoStack.push(cmd);
+      notify();
       return true;
     },
     canUndo: () => undoStack.length > 0,
@@ -152,6 +164,7 @@ export function attachHistory(store: SceneStore, opts?: HistoryOptions): History
     clearHistory: () => {
       undoStack = [];
       redoStack = [];
+      notify();
     },
     depths: () => ({ undo: undoStack.length, redo: redoStack.length }),
     batch: (fn) => {
@@ -170,6 +183,10 @@ export function attachHistory(store: SceneStore, opts?: HistoryOptions): History
       if (!sameSnapshot(before, after)) {
         push({ label: 'batch', key: null, before, after: { ...after, timestamp: now() } });
       }
+    },
+    subscribe: (fn) => {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
     },
   };
   batchRegistry.set(store, history);

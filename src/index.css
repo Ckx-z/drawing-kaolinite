@@ -113,6 +113,14 @@ button:hover {
   border-color: var(--acc);
   color: #fff;
 }
+button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+button:disabled:hover {
+  border-color: var(--line);
+  color: var(--txt);
+}
 button.mini {
   padding: 2px 10px;
   font-size: 12px;
