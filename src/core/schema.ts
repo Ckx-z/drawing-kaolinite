@@ -46,6 +46,12 @@ const singleElOf = (fallback: string) =>
     .string()
     .refine((s) => /^[A-Z][a-z]?$/.test(s), '元素符号格式（首大写可选次小写）')
     .default(fallback);
+/**
+ * 单原子层数（2026-09-10）：single 模式下显示前 N 层单原子层（其余层不生成）。
+ * 默认 3 = 意图"全部层"——运行时由 builder clamp 到实际 layers/walls
+ * （片层 1–3 层时默认即全部，与旧行为一致）；旧场景缺键经 default 补全。
+ */
+const singleLayersOf = z.number().int().min(1).max(3).default(3);
 
 /* ---------- 各类型 params（范围 = DATA_DICT §二~六 = demo PARAM_DEFS） ---------- */
 
@@ -59,9 +65,11 @@ export const sheetParamsSchema = z.strictObject({
   edgeH: z.boolean(),
   // T-2.7：晶学严格模式（保留 β/γ 夹角的真实三斜投影）；默认示意正交化（D03）
   strictCell: z.boolean().default(false),
-  // 单原子模式（2026-09-08）：全部原子统一为 singleEl（简化示意）
+  // 单原子模式（2026-09-08）：全部原子统一为 singleEl（简化示意）；
+  // singleLayers（2026-09-10）：single 下只显示前 N 层（builder clamp 到 layers）
   atomMode,
   singleEl: singleElOf('Si'),
+  singleLayers: singleLayersOf,
   // D05 预留：showInterlayer（T-2.4 多矿物接入时启用，当前类型不暴露）
 });
 
@@ -76,9 +84,10 @@ export const tubeParamsSchema = z.strictObject({
   // T-2.6：卷曲方向（'a' 基线 / 'b' 真实轴向美感）与端口噪声幅度（0 = 关）
   curlAxis: z.enum(['a', 'b']).default('a'),
   portNoise: z.number().min(0).max(2).default(0),
-  // 单原子模式（2026-09-08）
+  // 单原子模式（2026-09-08）；singleLayers（2026-09-10）：single 下只卷前 N 壁
   atomMode,
   singleEl: singleElOf('Si'),
+  singleLayers: singleLayersOf,
 });
 
 export const particleParamsSchema = z.strictObject({
@@ -254,6 +263,7 @@ export const DEFAULT_PARAMS = {
     strictCell: false,
     atomMode: 'full',
     singleEl: 'Si',
+    singleLayers: 3,
   },
   halloysite_tube: {
     innerR: 14,
@@ -267,6 +277,7 @@ export const DEFAULT_PARAMS = {
     portNoise: 0,
     atomMode: 'full',
     singleEl: 'Si',
+    singleLayers: 3,
   },
   nanoparticle: { radius: 9, grains: 160, seed: 7, mode: '簇装', atomMode: 'full', singleEl: 'Ce' },
   molecule: { kind: 'H₂O' },

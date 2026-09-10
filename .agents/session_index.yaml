@@ -594,3 +594,11 @@ sessions:
       - src/ui/TopBar.tsx / LibraryPanel.tsx（模板分区）/ SceneCanvas.tsx（diagram rAF 分支）
       - src/render/RendererService.ts（setSceneVisible/view 导出）/ src/export/svg.ts（viewTransformedShape）
       - data/seed-templates.json（4 版式种子）
+  - id: "2026-09-10-31"
+    date: "2026-09-10"
+    title: "单原子模式增加「单原子层数」（前 N 层单原子，默认全部层）"
+    summary: "用户报告单原子模式把所有原子替换成一个原子无法选层数。实现：Atom.layer 可选层标记（buildSlab k 循环打标 + 羟基/边缘 H 继承 + rollToTube 保留）+ groupByLayer 纯函数；builders singleModeLayers clamp（single 模式 nc=min(singleLayers??3, layers|walls)，N 层完整晶体学层天然可区分）；schema singleLayers int1-3 default3（哨兵=全部层，旧场景兼容）仅 sheet/tube；types 改 z.input 免改字面量；ParamDef.min/max 支持函数动态边界 + RangeControl 钳制显示。284 tests（+15）全绿；浏览器实测滑块联动 + 3D 实例数 full3层=single全部=29988 / single1层=full单层=9996。"
+    files:
+      - src/core/geometry.ts（Atom.layer）/ crystal.ts（层标记+groupByLayer）/ builders.ts（singleModeLayers）/ schema.ts（singleLayers）
+      - src/core/types.ts（z.input）/ singleLayers.test.ts（新 14 条）
+      - src/ui/paramDefs.ts（动态 min/max）/ ParamPanel.tsx（RangeControl 函数边界+钳制）/ paramDefs.test.ts

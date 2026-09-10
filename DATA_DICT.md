@@ -32,6 +32,9 @@
 | `style` | enum | 空间填充 / 球棍 | 空间填充 | — | 空间填充 = vdw×0.92 无键；球棍 = cov×0.95 + 键半径 0.16Å |
 | `edgeH` | bool | — | false | — | 边缘羟基饱和（当前为径向补 H 实验实现，T-2.5 升级） |
 | `strictCell` | bool | — | false | — | 晶学严格模式（T-2.7）：保留 β/γ 夹角的真实三斜投影，层片倾斜；默认示意正交化（D03） |
+| `atomMode` | enum | full / single | full | — | 单原子模式（2026-09-08）：single = 全部原子统一为 singleEl（简化示意堆叠） |
+| `singleEl` | string | 元素符号 | Si | — | 单原子模式的元素（仅 single 时有意义） |
+| `singleLayers` | int | 1–3（动态 clamp 到 layers） | 3 | 层 | **单原子层数**（2026-09-10）：single 模式下只显示前 N 层单原子层（每层为完整晶体学层，z 间隔 d001 可区分）；默认 3 = 全部层（=旧行为），超界由 builder clamp |
 
 ## 三、halloysite_tube 埃洛石管
 
@@ -46,6 +49,9 @@
 | `style` | enum | 空间填充 / 球棍 | 空间填充 | — | 同片层 |
 | `curlAxis` | enum | a / b | a | — | 卷曲方向（T-2.6）：b 轴向近真实埃洛石 [110]，作图取美观 |
 | `portNoise` | number | 0–2 | 0 | Å | 端口噪声幅度：管两端 3Å 内确定性扰动，模拟天然不规则端口（0 = 关） |
+| `atomMode` | enum | full / single | full | — | 单原子模式（2026-09-08）：同片层 |
+| `singleEl` | string | 元素符号 | Si | — | 单原子模式的元素 |
+| `singleLayers` | int | 1–3（动态 clamp 到 walls） | 3 | 壁 | **单原子层数**（2026-09-10）：single 下只卷前 N 壁（同心壁层数随之减少）；默认 3 = 全部壁 |
 
 几何常量（内核内定，非用户参数）：卷曲方向沿 a 轴（轴向 ∥ b）；卷曲后**重新判键**（开口端自动断键）；卷曲前去除 x=xMax 末端一列原子防止闭合重叠。
 

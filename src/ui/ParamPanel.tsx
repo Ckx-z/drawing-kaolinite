@@ -64,8 +64,13 @@ function PaletteSection() {
   );
 }
 
-function RangeControl(props: { compId: string; def: ParamDef; value: number }) {
-  const { compId, def, value } = props;
+function RangeControl(props: { compId: string; def: ParamDef; value: number; params: Record<string, unknown> }) {
+  const { compId, def, params } = props;
+  // 边界可为常量或随其他参数动态（如"单原子层数"上限 = 当前堆叠层数）
+  const min = typeof def.min === 'function' ? def.min(params) : (def.min ?? 0);
+  const max = typeof def.max === 'function' ? def.max(params) : (def.max ?? 100);
+  // 显示值钳制到当前边界（存量值超界时滑块仍可用，store 原值由 builder clamp）
+  const value = Math.min(Math.max(props.value, min), max);
   return (
     <div className="ctl">
       <div className="row">
@@ -74,8 +79,8 @@ function RangeControl(props: { compId: string; def: ParamDef; value: number }) {
       </div>
       <input
         type="range"
-        min={def.min}
-        max={def.max}
+        min={min}
+        max={max}
         step={def.step}
         value={value}
         onChange={(e) =>
@@ -419,7 +424,15 @@ export default function ParamPanel() {
         if (def.type === 'toggle') return <ToggleControl key={def.key} compId={selected.id} def={def} value={String(v)} />;
         if (def.type === 'checkbox')
           return <CheckControl key={def.key} compId={selected.id} def={def} checked={Boolean(v)} />;
-        return <RangeControl key={def.key} compId={selected.id} def={def} value={Number(v)} />;
+        return (
+          <RangeControl
+            key={def.key}
+            compId={selected.id}
+            def={def}
+            value={Number(v)}
+            params={selected.params as Record<string, unknown>}
+          />
+        );
       })}
 
       <div className="subhead">变 换</div>

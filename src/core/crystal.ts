@@ -293,7 +293,7 @@ export function buildSlab(parsed: ParsedCIF, opts: SlabOptions): { atoms: Atom[]
           for (const a of base) {
             const zIntra = a.fz * parsed.cell.c; // 层内高度（不缩放）
             const p = fracToCart(L, a.fx + i, a.fy + j, 0);
-            atoms.push({ label: a.label, el: a.el, x: p.x, y: p.y, z: zIntra + k * d001 });
+            atoms.push({ label: a.label, el: a.el, x: p.x, y: p.y, z: zIntra + k * d001, layer: k });
           }
         }
       }
@@ -309,7 +309,7 @@ export function buildSlab(parsed: ParsedCIF, opts: SlabOptions): { atoms: Atom[]
           for (const a of base) {
             const p = fracToCart(L, a.fx + i, a.fy + j, a.fz);
             atoms.push({
-              label: a.label, el: a.el,
+              label: a.label, el: a.el, layer: k,
               x: p.x + ucx * lift, y: p.y + ucy * lift, z: p.z + ucz * lift,
             });
           }
@@ -318,6 +318,21 @@ export function buildSlab(parsed: ParsedCIF, opts: SlabOptions): { atoms: Atom[]
     }
   }
   return center(atoms);
+}
+
+/**
+ * 按堆叠层分桶（层序号 0 基升序返回）。无 layer 标记的原子（分子/颗粒/
+ * 手工构造）全部归第 0 桶——"没有层结构"与"单层"在此语义下等价。
+ */
+export function groupByLayer(atoms: Atom[]): Atom[][] {
+  const buckets = new Map<number, Atom[]>();
+  for (const a of atoms) {
+    const k = a.layer ?? 0;
+    const b = buckets.get(k);
+    if (b) b.push(a);
+    else buckets.set(k, [a]);
+  }
+  return [...buckets.keys()].sort((x, y) => x - y).map((k) => buckets.get(k)!);
 }
 
 /** 正六边形掩膜裁剪：高岭土片层天然呈"假六方"轮廓 */
@@ -442,6 +457,7 @@ export function addHydroxylHydrogens(atoms: Atom[]): Atom[] {
       x: a.x + ((a.x - best.x) / d) * 0.98,
       y: a.y + ((a.y - best.y) / d) * 0.98,
       z: a.z + ((a.z - best.z) / d) * 0.98,
+      layer: a.layer, // H 随所属羟基氧的层（层标记语义完整）
     });
   }
   return atoms.concat(added);
@@ -478,7 +494,10 @@ export function saturateEdges(atoms: Atom[], bonds: Bond[]): Atom[] {
 
   const addH = (o: Atom, dx: number, dy: number, dz: number): Atom => {
     const L = Math.hypot(dx, dy, dz) || 1;
-    return { el: 'H', label: 'H*', x: o.x + (dx / L) * 0.98, y: o.y + (dy / L) * 0.98, z: o.z + (dz / L) * 0.98 };
+    return {
+      el: 'H', label: 'H*', layer: o.layer,
+      x: o.x + (dx / L) * 0.98, y: o.y + (dy / L) * 0.98, z: o.z + (dz / L) * 0.98,
+    };
   };
 
   const added: Atom[] = [];

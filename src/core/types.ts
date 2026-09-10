@@ -27,12 +27,12 @@ export type Vec3 = z.infer<typeof transformSchema>['position'];
 
 export type Transform = z.infer<typeof transformSchema>;
 
-/** 各类型 params */
-export type SheetParams = z.infer<typeof sheetParamsSchema>;
-export type TubeParams = z.infer<typeof tubeParamsSchema>;
-export type ParticleParams = z.infer<typeof particleParamsSchema>;
-export type MoleculeParams = z.infer<typeof moleculeParamsSchema>;
-export type SubstrateParams = z.infer<typeof substrateParamsSchema>;
+/** 各类型 params（sheet/tube 用 z.input：singleLayers 等带默认值的新增键可选，字面量构造零负担；运行时由 builder 容错） */
+export type SheetParams = z.input<typeof sheetParamsSchema>;
+export type TubeParams = z.input<typeof tubeParamsSchema>;
+export type ParticleParams = z.input<typeof particleParamsSchema>;
+export type MoleculeParams = z.input<typeof moleculeParamsSchema>;
+export type SubstrateParams = z.input<typeof substrateParamsSchema>;
 
 /** 组件判别联合： narrowing by `type` 字段 */
 export type SceneComponent = z.infer<typeof componentSchema>;

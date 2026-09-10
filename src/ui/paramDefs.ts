@@ -13,8 +13,9 @@ export interface ParamDef {
   on?: string;
   off?: string;
   options?: readonly string[];
-  min?: number;
-  max?: number;
+  /** 数值边界：常量或随其他参数动态（如"单原子层数"上限 = 当前堆叠层数） */
+  min?: number | ((params: Record<string, unknown>) => number);
+  max?: number | ((params: Record<string, unknown>) => number);
   step?: number;
   unit?: string;
   /** 滑块值的显示格式（如卷曲进度显示百分比） */
@@ -23,8 +24,8 @@ export interface ParamDef {
   when?: (params: Record<string, unknown>) => boolean;
 }
 
-/** 单原子模式共用 UI 字段（片层/管/颗粒；元素选择仅在开启时显示） */
-const ATOM_MODE_FIELDS: ParamDef[] = [
+/** 单原子模式基础字段（片层/管/颗粒共用；元素选择仅在开启时显示） */
+const ATOM_MODE_BASE: ParamDef[] = [
   { key: 'atomMode', label: '单原子模式（单一原子堆叠示意）', type: 'toggle', on: 'single', off: 'full' },
   {
     key: 'singleEl',
@@ -34,6 +35,20 @@ const ATOM_MODE_FIELDS: ParamDef[] = [
     when: (p) => p.atomMode === 'single',
   },
 ];
+
+/**
+ * 单原子层数字段（2026-09-10）：single 模式下显示前 N 层单原子层。
+ * 滑块上限动态 = 当前堆叠/壁层数（layersKey 指定读哪个参数）；
+ * 颗粒无层结构，不追加本字段。
+ */
+const singleLayersField = (layersKey: 'layers' | 'walls'): ParamDef => ({
+  key: 'singleLayers',
+  label: '单原子层数',
+  min: 1,
+  max: (p) => Number(p[layersKey] ?? 3),
+  step: 1,
+  when: (p) => p.atomMode === 'single',
+});
 
 export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
   kaolinite_sheet: [
@@ -45,7 +60,8 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     { key: 'style', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
     { key: 'edgeH', label: '边缘羟基饱和（实验）', type: 'checkbox' },
     { key: 'strictCell', label: '晶学严格模式（保留 β/γ 夹角）', type: 'checkbox' },
-    ...ATOM_MODE_FIELDS,
+    ...ATOM_MODE_BASE,
+    singleLayersField('layers'),
   ],
   halloysite_tube: [
     { key: 'innerR', label: '内半径', unit: 'Å', min: 8, max: 40, step: 1 },
@@ -57,14 +73,15 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     { key: 'curlAxis', label: '卷曲方向', type: 'select', options: ['a', 'b'] },
     { key: 'portNoise', label: '端口噪声', unit: 'Å', min: 0, max: 2, step: 0.1 },
     { key: 'style', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
-    ...ATOM_MODE_FIELDS,
+    ...ATOM_MODE_BASE,
+    singleLayersField('walls'),
   ],
   nanoparticle: [
     { key: 'radius', label: '颗粒半径', unit: 'Å', min: 4, max: 20, step: 0.5 },
     { key: 'grains', label: '晶粒数量', min: 40, max: 400, step: 10 },
     { key: 'seed', label: '随机种子', min: 1, max: 99, step: 1 },
     { key: 'mode', label: '形态', type: 'select', options: ['簇装', '光滑'] },
-    ...ATOM_MODE_FIELDS,
+    ...ATOM_MODE_BASE,
   ],
   molecule: [
     {

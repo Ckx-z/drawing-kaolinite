@@ -12,6 +12,8 @@ export interface Atom {
   z: number;
   /** 覆盖默认显示半径（颗粒晶粒用，Å），可选 */
   r?: number;
+  /** 堆叠层序号（0 基，buildSlab 生成；分子/颗粒等无层结构的不带），可选 */
+  layer?: number;
 }
 
 export type Bond = [number, number];

@@ -29,6 +29,11 @@ export function mulberry32(seed: number): () => number {
  * 单原子模式（2026-09-08）：忽略化学组成，全部原子统一为 singleEl——
  * 机理图简化示意画法（"由重复的单一原子堆叠成结构"）。键网与几何不变，
  * 仅替换元素标识（渲染层按 el 取半径/颜色 → 视觉即为单一原子堆叠）。
+ *
+ * 2026-09-10 层数维度：single 模式下几何生成即只含前 singleLayers 层
+ * （buildKaoliniteSheet/buildHalloysiteTube 传给 buildSlab 的 nc 已 clamp），
+ * 因此本函数照旧全量替换——显示的每一层都是完整晶体学层（z 间隔 d001），
+ * 层与层天然可区分，不做"全部层塌成一层"式的合并。
  */
 function applyAtomMode<T extends GeometryData>(
   g: T,
@@ -40,12 +45,20 @@ function applyAtomMode<T extends GeometryData>(
   return g;
 }
 
+/** 单原子模式的实际堆叠层数：前 N 层（clamp 到结构总层数；缺省 3 = 全部层，兼容旧参数） */
+function singleModeLayers(total: number, p: { atomMode?: string; singleLayers?: number }): number {
+  if (p.atomMode !== 'single') return total;
+  return Math.max(1, Math.min(p.singleLayers ?? 3, total));
+}
+
 export function buildKaoliniteSheet(cifText: string, p: SheetParams): GeometryData {
   const parsed = C.parseCIF(cifText);
   const na = Math.max(2, Math.round(p.Lx / parsed.cell.a));
   const nb = Math.max(2, Math.round(p.Ly / parsed.cell.b));
   // T-2.7：strictCell = 晶学严格模式（保留 β/γ 夹角）；卷曲管线保持示意正交化（斜方板卷曲会引入人为扭曲）
-  const slab = C.buildSlab(parsed, { na, nb, nc: p.layers, d001: p.d001, orthogonal: !p.strictCell });
+  // 2026-09-10：单原子模式只生成前 singleLayers 层（其余层不显示）
+  const nc = singleModeLayers(p.layers, p);
+  const slab = C.buildSlab(parsed, { na, nb, nc, d001: p.d001, orthogonal: !p.strictCell });
   let atoms = slab.atoms;
   if (p.shape === '六角') {
     atoms = C.clipHexagon(atoms, Math.min(p.Lx, p.Ly) * 0.52);
@@ -74,7 +87,9 @@ export function buildHalloysiteTube(cifText: string, p: TubeParams): GeometryDat
   const lengthCells = (cellLen: number): number => Math.max(2, Math.round(p.length / cellLen));
   const na = curlAxis === 'b' ? lengthCells(parsed.cell.a) : circumferenceCells(parsed.cell.a);
   const nb = curlAxis === 'b' ? circumferenceCells(parsed.cell.b) : lengthCells(parsed.cell.b);
-  const slab = C.buildSlab(parsed, { na, nb, nc: p.walls, d001: p.d001 || 7.4 });
+  // 2026-09-10：单原子模式只卷前 singleLayers 壁（同心壁层数随之减少）
+  const nc = singleModeLayers(p.walls, p);
+  const slab = C.buildSlab(parsed, { na, nb, nc, d001: p.d001 || 7.4 });
   let atoms = C.addHydroxylHydrogens(slab.atoms);
 
   if (curlAxis === 'b') {
@@ -176,6 +191,7 @@ export function rollToTube(atoms: Atom[], p: RollOptions): Atom[] {
       el: a.el,
       label: a.label,
       r: a.r,
+      layer: a.layer, // 壁层标记随卷曲保留（径向同心壁的层序号）
       x: r * Math.sin(theta),
       y: a.y,
       z: Rmid - r * Math.cos(theta),
