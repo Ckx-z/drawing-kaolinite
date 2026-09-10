@@ -11,6 +11,7 @@ import { SHAPE_TOOLS, type ShapeTool } from '../core/shapes/schema';
 import { moduleEntryFromComponent, moduleEntryFromScene, saveModule } from '../state/moduleLibrary';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
+import { shapeViewStore } from './shapes/view';
 import { loadPresetScene } from './preset';
 import { dataUrlToBlob, saveBlob, saveBlobs, saveText } from './saveFile';
 
@@ -37,6 +38,42 @@ function ShapeToolGroup() {
           {TOOL_LABELS[t]}
         </button>
       ))}
+    </div>
+  );
+}
+
+/** T-11.6 画布形态切换（3D 混合 / 纯示意图）+ T-11.7 磁吸开关 + 视图缩放显示 */
+function ModeGroup() {
+  const mode = useStore(sceneStore, (s) => s.mode);
+  const snap = useStore(shapeViewStore, (s) => s.snap);
+  const zoom = useStore(shapeViewStore, (s) => s.zoom);
+  return (
+    <div className="tb-group" title="示意图模式：无 3D 的无限画布（空格/中键拖拽平移，滚轮缩放）；图元数据两模式共享">
+      <button
+        className={`mini${mode === 'mixed' ? ' on' : ''}`}
+        onClick={() => sceneStore.getState().setMode('mixed')}
+      >
+        🧊 3D 混合
+      </button>
+      <button
+        className={`mini${mode === 'diagram' ? ' on' : ''}`}
+        onClick={() => sceneStore.getState().setMode('diagram')}
+      >
+        ✏️ 示意图
+      </button>
+      {mode === 'diagram' && (
+        <>
+          <label className="chk" title="拖拽图元时自动对齐网格与其他图元边缘/中心（洋红参考线提示）">
+            <input
+              type="checkbox"
+              checked={snap}
+              onChange={(e) => shapeViewStore.getState().setSnap(e.target.checked)}
+            />
+            磁吸
+          </label>
+          <span style={{ opacity: 0.6, alignSelf: 'center', fontSize: 12 }}>{Math.round(zoom * 100)}%</span>
+        </>
+      )}
     </div>
   );
 }
@@ -188,6 +225,28 @@ export default function TopBar() {
     flash(`已存组合模块「${name}」，实例化后各组件仍独立可调`);
   };
 
+  /** T-11.8：当前场景存为机理图模板（组件+图元+标注快照，一键复用） */
+  const onSaveTemplate = async (): Promise<void> => {
+    const s = sceneStore.getState();
+    if (!s.shapes.length && !s.components.length) {
+      flash('场景为空，先画点内容再存模板');
+      return;
+    }
+    const name = `我的模板（${s.shapes.length} 图元${s.components.length ? ` + ${s.components.length} 组件` : ''}）`;
+    const { saveTemplate } = await import('../state/templateLibrary');
+    await saveTemplate({
+      id: `tpl-user-${Date.now()}`,
+      name,
+      desc: '自存模板',
+      components: s.components.map((c) => ({ ...c })) as never,
+      shapes: structuredClone(s.shapes) as never,
+      annotations: structuredClone(s.annotations) as never,
+      createdAt: new Date().toISOString(),
+    });
+    sceneStore.getState().bumpTemplates(); // 模板分区立即出现新卡片
+    flash(`已存为模板「${name}」，左侧模板分区可一键载入`);
+  };
+
   return (
     <header className="topbar">
       <div className="brand">
@@ -200,6 +259,7 @@ export default function TopBar() {
         </button>
       </div>
       <ShapeToolGroup />
+      <ModeGroup />
       <div className="tb-group">
         <button onClick={onSaveScene}>保存场景</button>
         <button onClick={onOpenScene}>打开场景</button>
@@ -220,6 +280,14 @@ export default function TopBar() {
           title="把整景存为一个组合模块（管+颗粒+分子…整体复用，实例化后各组件仍独立可调）"
         >
           ★ 存组合
+        </button>
+        <button
+          onClick={() => {
+            void onSaveTemplate();
+          }}
+          title="把当前场景（含图元/箭头/文字）存为机理图模板，左侧「机理图模板」分区一键复用（T-11.8）"
+        >
+          🧩 存为模板
         </button>
       </div>
       <div className="tb-group">

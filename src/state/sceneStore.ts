@@ -120,6 +120,12 @@ export interface SceneState {
   groupShapes: (ids: string[]) => string | null;
   /** 解散图元编组 */
   ungroupShapes: (ids: string[]) => void;
+  /** 画布形态（T-11.6）：mixed = 3D 混合（默认）；diagram = 纯 2D 示意图（3D 隐藏 + 视口 pan/zoom）。视图状态不持久化 */
+  mode: 'mixed' | 'diagram';
+  setMode: (mode: 'mixed' | 'diagram') => void;
+  /** 模板库版本号（T-11.8）：存/删模板后 bump，驱动模板分区刷新（视图信号，不持久化） */
+  templateSeq: number;
+  bumpTemplates: () => void;
 }
 
 export type SceneStore = StoreApi<SceneState>;
@@ -139,6 +145,11 @@ export function createSceneStore(): SceneStore {
     shapes: [],
     shapeSelectionIds: [],
     tool: 'select',
+    mode: 'mixed',
+    templateSeq: 0,
+
+    setMode: (mode) => set({ mode }),
+    bumpTemplates: () => set((s) => ({ templateSeq: s.templateSeq + 1 })),
 
     setPalette: (p) => set({ palette: p }),
 

@@ -9,8 +9,9 @@ import kaoliniteCif from '../../data/kaolinite.cif?raw';
 import { createCachedEngine, defaultTubePrebakeRequests, prebake } from '../core/cache';
 import { createWorkerEngine } from '../core/worker';
 import { drawAnnotations } from './annotations/draw';
-import { drawDraft, drawShapes } from './shapes/draw';
+import { drawDraft, drawGrid, drawGuides, drawShapes } from './shapes/draw';
 import { createShapeInteraction } from './shapes/interaction';
+import { shapeViewStore } from './shapes/view';
 import { RendererService } from '../render/RendererService';
 import { hoverStore } from '../render/highlight';
 import { bindRenderer } from '../state/rendererBinding';
@@ -38,25 +39,45 @@ function AnnotationOverlay(): React.ReactElement {
           const W = cv.clientWidth || cv.width / dpr;
           const H = cv.clientHeight || cv.height / dpr;
           ctx.scale(dpr, dpr);
-          drawAnnotations({
-            ctx,
-            width: W,
-            height: H,
-            annotations: s.annotations,
-            project: (p) => svc.projectToScreen(p, W, H),
-            pxPerAAtTarget: svc.pxPerAAtTarget(H),
-          });
-          // T-11.1 机理图图元层（画在标注之上；图元层坐标 == 视口逻辑像素）
-          drawShapes({
-            ctx,
-            width: W,
-            height: H,
-            shapes: s.shapes,
-            components: s.components,
-            project: (p) => svc.projectToScreen(p, W, H),
-            selectionId: s.shapeSelectionIds.at(-1) ?? null,
-          });
-          drawDraft(ctx);
+          if (s.mode === 'diagram') {
+            // T-11.6 纯示意图：浅格点背景（图元层坐标网格，随 view 变换）+ 图元视图变换
+            const v = shapeViewStore.getState();
+            drawGrid(ctx, W, H, v.zoom, v.panX, v.panY);
+            ctx.setTransform(dpr * v.zoom, 0, 0, dpr * v.zoom, dpr * v.panX, dpr * v.panY);
+            drawShapes({
+              ctx,
+              width: W / v.zoom,
+              height: H / v.zoom,
+              shapes: s.shapes,
+              components: [],
+              project: () => ({ x: 0, y: 0, visible: false }),
+              selectionId: s.shapeSelectionIds.at(-1) ?? null,
+            });
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            drawDraft(ctx); // 橡皮筋在屏幕空间
+            drawGuides(ctx, v.zoom, v.panX, v.panY);
+          } else {
+            drawAnnotations({
+              ctx,
+              width: W,
+              height: H,
+              annotations: s.annotations,
+              project: (p) => svc.projectToScreen(p, W, H),
+              pxPerAAtTarget: svc.pxPerAAtTarget(H),
+            });
+            // T-11.1 机理图图元层（画在标注之上；图元层坐标 == 视口逻辑像素）
+            drawShapes({
+              ctx,
+              width: W,
+              height: H,
+              shapes: s.shapes,
+              components: s.components,
+              project: (p) => svc.projectToScreen(p, W, H),
+              selectionId: s.shapeSelectionIds.at(-1) ?? null,
+            });
+            drawDraft(ctx);
+            drawGuides(ctx);
+          }
           ctx.setTransform(1, 0, 0, 1, 0, 0);
         }
       }

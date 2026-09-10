@@ -1,5 +1,5 @@
 /**
- * 图元交互层 —— T-11.2/T-11.3
+ * 图元交互层 —— T-11.2/T-11.3/T-11.6/T-11.7
  *
  * 事件宿主 = 3D WebGL canvas（overlay canvas 保持 pointerEvents:none）。
  * 分流机制：在 domElement 上挂 **capture 阶段**监听，pointerdown 先做图元/手柄/
@@ -7,18 +7,22 @@
  * 3D 拾取）；未命中且工具为 select 则不拦截（事件自然透传 3D 交互）。
  *
  * 状态机：idle → drawing（绘制橡皮筋）/ moving（多选整体移动，组感知）/
- * resizing（8 手柄）/ linking（箭头端点拖拽改锚定，T-11.3）。
+ * resizing（8 手柄）/ linking（箭头端点拖拽改锚定，T-11.3）/ panning
+ * （纯示意图模式画布平移，T-11.6：中键或空格+左键）。
  * 文本双击 → 浮层 input 编辑（Enter 提交 / Esc 取消 / blur 提交）。
+ * T-11.6 纯示意图：滚轮以指针为中心缩放（view 变换，图元数据不动）。
+ * T-11.7 对齐吸附：移动/缩放后网格 + 边缘/中心参考线吸附（磁吸开关）。
  */
 import type { ShapeTool } from '../../core/shapes/schema';
 import { SHAPE_DEFAULTS } from '../../core/shapes/schema';
 import { sceneStore } from '../../state/sceneStore';
 import { rendererRef } from '../../state/rendererRef';
-import { shapeDraft } from './draft';
+import { shapeDraft, shapeGuides } from './draft';
 import { applyHandle, hitEndpoint, hitHandle, hitTest } from './hit';
 import { normBox, resolveLineEnds } from './draw';
+import { shapeViewStore, toLayerCoord } from './view';
 
-/* ---------- 坐标换算 ---------- */
+/* ---------- 坐标换算（屏幕 → 图元层，含 view 逆变换） ---------- */
 
 interface CtxInfo {
   W: number;
@@ -26,7 +30,7 @@ interface CtxInfo {
 }
 const toLocal = (dom: HTMLElement, e: PointerEvent | MouseEvent): { x: number; y: number } => {
   const r = dom.getBoundingClientRect();
-  return { x: e.clientX - r.left, y: e.clientY - r.top };
+  return toLayerCoord(e.clientX, e.clientY, r.left, r.top);
 };
 
 /* ---------- 交互工厂 ---------- */
@@ -37,9 +41,11 @@ export function createShapeInteraction(dom: HTMLCanvasElement): () => void {
     | { t: 'draw' }
     | { t: 'move'; ids: string[]; ox: number; oy: number; origins: Map<string, { x: number; y: number }> }
     | { t: 'resize'; id: string; handle: string }
-    | { t: 'link'; id: string; end: 'start' | 'end' };
+    | { t: 'link'; id: string; end: 'start' | 'end' }
+    | { t: 'pan'; sx: number; sy: number; v0: { panX: number; panY: number; zoom: number } };
 
   let mode: Mode = { t: 'idle' };
+  let spaceHeld = false;
   const store = sceneStore;
 
   const dims = (): CtxInfo => ({ W: dom.clientWidth, H: dom.clientHeight });
@@ -53,7 +59,52 @@ export function createShapeInteraction(dom: HTMLCanvasElement): () => void {
     e.stopImmediatePropagation();
   };
 
-  /** 落点吸附判定（绘制完成与端点拖拽共用）：图元优先 → 组件投影 16px → free */
+  /**
+   * T-11.7 移动对齐吸附：主选 bbox 的左/中/右、上/中/下六条线与其他图元六线比对
+   * （屏幕 6px 阈值，命中吸附 + 参考线）；未命中再吸附 10px 网格。开关关闭则直通。
+   */
+  const computeSnap = (
+    box: { x: number; y: number; w: number; h: number },
+    others: Array<{ x: number; y: number; w: number; h: number }>,
+  ): { dx: number; dy: number; guides: Array<{ axis: 'v' | 'h'; at: number }> } => {
+    const out = { dx: 0, dy: 0, guides: [] as Array<{ axis: 'v' | 'h'; at: number }> };
+    const view = shapeViewStore.getState();
+    if (!view.snap) return out;
+    const TH = 6 / view.zoom;
+    const vx = [box.x, box.x + box.w / 2, box.x + box.w];
+    const vy = [box.y, box.y + box.h / 2, box.y + box.h];
+    let bestX: { d: number; at: number } | null = null;
+    let bestY: { d: number; at: number } | null = null;
+    for (const o of others) {
+      for (const a of vx) {
+        for (const b of [o.x, o.x + o.w / 2, o.x + o.w]) {
+          const d = b - a;
+          if (Math.abs(d) <= TH && (!bestX || Math.abs(d) < Math.abs(bestX.d))) bestX = { d, at: b };
+        }
+      }
+      for (const a of vy) {
+        for (const b of [o.y, o.y + o.h / 2, o.y + o.h]) {
+          const d = b - a;
+          if (Math.abs(d) <= TH && (!bestY || Math.abs(d) < Math.abs(bestY.d))) bestY = { d, at: b };
+        }
+      }
+    }
+    if (bestX) {
+      out.dx = bestX.d;
+      out.guides.push({ axis: 'v', at: bestX.at });
+    } else {
+      out.dx = Math.round(box.x / 10) * 10 - box.x; // 网格兜底
+    }
+    if (bestY) {
+      out.dy = bestY.d;
+      out.guides.push({ axis: 'h', at: bestY.at });
+    } else {
+      out.dy = Math.round(box.y / 10) * 10 - box.y;
+    }
+    return out;
+  };
+
+  /** 落点吸附判定（绘制完成与端点拖拽共用）：图元优先 → 组件投影 16px → free（纯示意图模式无组件锚定） */
   const snapAnchor = (
     x: number,
     y: number,
@@ -64,6 +115,7 @@ export function createShapeInteraction(dom: HTMLCanvasElement): () => void {
     const hitCtx = { shapes: s.shapes, components: s.components, project: proj, width: W, height: H };
     const target = hitTest(hitCtx, x, y);
     if (target && target.id !== excludeId) return { kind: 'shape', id: target.id };
+    if (s.mode === 'diagram') return { kind: 'free' }; // 视图坐标与 3D 投影不在同一空间
     let bestComp: string | null = null;
     let bestD = 16;
     for (const c of s.components) {
@@ -79,6 +131,14 @@ export function createShapeInteraction(dom: HTMLCanvasElement): () => void {
   };
 
   const onDown = (e: PointerEvent): void => {
+    // T-11.6 纯示意图：中键或空格+左键 = 画布平移
+    if (store.getState().mode === 'diagram' && (e.button === 1 || (e.button === 0 && spaceHeld))) {
+      const v = shapeViewStore.getState();
+      mode = { t: 'pan', sx: e.clientX, sy: e.clientY, v0: { panX: v.panX, panY: v.panY, zoom: v.zoom } };
+      dom.setPointerCapture(e.pointerId);
+      consume(e);
+      return;
+    }
     if (e.button !== 0) return; // 右键/中键留给 3D pan/zoom
     const s = store.getState();
     const { x, y } = toLocal(dom, e);
@@ -151,6 +211,15 @@ export function createShapeInteraction(dom: HTMLCanvasElement): () => void {
 
   const onMove = (e: PointerEvent): void => {
     if (mode.t === 'idle') return;
+    if (mode.t === 'pan') {
+      const m = mode;
+      shapeViewStore.getState().setView({
+        panX: m.v0.panX + (e.clientX - m.sx),
+        panY: m.v0.panY + (e.clientY - m.sy),
+      });
+      consume(e);
+      return;
+    }
     const { x, y } = toLocal(dom, e);
     if (mode.t === 'draw') {
       if (shapeDraft.current) {
@@ -162,8 +231,21 @@ export function createShapeInteraction(dom: HTMLCanvasElement): () => void {
     }
     if (mode.t === 'move') {
       const m = mode; // const 定格窄化（后续函数调用不再重置）
-      const dx = x - m.ox;
-      const dy = y - m.oy;
+      let dx = x - m.ox;
+      let dy = y - m.oy;
+      // T-11.7 对齐吸附：主选图元 bbox 对其他图元六线比对（含网格兜底）
+      const st = store.getState();
+      const primary = st.shapes.find((s2) => s2.id === m.ids[0]);
+      if (primary) {
+        const b = normBox({ ...primary, x: primary.x + dx, y: primary.y + dy });
+        const others = st.shapes
+          .filter((s2) => !m.ids.includes(s2.id) && s2.visible !== false)
+          .map((s2) => normBox(s2));
+        const r = computeSnap(b, others);
+        dx += r.dx;
+        dy += r.dy;
+        shapeGuides.current = r.guides;
+      }
       for (const [id, o] of m.origins) {
         store.getState().updateShape(id, { x: o.x + dx, y: o.y + dy });
       }
@@ -240,12 +322,40 @@ export function createShapeInteraction(dom: HTMLCanvasElement): () => void {
       return;
     }
     if (mode.t !== 'idle') {
+      if (mode.t === 'move') shapeGuides.current = []; // T-11.7 松手清参考线
       mode = { t: 'idle' };
       try {
         dom.releasePointerCapture(e.pointerId);
       } catch {
         /* 已释放 */
       }
+    }
+  };
+
+  /** T-11.6 纯示意图：滚轮以指针为中心缩放（view 变换，图元数据不动） */
+  const onWheel = (e: WheelEvent): void => {
+    if (store.getState().mode !== 'diagram') return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const r = dom.getBoundingClientRect();
+    const px = e.clientX - r.left;
+    const py = e.clientY - r.top;
+    const v = shapeViewStore.getState();
+    const nz = Math.min(4, Math.max(0.25, v.zoom * Math.exp(-e.deltaY * 0.0015)));
+    shapeViewStore.getState().setView({
+      zoom: nz,
+      panX: px - (px - v.panX) * (nz / v.zoom),
+      panY: py - (py - v.panY) * (nz / v.zoom),
+    });
+  };
+
+  /** 空格跟踪（示意图模式平移修饰键；输入框聚焦时不拦截） */
+  const onSpace = (e: KeyboardEvent): void => {
+    const tag = (document.activeElement?.tagName ?? '').toLowerCase();
+    if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+    if (e.code === 'Space') {
+      spaceHeld = e.type === 'keydown';
+      if (spaceHeld && store.getState().mode === 'diagram') e.preventDefault();
     }
   };
 
@@ -265,13 +375,20 @@ export function createShapeInteraction(dom: HTMLCanvasElement): () => void {
     }
   };
 
-  // 绘制工具时光标提示（crosshair）
+  // 绘制工具时光标提示（crosshair）；模式切换重置视图 + 通知渲染层显隐 3D
   let lastTool: ShapeTool = 'select';
+  let lastMode: 'mixed' | 'diagram' = 'mixed';
   const unsub = store.subscribe((st) => {
     if (st.tool !== lastTool) {
       lastTool = st.tool;
       dom.style.cursor = st.tool === 'select' ? '' : 'crosshair';
       if (st.tool !== 'select' && st.shapeSelectionIds.length) sceneStore.getState().selectShape(null);
+    }
+    if (st.mode !== lastMode) {
+      lastMode = st.mode;
+      shapeViewStore.getState().resetView(); // 两形态切换从 identity 开始
+      shapeGuides.current = [];
+      rendererRef.current?.setSceneVisible(st.mode === 'mixed');
     }
   });
 
@@ -279,13 +396,20 @@ export function createShapeInteraction(dom: HTMLCanvasElement): () => void {
   dom.addEventListener('pointermove', onMove, { capture: true });
   dom.addEventListener('pointerup', onUp, { capture: true });
   dom.addEventListener('dblclick', onDblClick, { capture: true });
+  dom.addEventListener('wheel', onWheel, { capture: true, passive: false });
+  window.addEventListener('keydown', onSpace, true);
+  window.addEventListener('keyup', onSpace, true);
   return () => {
     dom.removeEventListener('pointerdown', onDown, { capture: true });
     dom.removeEventListener('pointermove', onMove, { capture: true });
     dom.removeEventListener('pointerup', onUp, { capture: true });
     dom.removeEventListener('dblclick', onDblClick, { capture: true });
+    dom.removeEventListener('wheel', onWheel, { capture: true });
+    window.removeEventListener('keydown', onSpace, true);
+    window.removeEventListener('keyup', onSpace, true);
     unsub();
     shapeDraft.current = null;
+    shapeGuides.current = [];
     dom.style.cursor = '';
   };
 }
@@ -300,11 +424,12 @@ export function openTextEditor(shapeId: string, dom: HTMLElement): void {
   const shape = s.shapes.find((x) => x.id === shapeId);
   if (!shape || shape.type !== 'text') return;
   const r = dom.getBoundingClientRect();
+  const v = shapeViewStore.getState(); // diagram 模式浮层定位经 view 变换
   const el = document.createElement('input');
   el.value = shape.text;
   el.style.position = 'fixed';
-  el.style.left = `${r.left + normBox(shape).x}px`;
-  el.style.top = `${r.top + normBox(shape).y - 26}px`;
+  el.style.left = `${r.left + normBox(shape).x * v.zoom + v.panX}px`;
+  el.style.top = `${r.top + normBox(shape).y * v.zoom + v.panY - 26}px`;
   el.style.zIndex = '1000';
   el.style.background = '#fff';
   el.style.border = '1px solid #3b82f6';

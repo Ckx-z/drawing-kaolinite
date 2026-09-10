@@ -335,3 +335,22 @@ export function shapesToSVG(o: SvgShapeOptions): string {
   }
   return parts.join('\n');
 }
+
+/**
+ * T-11.6：示意图模式导出预变换——图元层坐标按 view（zoom/pan）映射到视口坐标
+ * （所见即所得）；字号/线宽/箭头头同步缩放。mixed 模式（identity）无需调用。
+ */
+export function viewTransformedShape(s: SceneShape, z: number, px: number, py: number): SceneShape {
+  const extra: Record<string, unknown> = {};
+  if (s.type === 'text') extra.fontSize = s.fontSize * z;
+  if (s.type === 'arrow') extra.headSize = s.headSize * z;
+  return {
+    ...s,
+    x: s.x * z + px,
+    y: s.y * z + py,
+    w: s.w * z,
+    h: s.h * z,
+    lineWidth: s.lineWidth * z,
+    ...extra,
+  } as SceneShape;
+}

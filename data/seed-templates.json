@@ -1,0 +1,73 @@
+[
+  {
+    "id": "tpl-interfacial",
+    "name": "界面反应三步版式",
+    "desc": "反应物 → 界面反应区 → 产物（T-9.8 占位升级，改文字即用）",
+    "builtin": true,
+    "shapes": [
+      { "id": "t1-1", "type": "rect", "x": 60, "y": 150, "w": 170, "h": 80, "stroke": "#475569" },
+      { "id": "t1-2", "type": "text", "x": 85, "y": 178, "w": 120, "h": 24, "text": "反应物", "fontSize": 16 },
+      { "id": "t1-3", "type": "arrow", "x": 245, "y": 190, "w": 80, "h": 0, "lineWidth": 3, "headSize": 14 },
+      { "id": "t1-4", "type": "rect", "x": 340, "y": 115, "w": 210, "h": 150, "stroke": "#b45309", "lineWidth": 3 },
+      { "id": "t1-5", "type": "text", "x": 365, "y": 175, "w": 160, "h": 24, "text": "界面反应区", "fontSize": 16 },
+      { "id": "t1-6", "type": "arrow", "x": 565, "y": 190, "w": 80, "h": 0, "lineWidth": 3, "headSize": 14 },
+      { "id": "t1-7", "type": "rect", "x": 660, "y": 150, "w": 170, "h": 80, "stroke": "#475569" },
+      { "id": "t1-8", "type": "text", "x": 690, "y": 178, "w": 120, "h": 24, "text": "产物", "fontSize": 16 },
+      { "id": "t1-9", "type": "text", "x": 235, "y": 330, "w": 420, "h": 24, "text": "界面反应机理说明（双击修改）", "fontSize": 14 }
+    ]
+  },
+  {
+    "id": "tpl-steps3",
+    "name": "三步流程（横向）",
+    "desc": "制备 → 改性 → 应用；通用流程图起点",
+    "builtin": true,
+    "shapes": [
+      { "id": "t2-0", "type": "text", "x": 280, "y": 60, "w": 240, "h": 26, "text": "标题（双击修改）", "fontSize": 20 },
+      { "id": "t2-1", "type": "rect", "x": 60, "y": 200, "w": 180, "h": 90, "stroke": "#0369a1" },
+      { "id": "t2-2", "type": "text", "x": 95, "y": 232, "w": 110, "h": 24, "text": "步骤一", "fontSize": 16 },
+      { "id": "t2-3", "type": "arrow", "x": 255, "y": 245, "w": 60, "h": 0, "headSize": 13 },
+      { "id": "t2-4", "type": "rect", "x": 330, "y": 200, "w": 180, "h": 90, "stroke": "#0369a1" },
+      { "id": "t2-5", "type": "text", "x": 365, "y": 232, "w": 110, "h": 24, "text": "步骤二", "fontSize": 16 },
+      { "id": "t2-6", "type": "arrow", "x": 525, "y": 245, "w": 60, "h": 0, "headSize": 13 },
+      { "id": "t2-7", "type": "rect", "x": 600, "y": 200, "w": 180, "h": 90, "stroke": "#0369a1" },
+      { "id": "t2-8", "type": "text", "x": 635, "y": 232, "w": 110, "h": 24, "text": "步骤三", "fontSize": 16 }
+    ]
+  },
+  {
+    "id": "tpl-cycle",
+    "name": "循环过程（四步环形）",
+    "desc": "吸附→反应→脱附→再生 循环机理",
+    "builtin": true,
+    "shapes": [
+      { "id": "t3-1", "type": "rect", "x": 290, "y": 60, "w": 160, "h": 70, "stroke": "#15803d" },
+      { "id": "t3-2", "type": "text", "x": 322, "y": 84, "w": 100, "h": 22, "text": "吸附", "fontSize": 15 },
+      { "id": "t3-3", "type": "rect", "x": 520, "y": 215, "w": 160, "h": 70, "stroke": "#15803d" },
+      { "id": "t3-4", "type": "text", "x": 552, "y": 239, "w": 100, "h": 22, "text": "反应", "fontSize": 15 },
+      { "id": "t3-5", "type": "rect", "x": 290, "y": 380, "w": 160, "h": 70, "stroke": "#15803d" },
+      { "id": "t3-6", "type": "text", "x": 322, "y": 404, "w": 100, "h": 22, "text": "脱附", "fontSize": 15 },
+      { "id": "t3-7", "type": "rect", "x": 60, "y": 215, "w": 160, "h": 70, "stroke": "#15803d" },
+      { "id": "t3-8", "type": "text", "x": 92, "y": 239, "w": 100, "h": 22, "text": "再生", "fontSize": 15 },
+      { "id": "t3-9", "type": "arrow", "x": 460, "y": 130, "w": 110, "h": 90, "headSize": 13 },
+      { "id": "t3-10", "type": "arrow", "x": 540, "y": 290, "w": -60, "h": 90, "headSize": 13 },
+      { "id": "t3-11", "type": "arrow", "x": 280, "y": 380, "w": -110, "h": -90, "headSize": 13 },
+      { "id": "t3-12", "type": "arrow", "x": 200, "y": 210, "w": 60, "h": -90, "headSize": 13 },
+      { "id": "t3-13", "type": "text", "x": 300, "y": 243, "w": 140, "h": 26, "text": "循环过程", "fontSize": 18 }
+    ]
+  },
+  {
+    "id": "tpl-compare",
+    "name": "对比示意（左右两栏）",
+    "desc": "改性前 vs 改性后 / 有无添加剂 对照实验示意",
+    "builtin": true,
+    "shapes": [
+      { "id": "t4-1", "type": "rect", "x": 70, "y": 110, "w": 250, "h": 210, "stroke": "#64748b" },
+      { "id": "t4-2", "type": "text", "x": 120, "y": 130, "w": 150, "h": 24, "text": "对照组", "fontSize": 16 },
+      { "id": "t4-3", "type": "text", "x": 100, "y": 200, "w": 190, "h": 24, "text": "（双击填写说明）", "fontSize": 13 },
+      { "id": "t4-4", "type": "rect", "x": 470, "y": 110, "w": 250, "h": 210, "stroke": "#b45309", "lineWidth": 3 },
+      { "id": "t4-5", "type": "text", "x": 520, "y": 130, "w": 150, "h": 24, "text": "实验组", "fontSize": 16 },
+      { "id": "t4-6", "type": "text", "x": 500, "y": 200, "w": 190, "h": 24, "text": "（双击填写说明）", "fontSize": 13 },
+      { "id": "t4-7", "type": "text", "x": 352, "y": 195, "w": 60, "h": 40, "text": "vs", "fontSize": 28 },
+      { "id": "t4-8", "type": "text", "x": 230, "y": 360, "w": 330, "h": 24, "text": "对照组 vs 实验组对比说明", "fontSize": 14 }
+    ]
+  }
+]

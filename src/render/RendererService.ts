@@ -33,8 +33,9 @@ import { smilesTo3D } from '../core/molecules/smiles';
 import { formulaTo3D } from '../core/molecules/formula';
 import type { SceneShape } from '../core/shapes/schema';
 import { drawShapes } from '../ui/shapes/draw';
+import { shapeViewStore } from '../ui/shapes/view';
 import { presetPosition, type CameraPreset } from './postfx';
-import { annotationsToSVG, sceneToSVG, shapesToSVG, type SvgAtom, type SvgComponentInput } from '../export/svg';
+import { annotationsToSVG, sceneToSVG, shapesToSVG, viewTransformedShape, type SvgAtom, type SvgComponentInput } from '../export/svg';
 import { getElement } from '../core/elements';
 import { activeColorFor } from './palette';
 import { addAtoms, addBonds, recolorAtomMesh } from './instanced';
@@ -94,6 +95,8 @@ export class RendererService {
   readonly tc: TransformControls;
 
   private records = new Map<string, ComponentRecord>();
+  /** T-11.6：3D 场集体可见性（纯 2D 模式 = false；盖在组件自身 visible 之上） */
+  private sceneVisible = true;
   private cifText = '';
   /** 几何生成引擎（T-2.2：默认 Worker 子线程；测试/回退注入同步引擎） */
   private readonly engine: GeometryEngine;
@@ -196,7 +199,7 @@ export class RendererService {
     const rec: ComponentRecord = { comp, group, data: null, atomCount: 0, box: null };
     this.records.set(comp.id, rec);
     this.applyTransform(comp, group);
-    group.visible = comp.visible;
+    group.visible = comp.visible && this.sceneVisible;
     this.scene.add(group);
     this.requestBuild(rec, comp);
   }
@@ -210,7 +213,7 @@ export class RendererService {
     rec.data = null;
     rec.atomCount = 0;
     this.applyTransform(comp, rec.group);
-    rec.group.visible = comp.visible;
+    rec.group.visible = comp.visible && this.sceneVisible;
     this.requestBuild(rec, comp);
   }
 
@@ -226,7 +229,22 @@ export class RendererService {
 
   setComponentVisible(id: string, visible: boolean): void {
     const rec = this.records.get(id);
-    if (rec) rec.group.visible = visible;
+    if (rec) rec.group.visible = visible && this.sceneVisible;
+  }
+
+  /**
+   * T-11.6 纯 2D 示意图模式：3D 场景整体显隐（纯渲染层开关，不动 store 数据——
+   * 切回混合形态即恢复）。隐藏时同时禁用 OrbitControls/拾取交互（事件留给图元层）。
+   */
+  setSceneVisible(visible: boolean): void {
+    this.sceneVisible = visible;
+    for (const rec of this.records.values()) {
+      rec.group.visible = rec.comp.visible && visible;
+    }
+    this.orbit.enabled = visible;
+    this.scene.background = visible
+      ? new THREE.Color(0xf4f5f7).convertSRGBToLinear()
+      : new THREE.Color(0xffffff).convertSRGBToLinear();
   }
 
   /** 仅更新变换（位置/旋转/缩放），不重建几何（gizmo 拖动与状态层同步用） */
@@ -525,13 +543,17 @@ export class RendererService {
       });
     }
     // T-11.5 图元层：图元坐标 = 视口逻辑像素 → 按导出/视口比例放大；
-    // component 锚定投影在离屏坐标下解析后除以 scale 折回视口坐标系，保持一致
+    // component 锚定投影在离屏坐标下解析后除以 scale 折回视口坐标系，保持一致。
+    // T-11.6 纯示意图模式：叠加 view 变换（zoom/pan），导出 = 所见
     if (shapes?.length) {
       const vw = this.container.clientWidth || 1;
       const vh = this.container.clientHeight || 1;
       const scale = w / vw;
+      const v = shapeViewStore.getState();
       ctx.save();
       ctx.scale(scale, scale);
+      ctx.translate(v.panX, v.panY);
+      ctx.scale(v.zoom, v.zoom);
       drawShapes({
         ctx,
         width: vw,
@@ -707,15 +729,19 @@ export class RendererService {
         project: (p) => this.projectToScreen(p, size.x, size.y),
       });
     }
-    // T-11.5 图元层（视口坐标 × scale = 导出坐标）
+    // T-11.5 图元层（视口坐标 × scale = 导出坐标；T-11.6 示意图模式先叠 view 变换再导出）
     const shapes = opts?.shapes ?? [];
     if (shapes.length) {
       const vw = this.container.clientWidth || 1;
+      const v = shapeViewStore.getState();
+      const vshapes = v.zoom !== 1 || v.panX !== 0 || v.panY !== 0
+        ? shapes.map((s) => viewTransformedShape(s, v.zoom, v.panX, v.panY))
+        : shapes;
       extra += (extra ? '\n' : '') + shapesToSVG({
         width: size.x,
         height: size.y,
         scale: size.x / vw,
-        shapes,
+        shapes: vshapes,
         components: [...this.records.values()].map((r) => r.comp),
         project: (p) => this.projectToScreen(p, size.x, size.y),
       });

@@ -13,3 +13,10 @@ export interface ShapeDraft {
 }
 
 export const shapeDraft: { current: ShapeDraft | null } = { current: null };
+
+/** 对齐参考线（T-11.7）：拖拽时 interaction 写入（图元层坐标），overlay 画洋红线 */
+export interface GuideLine {
+  axis: 'v' | 'h';
+  at: number;
+}
+export const shapeGuides: { current: GuideLine[] } = { current: [] };

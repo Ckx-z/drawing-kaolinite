@@ -34,6 +34,11 @@ export interface History {
   clearHistory: () => void;
   /** 当前栈深（调试/测试用） */
   depths: () => { undo: number; redo: number };
+  /**
+   * 事务：fn 内全部写操作合并为一条可撤销命令（模板载入等多步复合操作用）；
+   * fn 抛错时不入栈（状态可能已部分变更，与单条操作失败语义一致）
+   */
+  batch: (fn: () => void) => void;
 }
 
 /** 需要 track 的写操作名（与 SceneState 方法签名逐一对应） */
@@ -115,7 +120,7 @@ export function attachHistory(store: SceneStore, opts?: HistoryOptions): History
     store.setState({ [name]: wrapped } as unknown as Partial<SceneState>);
   }
 
-  return {
+  const history: History = {
     undo: () => {
       const cmd = undoStack[undoStack.length - 1];
       if (!cmd) return false;
@@ -149,5 +154,38 @@ export function attachHistory(store: SceneStore, opts?: HistoryOptions): History
       redoStack = [];
     },
     depths: () => ({ undo: undoStack.length, redo: redoStack.length }),
+    batch: (fn) => {
+      if (recording) {
+        fn(); // 回放中嵌套事务：直接执行（外层命令已含其效果）
+        return;
+      }
+      const before = takeSnapshot(store.getState());
+      recording = true; // 抑制内部各步骤独立入栈
+      try {
+        fn();
+      } finally {
+        recording = false;
+      }
+      const after = takeSnapshot(store.getState());
+      if (!sameSnapshot(before, after)) {
+        push({ label: 'batch', key: null, before, after: { ...after, timestamp: now() } });
+      }
+    },
   };
+  batchRegistry.set(store, history);
+  return history;
+}
+
+/* ---------- 事务注册表：多步复合操作（如模板载入）按 store 实例找历史 ---------- */
+
+const batchRegistry = new WeakMap<object, History>();
+
+/**
+ * 在 store 的历史事务中执行 fn（全部写操作合并为一条命令）；
+ * store 未 attach 历史时（纯 store 单测）直接执行。
+ */
+export function runInBatch(store: object, fn: () => void): void {
+  const h = batchRegistry.get(store);
+  if (h) h.batch(fn);
+  else fn();
 }

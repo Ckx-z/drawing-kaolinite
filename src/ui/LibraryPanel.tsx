@@ -2,15 +2,59 @@
  * 素材库面板 —— T-1.6/T-2.3/T-2.8
  * 上：素材库（点击添加组件并取景）+ SMILES 分子导入；下：我的模块（IndexedDB 持久化，点击复用）。
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
+import seedTemplates from '../../data/seed-templates.json';
 import { formulaTo3D } from '../core/molecules/formula';
 import { smilesTo3D } from '../core/molecules/smiles';
 import type { ComponentType } from '../core/types';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
+import { applyTemplate, ensureSeeded, listTemplates, type TemplateEntry } from '../state/templateLibrary';
 import ModulePanel from './ModulePanel';
 import { LIB } from './paramDefs';
+
+/** T-11.8 机理图模板分区：种子 + 自存模板，点击追加载入（可 Ctrl+Z 撤销） */
+function TemplateSection() {
+  const [templates, setTemplates] = useState<TemplateEntry[]>([]);
+  const [msg, setMsg] = useState('');
+  /** 存/删模板后 bump → 重新拉列表（新卡片立即出现） */
+  const templateSeq = useStore(sceneStore, (s) => s.templateSeq);
+
+  useEffect(() => {
+    void ensureSeeded(seedTemplates as TemplateEntry[]).then(() =>
+      void listTemplates().then((all) => setTemplates(all.filter((t) => t.shapes.length || t.components?.length))),
+    );
+  }, [templateSeq]);
+
+  if (!templates.length) return null;
+  return (
+    <>
+      <h3 style={{ marginTop: 16 }}>机理图模板</h3>
+      <div>
+        {templates.map((t) => (
+          <div
+            key={t.id}
+            className="lib-card"
+            title="点击载入模板（追加到当前画布，Ctrl+Z 可撤销）；顶栏「存为模板」可把当前场景存成自己的模板"
+            onClick={() => {
+              applyTemplate(sceneStore, t);
+              setMsg(`已载入「${t.name}」（双击文本修改内容）`);
+              setTimeout(() => setMsg(''), 2600);
+            }}
+          >
+            <div className="t">
+              <span className="ic">{t.builtin ? '🧩' : '⭐'}</span>
+              {t.name}
+            </div>
+            {t.desc && <div className="d">{t.desc}</div>}
+          </div>
+        ))}
+      </div>
+      {msg && <p className="hint">{msg}</p>}
+    </>
+  );
+}
 
 export default function LibraryPanel() {
   useStore(sceneStore, () => null); // 订阅以随 store 更新（当前卡片为静态列表）
@@ -100,6 +144,7 @@ export default function LibraryPanel() {
         {smilesMsg && <p className="hint">{smilesMsg}</p>}
       </div>
       <ModulePanel />
+      <TemplateSection />
       <h3 style={{ marginTop: 16 }}>提示</h3>
       <p className="hint">点击卡片添加组件；点击画布选中；Delete 删除、Esc 取消选中；SMILES / 化学式（如 Si、H2O）输入后回车导入。</p>
     </aside>

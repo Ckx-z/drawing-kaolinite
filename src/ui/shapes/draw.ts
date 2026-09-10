@@ -14,7 +14,7 @@
  */
 import type { ProjectionResult } from '../annotations/draw';
 import type { ArrowShape, LineShape, SceneShape, ShapeAnchor } from '../../core/shapes/schema';
-import { shapeDraft } from './draft';
+import { shapeDraft, shapeGuides } from './draft';
 
 export interface ShapeEndpoint {
   x: number;
@@ -293,8 +293,7 @@ function drawSelection(c: ShapeDrawContext, s: SceneShape): void {
 }
 
 /** 绘制工具橡皮筋预览（overlay rAF 循环调用） */
-export function drawDraft(ctx: CanvasRenderingContext2D): void {
-  const d = shapeDraft.current;
+export function drawDraft(ctx: CanvasRenderingContext2D): void {  const d = shapeDraft.current;
   if (!d) return;
   const x = Math.min(d.x0, d.x1);
   const y = Math.min(d.y0, d.y1);
@@ -322,5 +321,58 @@ export function drawDraft(ctx: CanvasRenderingContext2D): void {
     // text：框代理
     if (d.tool === 'text') ctx.strokeRect(x, y, Math.max(w, 12), Math.max(h, 18));
   }
+  ctx.restore();
+}
+
+/** T-11.6 纯示意图模式：浅格点背景（10px 图元层网格，屏幕步长 = 10×zoom） */
+export function drawGrid(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  zoom: number,
+  panX: number,
+  panY: number,
+): void {
+  const step = 10 * zoom;
+  if (step < 5) return; // 缩得太深不画（视觉噪点）
+  ctx.save();
+  ctx.strokeStyle = 'rgba(120,130,145,0.18)';
+  ctx.lineWidth = 1;
+  const offX = ((panX % step) + step) % step;
+  const offY = ((panY % step) + step) % step;
+  ctx.beginPath();
+  for (let x = offX; x <= W; x += step) {
+    ctx.moveTo(Math.round(x) + 0.5, 0);
+    ctx.lineTo(Math.round(x) + 0.5, H);
+  }
+  for (let y = offY; y <= H; y += step) {
+    ctx.moveTo(0, Math.round(y) + 0.5);
+    ctx.lineTo(W, Math.round(y) + 0.5);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** T-11.7 对齐参考线（屏幕空间画；guide 存图元层坐标，经 view 换算） */
+export function drawGuides(ctx: CanvasRenderingContext2D, zoom = 1, panX = 0, panY = 0): void {
+  const guides = shapeGuides.current;
+  if (!guides.length) return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(217,70,239,0.85)'; // 洋红
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  for (const g of guides) {
+    if (g.axis === 'v') {
+      const x = g.at * zoom + panX;
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, ctx.canvas.clientHeight || 10000);
+    } else {
+      const y = g.at * zoom + panY;
+      ctx.moveTo(0, y);
+      ctx.lineTo(ctx.canvas.clientWidth || 10000, y);
+    }
+  }
+  ctx.stroke();
   ctx.restore();
 }

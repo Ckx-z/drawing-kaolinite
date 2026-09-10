@@ -584,3 +584,13 @@ sessions:
     commits: []
     blockers: []
     status: "completed"
+  - id: "2026-09-10-30"
+    date: "2026-09-10"
+    title: "T-11 机理图二期（T-11.6~11.8）：纯 2D 示意图模式 + 对齐吸附 + 模板库"
+    summary: "T-11.6：ui/shapes/view.ts shapeViewStore（pan/zoom 0.25~4 + snap）+ toLayerCoord 逆变换，图元数据不动视口变换；RendererService.setSceneVisible 贯通（orbit.enabled/背景白灰）；onWheel 指针中心缩放 + 空格拖拽平移；overlay rAF diagram 分支 drawGrid + setTransform view 变换；导出 viewTransformedShape（SVG/位图双路）。T-11.7：computeSnap 主选 bbox 六线比对（阈值 6/zoom 最优吸附）+ 洋红 drawGuides + 10px 网格兜底。T-11.8：templateLibrary.ts（Dexie kaolin-templates + ensureSeeded 4 种子版式 + applyTemplate 两遍载入锚定/编组重映射）+ 历史事务 History.batch/runInBatch（WeakMap 注册表，模板载入=一条 Ctrl+Z）+ TopBar 存为模板 + sceneStore.bumpTemplates/templateSeq 驱动分区刷新。踩坑：zod strictObject 拒绝未声明键即使值 undefined（{...s,anchors:undefined} 炸 rect/text → delete 剔除；templateSchema 漏 createdAt 致存模板静默失败）；模板原始数据≠parse 后数据（s.anchors 访问前容错）；交互事件挂 3D WebGL canvas 而非 2D overlay。验收：269 tests（+5）/0 类型/0 lint；浏览器实测模板载入 9 图元+像素采样三色命中、事务撤销 9→0→9、自存模板 Dexie 往返文本保留、缩放 100→157→246% 框边 59→142、空格平移+60px 精确、磁吸 x=200 边缘 + y 中心最优线、diagram SVG x=200×zoom+panX 精确 + PNG 600×450 白底。T-11 全系列完成。"
+    files:
+      - src/ui/shapes/view.ts / interaction.ts / draw.ts（guides）
+      - src/state/templateLibrary.ts（+test 5 条）/ history.ts（batch）/ sceneStore.ts（mode/templateSeq）
+      - src/ui/TopBar.tsx / LibraryPanel.tsx（模板分区）/ SceneCanvas.tsx（diagram rAF 分支）
+      - src/render/RendererService.ts（setSceneVisible/view 导出）/ src/export/svg.ts（viewTransformedShape）
+      - data/seed-templates.json（4 版式种子）
