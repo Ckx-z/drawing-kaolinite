@@ -150,9 +150,10 @@ describe('全周期表方括号原子（2026-09-11：白名单改为元素库派
     expect(au.atoms).toHaveLength(1);
     expect(au.atoms[0]!.el).toBe('Au');
 
-    const pt = smilesTo3D('[PtCl6]2-');
-    expect(pt.atoms.filter((a) => a.el === 'Pt')).toHaveLength(1);
-    expect(pt.atoms.filter((a) => a.el === 'Cl')).toHaveLength(6);
+    // 注：SMILES 方括号只包单原子+电荷（配离子团 [PtCl6]2- 非法，多原子走化学式 PtCl4 链路）
+    const pt = smilesTo3D('[Pt4+]');
+    expect(pt.atoms).toHaveLength(1);
+    expect(pt.atoms[0]!.el).toBe('Pt');
 
     const la = smilesTo3D('[La3+]');
     expect(la.atoms[0]!.el).toBe('La');
