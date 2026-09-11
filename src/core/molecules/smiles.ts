@@ -13,6 +13,7 @@
  *     smilesToMolecule 抽象，后续可无感换装/叠加 RDKit WASM 增强器。
  * 全程零运行时依赖、离线可用、确定性输出（存参数不存网格，D02）。
  */
+import { ELEMENTS } from '../elements';
 
 export class SmilesError extends Error {
   constructor(
@@ -54,10 +55,11 @@ const ORGANIC_VALENCE: Record<string, number[]> = {
   F: [1], Cl: [1], Br: [1], I: [1],
 };
 const AROMATIC_VALENCE: Record<string, number> = { c: 4, n: 3, o: 2, s: 2, p: 3 };
-const BRACKET_ELEMENTS = new Set([
-  'H', 'B', 'C', 'N', 'O', 'P', 'S', 'F', 'Cl', 'Br', 'I',
-  'Na', 'Mg', 'K', 'Ca', 'Fe', 'Zn', 'Cu', 'Mn', 'Co', 'Ni', 'Ti', 'Ce', 'Se', 'Si', 'Li',
-]);
+/**
+ * 方括号原子合法集：以元素显示库为单一事实源（2026-09-11 扩全周期表——
+ * 此前手写 26 元素白名单，[Au+]/[PtCl6]2- 等离子无法解析）。
+ */
+const BRACKET_ELEMENTS: ReadonlySet<string> = new Set(Object.keys(ELEMENTS));
 
 function implicitH(
   el: string,

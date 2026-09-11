@@ -93,12 +93,15 @@ function tokenize(input: string, strictCase: boolean): FormulaToken[] | null {
     if (!els) return null;
     const count = m[2] ? Number(m[2]) : 1;
     if (!Number.isInteger(count) || count < 1) return null;
+    // 尾计量只作用于块内最后一个元素（2026-09-11 修复：PtCl4 → Pt + Cl×4；
+    // 此前挂到块内全部元素得 Pt4Cl4，无化学对应的"块整体重复"语义）
     // 相邻同元素合并（贪心拆分可能产生，如 hho → H2O）
-    const last = tokens[tokens.length - 1];
-    for (const el of els) {
-      if (last && last.el === el) last.count += count;
-      else tokens.push({ el, count });
-    }
+    els.forEach((el, idx) => {
+      const c = idx === els.length - 1 ? count : 1;
+      const tail = tokens[tokens.length - 1];
+      if (tail && tail.el === el) tail.count += c;
+      else tokens.push({ el, count: c });
+    });
     rest = rest.slice(m[0].length);
   }
   return tokens.length ? tokens : null;

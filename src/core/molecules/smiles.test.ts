@@ -143,3 +143,18 @@ describe('解析器细节', () => {
     expect(mol.bonds).toHaveLength(4);
   });
 });
+
+describe('全周期表方括号原子（2026-09-11：白名单改为元素库派生）', () => {
+  it('贵金属/稀土带电离子可解析（此前 [Au+] 报"未知元素"）', () => {
+    const au = smilesTo3D('[Au+]');
+    expect(au.atoms).toHaveLength(1);
+    expect(au.atoms[0]!.el).toBe('Au');
+
+    const pt = smilesTo3D('[PtCl6]2-');
+    expect(pt.atoms.filter((a) => a.el === 'Pt')).toHaveLength(1);
+    expect(pt.atoms.filter((a) => a.el === 'Cl')).toHaveLength(6);
+
+    const la = smilesTo3D('[La3+]');
+    expect(la.atoms[0]!.el).toBe('La');
+  });
+});

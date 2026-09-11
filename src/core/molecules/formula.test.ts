@@ -181,3 +181,35 @@ describe('单原子模式（2026-09-08）', () => {
     expect(DEFAULT_PARAMS.kaolinite_sheet.atomMode).toBe('full');
   });
 });
+
+describe('全周期表元素识别（2026-09-11 修复：此前 84 种元素无法导入）', () => {
+  it('曾失败的单质：Au/Pt/W/Pd/La/Nd/Ga/Pb/U（含大小写变体）', () => {
+    for (const [input, canonical] of [
+      ['Au', 'Au'], ['au', 'Au'], ['AU', 'Au'],
+      ['Pt', 'Pt'], ['pt', 'Pt'], ['W', 'W'], ['w', 'W'],
+      ['Pd', 'Pd'], ['La', 'La'], ['la', 'La'], ['Nd', 'Nd'],
+      ['Ga', 'Ga'], ['Pb', 'Pb'], ['U', 'U'],
+    ] as const) {
+      const r = formulaTo3D(input);
+      expect(r.canonical, `${input} 应识别为 ${canonical}`).toBe(canonical);
+      expect(r.atoms).toHaveLength(1);
+      expect(r.atoms[0]!.el).toBe(canonical);
+    }
+  });
+
+  it('曾失败的化合物：贵金属/稀土/钨酸盐化学式', () => {
+    expect(formulaTo3D('Au2O3').canonical).toBe('Au2O3');
+    expect(formulaTo3D('PtCl4').canonical).toBe('PtCl4'); // 规范大小写（全小写 ptcl4 语义歧义：块计量 = Pt4Cl4）
+    expect(formulaTo3D('La2O3').canonical).toBe('La2O3');
+    expect(formulaTo3D('CaWO4').canonical).toBe('CaWO4');
+    expect(formulaTo3D('GaN').canonical).toBe('GaN'); // Ga+ 单字母歧义无碍（Ga 双字母优先）
+    const au = formulaTo3D('Au2O3');
+    expect(au.atoms.filter((a) => a.el === 'Au')).toHaveLength(2);
+    expect(au.atoms.filter((a) => a.el === 'O')).toHaveLength(3);
+  });
+
+  it('真非法输入仍拒绝（q 不在周期表）', () => {
+    expect(() => formulaTo3D('qqq')).toThrow();
+    expect(() => formulaTo3D('Q1')).toThrow();
+  });
+});
