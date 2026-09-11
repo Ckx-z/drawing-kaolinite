@@ -141,7 +141,8 @@ export function parseSmiles(smiles: string): SmilesGraph {
       const close = s.indexOf(']', i);
       if (close < 0) throw new SmilesError('方括号未闭合', i);
       const body = s.slice(i + 1, close);
-      const m = /^(\d+)?([A-Z][a-z]?|[a-z])(@{1,2})?(H\d*)?((?:\+|-)\d*|(?:\+|-)+)?(?::\d+)?$/.exec(body);
+      // 电荷两种合法写法：+4（符号在前）与 4+（数字在前，2026-09-11 支持）
+      const m = /^(\d+)?([A-Z][a-z]?|[a-z])(@{1,2})?(H\d*)?((?:\+|-)\d+|(?:\+|-)+|\d*[+-])?(?::\d+)?$/.exec(body);
       if (!m || !m[2]) throw new SmilesError(`无法解析方括号原子 [${body}]`, i);
       let el = m[2];
       if (BRACKET_ELEMENTS.has(el) === false) {
@@ -155,9 +156,10 @@ export function parseSmiles(smiles: string): SmilesGraph {
       const chargePart = m[5];
       let charge = 0;
       if (chargePart) {
-        const sign = chargePart[0] === '+' ? 1 : -1;
-        const mag = chargePart.length > 1 ? parseInt(chargePart.slice(1), 10) || 1 : 1;
-        charge = sign * mag;
+        // "+4" / "++" / "4+" / "2-" → 符号与幅值
+        const plus = chargePart.includes('+');
+        const digits = chargePart.match(/\d/);
+        charge = (plus ? 1 : -1) * (digits ? parseInt(chargePart.replace(/[^\d]/g, ''), 10) || 1 : 1);
       }
       addAtom(el, false, charge, bracketH);
       i = close + 1;
