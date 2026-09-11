@@ -612,3 +612,12 @@ sessions:
       - src/ui/paramDefs.ts（packedMask 控件型+LIB）/ ParamPanel.tsx（PackedMaskControl）
       - src/render/RendererService.ts（buildData case）/ sceneStore.ts（TYPE_NAMES）/ moduleLibrary.ts / ModulePanel.tsx
       - DATA_DICT.md §六b
+  - id: "2026-09-11-33"
+    date: "2026-09-11"
+    title: "修复：搜索化学元素识别不出来——元素库扩全周期表 118 + 化学式计量/电荷写法修正"
+    summary: "根因两层：①ELEMENTS 只收 33 种且是 parseFormula 与 SMILES 方括号原子的合法性判据（Au/Pt/W/Pd/La/Nd/Ga/Pb/U 等 85 种报无法识别）；②既有化学式块计量 bug：尾计量挂块内全部元素（PtCl4→Pt4Cl4、CaWO4→Ca4W4O4）。修复：elements.ts 扩 118 全周期表（原 33 项逐字保留，Cordero 2008 半径+CPK 柔和色+IUPAC 中文名）；smiles.ts 白名单改 ELEMENTS 键集派生 + 方括号电荷支持 4+ 数字前置写法（规范两种均合法）；formula.ts tokenize 尾计量只挂块内最后元素 + forEach 每步重取尾引用。304 tests（+7）。浏览器实测 Au/pt/au2o3/PtCl4/La2O3/CaWO4/U/[Au+] 全导入成功。已重新打包。"
+    files:
+      - src/core/elements.ts（118 全表）/ elements.test.ts（+3 快照守护）
+      - src/core/molecules/formula.ts（计量语义）/ formula.test.ts（+3）
+      - src/core/molecules/smiles.ts（白名单派生+电荷写法）/ smiles.test.ts（+1）
+      - DATA_DICT.md §九
