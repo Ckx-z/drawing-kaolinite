@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sceneDocumentSchema } from '../core/schema';
+import type { Transform } from '../core/types';
 import { createSceneStore, type SceneState } from './sceneStore';
 
 /**
@@ -159,5 +160,49 @@ describe('序列化往返：toSceneDocument / loadScene', () => {
     s.clear();
     expect(store.getState().components).toHaveLength(0);
     expect(store.getState().selectionId).toBeNull();
+  });
+});
+
+describe('旋转交互（2026-09-12：无限连续旋转 + 组同步最短角差）', () => {
+  const T = (over: Partial<Transform>): Transform => ({
+    position: [0, 0, 0],
+    rotation: [0, 0, 0],
+    scale: 1,
+    ...over,
+  });
+
+  it('组同步最短角差：leader 179°→−179°（等价 +2°），成员增量 +2 而非 −358', () => {
+    const store = createSceneStore();
+    const a = store.getState().addComponent('molecule');
+    const b = store.getState().addComponent('molecule');
+    store.getState().groupComponents([a, b]);
+    // 摆好初始：两成员 Y 均 179°
+    store.getState().setTransform(a, T({ rotation: [0, 179, 0] }));
+    store.getState().setTransform(b, T({ rotation: [0, 179, 0] }));
+    // 解除合并影响：直接构造两成员同组不同初始角会互相污染——用同组同角基线后 leader 拖到 −179
+    const gb = store.getState().components.find((c) => c.id === b)!.transform.rotation[1];
+    store.getState().setTransform(a, T({ rotation: [0, -179, 0] }));
+    const b2 = store.getState().components.find((c) => c.id === b)!.transform.rotation[1];
+    // −179 ≡ 181 ≡ 179+2：成员应从 179 → 181（最短角差 +2），而不是 179−358=−179
+    expect(Math.abs(b2 - (gb + 2))).toBeLessThan(0.01);
+  });
+
+  it('组同步跨整圈：leader Y 0→−361（裸差 −361），成员净转 −1 而非 −361', () => {
+    const store = createSceneStore();
+    const a = store.getState().addComponent('molecule');
+    const b = store.getState().addComponent('molecule');
+    store.getState().groupComponents([a, b]);
+    store.getState().setTransform(a, T({ rotation: [0, -361, 0] }));
+    const b2 = store.getState().components.find((c) => c.id === b)!.transform.rotation[1];
+    expect(b2).toBeCloseTo(-1, 6);
+  });
+
+  it('单组件旋转角无范围截断（多圈 720° 直写合法，供累积表示）', () => {
+    const store = createSceneStore();
+    const id = store.getState().addComponent('molecule');
+    store.getState().setTransform(id, T({ rotation: [0, 720, 0] }));
+    expect(store.getState().components[0]!.transform.rotation[1]).toBe(720);
+    store.getState().setTransform(id, T({ rotation: [0, -1080, 0] }));
+    expect(store.getState().components[0]!.transform.rotation[1]).toBe(-1080);
   });
 });

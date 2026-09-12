@@ -153,9 +153,10 @@ export class RendererService {
     this.tc.addEventListener('dragging-changed', (e) => {
       const v = (e as unknown as { value: boolean }).value;
       this.orbit.enabled = !v;
-    });
-    this.tc.addEventListener('objectChange', () => {
-      if (this.selectedId && this.onTransformChange) this.onTransformChange(this.selectedId);
+      // 2026-09-12：拖拽中不回写 store（TransformControls 四元数自驱动，无限圈平滑；
+      // 此前 objectChange 每帧回写引发：history 双快照深拷贝 + 全组件 diff + 拖拽中
+      // applyTransform 竞态 + 编组时欧拉差同步跳变）——松手一次提交 = 一条撤销记录
+      if (!v && this.selectedId && this.onTransformChange) this.onTransformChange(this.selectedId);
     });
 
     // 环境光照：PMREM 室内环境 + 主光/补光（期刊柔和质感，参数对齐 demo）
@@ -239,6 +240,7 @@ export class RendererService {
     this.clearGroup(rec.group);
     this.scene.remove(rec.group);
     this.records.delete(id);
+    this.lastRotationRead.delete(id);
     if (this.selectedId === id) this.setSelection(null);
   }
 
@@ -439,14 +441,30 @@ export class RendererService {
   }
 
   /** 读取组件当前变换（gizmo 拖动后由状态层回写 store） */
+  /** 各组件上次回读的旋转角（度）——unwrap 连续化基准（2026-09-12） */
+  private lastRotationRead = new Map<string, [number, number, number]>();
+
+  /**
+   * 回读组件变换。旋转角做连续化 unwrap：THREE 的欧拉分解恒在 ±180° 内，
+   * 拖多圈后数值会回卷（3 圈后显示 0° 而非 1080°）——加 360k 取最接近上次
+   * 回读值，使 store/面板呈现累积角度（姿态数值等价，仅表示连续）。
+   */
   getComponentTransform(id: string): Transform | null {
     const rec = this.records.get(id);
     if (!rec) return null;
     const g = rec.group;
     const d = 180 / Math.PI;
+    const prev = this.lastRotationRead.get(id);
+    const raw: [number, number, number] = [g.rotation.x * d, g.rotation.y * d, g.rotation.z * d];
+    const rotation = raw.map((v, i) => {
+      if (!prev) return v;
+      // 最近邻回卷：|v + 360k − prev[i]| 最小的 k
+      return v + Math.round((prev[i]! - v) / 360) * 360;
+    }) as [number, number, number];
+    this.lastRotationRead.set(id, rotation);
     return {
       position: [g.position.x, g.position.y, g.position.z],
-      rotation: [g.rotation.x * d, g.rotation.y * d, g.rotation.z * d],
+      rotation,
       scale: g.scale.x,
     };
   }
@@ -1113,6 +1131,8 @@ export class RendererService {
     g.position.fromArray(t.position);
     g.rotation.set((t.rotation[0] * Math.PI) / 180, (t.rotation[1] * Math.PI) / 180, (t.rotation[2] * Math.PI) / 180);
     g.scale.setScalar(t.scale);
+    // 写入值同步为 unwrap 连续化锚点（外部输入 720° 后拖拽回读以 720 为基准累积）
+    if (comp.id) this.lastRotationRead.set(comp.id, [...t.rotation] as [number, number, number]);
   }
 
   private clearGroup(g: THREE.Group): void {

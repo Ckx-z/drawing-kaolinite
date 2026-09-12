@@ -76,3 +76,18 @@
 - **为什么**：Tauri 打包后 WKWebView 以 `tauri://localhost` 自定义协议运行，module Worker 独立 chunk 静默加载失败（不触发 error 事件）→ build Promise 永久 pending → 画布全空且零报错（2026-09-08 用户报障根因之一）；IndexedDB open 同类挂起风险。dev 模式（http origin）完全无法暴露此类故障。
 - **考虑过**：`worker.format: 'iife'`（仍需运行时 fetch chunk，自定义协议下不保证）；仅加超时回退不内联（功能正确但打包版永远走慢路径）。
 - **何时复盘**：若内联导致主包体积问题（当前 +~200KB 可忽略），或 Tauri 官方修复自定义协议 worker 加载。
+
+## D-2026-09-12：旋转交互改"拖拽中四元数自驱动 + 松手单次提交"
+
+**背景**：用户报告鼠标旋转到一定角度停止/跳变。根因不在 TransformControls（其 rotate 模式按 `_quaternionStart` 绝对重放，天然无限圈），而在回写链：
+1. `objectChange` 每个 pointermove 触发 `getComponentTransform`（读欧拉分解）→ `setTransform`——每帧 history 双快照深拷贝 + 全组件 JSON diff + 拖拽中 applyTransform 竞态回写；
+2. `setTransform` 的 T-3.3 组感知用逐分量欧拉差同步同组成员：跨 ±180° 时裸差 = ±360（成员视觉转整圈）；欧拉分解在 y≈±90° 万向锁附近翻转时差 ≈(±180,−2y,±180)（成员瞬间翻 180°）——即"跳变"；
+3. 欧拉分解恒在 ±180° 内，多圈拖拽后数值回卷（3 圈显示 0°）。
+
+**决策**：
+- 回写节流：删除 objectChange 高频回写，`dragging-changed`（false）松手时提交一次——拖拽中姿态由 TransformControls 四元数独占驱动（无限圈平滑），一次拖拽 = 一条撤销记录（不再依赖 800ms 合并窗）。
+- 组同步旋转增量取最短角差（wrap 到 (−180,180]），等价表示不再被当成整圈转动。
+- `getComponentTransform` 回读做 unwrap 连续化（每分量加 360k 取最接近上次回读值，applyTransform 写入值同步为锚点）——store/面板呈现累积角度（1080° 而非 0°），姿态数值等价。
+- 不把存储层改成四元数（保 kaolin-scene/v1 欧拉契约；欧拉 + unwrap 已满足连续性与累积显示）。
+
+**验证**：浏览器实测 12 步 × 90° 绕 Y 三圈：90→180→…→1080 连续累积、编组成员同步至 1080、无跳变；332 tests 全绿（+3：最短角差/跨整圈/单组件无截断）。

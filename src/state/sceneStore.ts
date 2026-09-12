@@ -281,9 +281,12 @@ export function createSceneStore(): SceneStore {
         });
         return;
       }
-      // T-3.3 组感知：位置/旋转取增量，缩放取比值，同步到同组全部成员
+      // T-3.3 组感知：位置/旋转取增量，缩放取比值，同步到同组全部成员。
+      // 旋转增量取最短角差（2026-09-12）：欧拉分解在 ±180° wrap / 万向锁附近翻转时，
+      // 逐分量裸差会把等价姿态当成 ±360° 转动同步给同组成员（拖拽跳变的根因）
+      const shortestAngle = (d: number): number => ((d + 180) % 360 + 360) % 360 - 180;
       const dPos = t.position.map((v, i) => v - comp.transform.position[i]) as Transform['position'];
-      const dRot = t.rotation.map((v, i) => v - comp.transform.rotation[i]) as Transform['rotation'];
+      const dRot = t.rotation.map((v, i) => shortestAngle(v - comp.transform.rotation[i])) as Transform['rotation'];
       const ratio = t.scale / comp.transform.scale;
       set({
         components: get().components.map((c) => {
