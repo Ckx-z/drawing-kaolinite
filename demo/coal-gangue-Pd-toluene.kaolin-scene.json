@@ -1,0 +1,375 @@
+{
+  "format": "kaolin-scene/v1",
+  "saved": "2026-09-12T11:32:21.819Z",
+  "components": [
+    {
+      "type": "kaolinite_sheet",
+      "params": {
+        "Lx": 30,
+        "Ly": 26,
+        "layers": 1,
+        "d001": 20.14,
+        "shape": "矩形",
+        "style": "球棍",
+        "edgeH": false,
+        "strictCell": false,
+        "mineral": "illite",
+        "atomMode": "full",
+        "singleEl": "Si",
+        "singleLayers": 3
+      },
+      "name": "煤矸石-伊利石",
+      "id": "c10",
+      "transform": {
+        "position": [
+          -3,
+          -3,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": 1
+      },
+      "visible": true,
+      "locked": false
+    },
+    {
+      "type": "kaolinite_sheet",
+      "params": {
+        "Lx": 32,
+        "Ly": 26,
+        "layers": 1,
+        "d001": 7.4,
+        "shape": "矩形",
+        "style": "球棍",
+        "edgeH": false,
+        "strictCell": false,
+        "mineral": "kaolinite",
+        "atomMode": "full",
+        "singleEl": "Si",
+        "singleLayers": 3
+      },
+      "name": "煤矸石-高岭石",
+      "id": "c11",
+      "transform": {
+        "position": [
+          19,
+          -13,
+          -8
+        ],
+        "rotation": [
+          0,
+          28,
+          8
+        ],
+        "scale": 0.75
+      },
+      "visible": true,
+      "locked": false
+    },
+    {
+      "type": "nanoparticle",
+      "params": {
+        "radius": 11,
+        "grains": 150,
+        "seed": 7,
+        "mode": "簇装",
+        "atomMode": "single",
+        "singleEl": "Pd"
+      },
+      "name": "Pd 纳米颗粒",
+      "id": "c12",
+      "transform": {
+        "position": [
+          1,
+          2,
+          19
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": 1.35
+      },
+      "visible": true,
+      "locked": false
+    },
+    {
+      "type": "molecule",
+      "params": {
+        "kind": "O₂"
+      },
+      "name": "O₂",
+      "id": "c13",
+      "transform": {
+        "position": [
+          -22,
+          8,
+          27
+        ],
+        "rotation": [
+          0,
+          0,
+          25
+        ],
+        "scale": 9
+      },
+      "visible": true,
+      "locked": false
+    },
+    {
+      "type": "molecule",
+      "params": {
+        "kind": "H₂O",
+        "smiles": "Cc1ccccc1"
+      },
+      "name": "甲苯",
+      "id": "c14",
+      "transform": {
+        "position": [
+          26,
+          8,
+          22
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": 6
+      },
+      "visible": true,
+      "locked": false
+    }
+  ],
+  "annotations": [
+    {
+      "type": "scalebar",
+      "visible": true
+    }
+  ],
+  "shapes": [
+    {
+      "type": "text",
+      "id": "s103",
+      "x": 132,
+      "y": 10,
+      "w": 500,
+      "h": 24,
+      "rotation": 0,
+      "stroke": "#2b2f33",
+      "fill": "none",
+      "lineWidth": 2,
+      "dash": "solid",
+      "visible": true,
+      "locked": false,
+      "text": "C₆H₅CH₃ + 9/2 O₂ → C₆H₅CHO + CO₂ + H₂O",
+      "fontSize": 15,
+      "color": "#1a1d21",
+      "align": "left",
+      "outline": true
+    },
+    {
+      "type": "text",
+      "id": "s104",
+      "x": 129,
+      "y": 221,
+      "w": 105,
+      "h": 18,
+      "rotation": 0,
+      "stroke": "#2b2f33",
+      "fill": "none",
+      "lineWidth": 2,
+      "dash": "solid",
+      "visible": true,
+      "locked": false,
+      "text": "O₂ 解离吸附",
+      "fontSize": 13,
+      "color": "#1a1d21",
+      "align": "left",
+      "outline": true
+    },
+    {
+      "type": "text",
+      "id": "s105",
+      "x": 519,
+      "y": 166,
+      "w": 150,
+      "h": 18,
+      "rotation": 0,
+      "stroke": "#2b2f33",
+      "fill": "none",
+      "lineWidth": 2,
+      "dash": "solid",
+      "visible": true,
+      "locked": false,
+      "text": "甲苯 C₆H₅CH₃",
+      "fontSize": 13,
+      "color": "#1a1d21",
+      "align": "left",
+      "outline": true
+    },
+    {
+      "type": "text",
+      "id": "s106",
+      "x": 218,
+      "y": 299,
+      "w": 130,
+      "h": 18,
+      "rotation": 0,
+      "stroke": "#2b2f33",
+      "fill": "none",
+      "lineWidth": 2,
+      "dash": "solid",
+      "visible": true,
+      "locked": false,
+      "text": "Pd⁰ 纳米颗粒",
+      "fontSize": 13,
+      "color": "#1a1d21",
+      "align": "left",
+      "outline": true
+    },
+    {
+      "type": "text",
+      "id": "s107",
+      "x": 277,
+      "y": 532,
+      "w": 260,
+      "h": 18,
+      "rotation": 0,
+      "stroke": "#2b2f33",
+      "fill": "none",
+      "lineWidth": 2,
+      "dash": "solid",
+      "visible": true,
+      "locked": false,
+      "text": "煤矸石载体（伊利石 / 高岭石）",
+      "fontSize": 13,
+      "color": "#1a1d21",
+      "align": "left",
+      "outline": true
+    },
+    {
+      "type": "text",
+      "id": "s108",
+      "x": 578,
+      "y": 210,
+      "w": 110,
+      "h": 18,
+      "rotation": 0,
+      "stroke": "#2b2f33",
+      "fill": "none",
+      "lineWidth": 2,
+      "dash": "solid",
+      "visible": true,
+      "locked": false,
+      "text": "氧化产物",
+      "fontSize": 12,
+      "color": "#1a1d21",
+      "align": "left",
+      "outline": true
+    },
+    {
+      "type": "text",
+      "id": "s109",
+      "x": 550,
+      "y": 248,
+      "w": 214,
+      "h": 18,
+      "rotation": 0,
+      "stroke": "#2b2f33",
+      "fill": "none",
+      "lineWidth": 2,
+      "dash": "solid",
+      "visible": true,
+      "locked": false,
+      "text": "C₆H₅CHO + CO₂ + H₂O",
+      "fontSize": 13,
+      "color": "#1a1d21",
+      "align": "left",
+      "outline": true
+    },
+    {
+      "type": "arrow",
+      "id": "s110",
+      "x": 265,
+      "y": 341,
+      "w": 65,
+      "h": -66,
+      "rotation": 0,
+      "stroke": "#1d4ed8",
+      "fill": "none",
+      "lineWidth": 2,
+      "dash": "solid",
+      "visible": true,
+      "locked": false,
+      "anchors": {
+        "start": {
+          "kind": "free"
+        },
+        "end": {
+          "kind": "free"
+        }
+      },
+      "headSize": 10,
+      "bow": -20,
+      "heads": "end"
+    },
+    {
+      "type": "arrow",
+      "id": "s111",
+      "x": 425,
+      "y": 204,
+      "w": -59,
+      "h": 67,
+      "rotation": 0,
+      "stroke": "#b45309",
+      "fill": "none",
+      "lineWidth": 2,
+      "dash": "solid",
+      "visible": true,
+      "locked": false,
+      "anchors": {
+        "start": {
+          "kind": "free"
+        },
+        "end": {
+          "kind": "free"
+        }
+      },
+      "headSize": 10,
+      "bow": 22,
+      "heads": "end"
+    },
+    {
+      "type": "arrow",
+      "id": "s112",
+      "x": 422,
+      "y": 277,
+      "w": 30,
+      "h": -53,
+      "rotation": 0,
+      "stroke": "#15803d",
+      "fill": "none",
+      "lineWidth": 2,
+      "dash": "solid",
+      "visible": true,
+      "locked": false,
+      "anchors": {
+        "start": {
+          "kind": "free"
+        },
+        "end": {
+          "kind": "free"
+        }
+      },
+      "headSize": 10,
+      "bow": -12,
+      "heads": "end"
+    }
+  ]
+}
