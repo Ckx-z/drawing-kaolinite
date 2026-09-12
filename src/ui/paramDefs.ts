@@ -24,6 +24,8 @@ export interface ParamDef {
   disp?: (v: number) => string;
   /** 条件显隐（2026-09-08）：依赖其他参数时才渲染（如单原子模式的元素选择） */
   when?: (params: Record<string, unknown>) => boolean;
+  /** 长列表下拉（如 118 项元素）显示过滤输入框：按符号或中文名包含匹配（2026-09-12） */
+  searchable?: boolean;
 }
 
 /**
@@ -43,6 +45,7 @@ const ATOM_MODE_BASE: ParamDef[] = [
     label: '单原子元素',
     type: 'select',
     options: SINGLE_EL_OPTIONS,
+    searchable: true,
     when: (p) => p.atomMode === 'single',
   },
 ];
@@ -110,7 +113,7 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     { key: 'thickness', label: '厚度', unit: 'Å', min: 2, max: 20, step: 1 },
   ],
   packed_layers: [
-    { key: 'el', label: '原子元素', type: 'select', options: SINGLE_EL_OPTIONS },
+    { key: 'el', label: '原子元素', type: 'select', options: SINGLE_EL_OPTIONS, searchable: true },
     { key: 'n', label: '每边原子数', min: 2, max: 12, step: 1 },
     { key: 'layers', label: '堆叠层数', min: 1, max: 8, step: 1 },
     { key: 'dist', label: '原子间距', unit: 'Å', min: 2, max: 8, step: 0.2 },

@@ -19,7 +19,7 @@ import {
   buildPackedLayers,
   buildParticle,
 } from '../core/builders';
-import type { GeometryData } from '../core/geometry';
+import type { Atom, GeometryData } from '../core/geometry';
 import type { Annotation, MoleculeParams, SceneComponent, Transform } from '../core/types';
 import { drawAnnotations } from '../ui/annotations/draw';
 import { createCachedEngine } from '../core/cache';
@@ -96,6 +96,14 @@ export class RendererService {
   readonly tc: TransformControls;
 
   private records = new Map<string, ComponentRecord>();
+
+  /** 组件的首个原子实例网格（Alt+点击原子等 UI 拾取用；无原子型返回 null） */
+  atomMeshOf(compId: string): { userData: { atoms: Atom[] } } | null {
+    const rec = this.records.get(compId);
+    if (!rec) return null;
+    const m = rec.group.children.find((ch) => (ch as { userData: { matKind?: string } }).userData.matKind === 'atom');
+    return (m as unknown as { userData: { atoms: Atom[] } }) ?? null;
+  }
   /** T-11.6：3D 场集体可见性（纯 2D 模式 = false；盖在组件自身 visible 之上） */
   private sceneVisible = true;
   private cifText = '';
@@ -112,6 +120,11 @@ export class RendererService {
 
   /** 画布点击选中回调（null = 点击空白取消） */
   onSelect: ((id: string | null) => void) | null = null;
+  /**
+   * Alt+点击原子回调（2026-09-12）：命中 InstancedMesh 的具体原子实例。
+   * 需配合 instanced.addAtoms 写入的 userData.atoms（桶内原子数组，实例 k = arr[k]）。
+   */
+  onAtomClick: ((compId: string, atom: Atom) => void) | null = null;
   /** gizmo 拖动结束帧的变换同步回调（T-1.5 状态层接入） */
   onTransformChange: ((id: string) => void) | null = null;
 
@@ -1175,9 +1188,18 @@ export class RendererService {
     const targets = [...this.records.values()].filter((r) => r.group.visible).map((r) => r.group);
     const hits = raycaster.intersectObjects(targets, true);
     if (hits.length) {
-      let o: THREE.Object3D | null = hits[0].object;
+      const hit = hits[0];
+      let o: THREE.Object3D | null = hit.object;
       while (o && !o.userData.componentId) o = o.parent;
-      this.onSelect?.((o?.userData.componentId as string | undefined) ?? null);
+      const compId = (o?.userData.componentId as string | undefined) ?? null;
+      // Alt+点击原子（2026-09-12）：instanceId → 该桶原子（密排层切换"参与堆叠"等）
+      if (e.altKey && hit.instanceId !== undefined && hit.object.userData.matKind === 'atom') {
+        const bucket = hit.object.userData.atoms as Atom[] | undefined;
+        const atom = bucket?.[hit.instanceId];
+        if (compId && atom) this.onAtomClick?.(compId, atom);
+        return; // 不触发选中切换（编辑意图）
+      }
+      this.onSelect?.(compId);
     } else {
       this.onSelect?.(null);
     }

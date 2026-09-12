@@ -77,6 +77,10 @@ export const arrowShapeSchema = z.strictObject({
   anchors: anchorsSchema,
   /** 箭头头部尺寸（px） */
   headSize: z.number().min(4).max(24).default(10),
+  /** 弓高（px，2026-09-12 弧线箭头）：0 = 直线；正/负 = 沿弦法向两侧弯曲（电子转移弧线示意） */
+  bow: z.number().min(-200).max(200).default(0),
+  /** 箭头位置：end = 终点单头（默认）；both = 双端（可逆反应）；none = 仅线 */
+  heads: z.enum(['end', 'both', 'none']).default('end'),
 });
 export const lineShapeSchema = z.strictObject({
   type: z.literal('line'),

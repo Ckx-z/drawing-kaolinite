@@ -6,7 +6,7 @@
  * （描边可点，纯填充内部也命中——与直觉一致）。
  */
 import type { SceneShape } from '../../core/shapes/schema';
-import { nearestEdgePoint, normBox, resolveLineEnds, shapeHandles } from './draw';
+import { arrowCtrlPoint, nearestEdgePoint, normBox, resolveLineEnds, shapeHandles } from './draw';
 
 export interface HitCtx {
   shapes: SceneShape[];
@@ -33,7 +33,26 @@ export function hitShape(s: SceneShape, px: number, py: number, ctx: Pick<HitCtx
   const strokeTol = s.lineWidth / 2 + tol;
   if (s.type === 'arrow' || s.type === 'line') {
     const ends = resolveLineEnds(s, { shapes: [], components: ctx.components, project: ctx.project, width: ctx.width, height: ctx.height });
-    return ptSegDist(px, py, ends.start.x, ends.start.y, ends.end.x, ends.end.y) <= strokeTol;
+    const bow = 'bow' in s ? s.bow : 0;
+    if (!bow) {
+      return ptSegDist(px, py, ends.start.x, ends.start.y, ends.end.x, ends.end.y) <= strokeTol;
+    }
+    // 弧线：贝塞尔 16 段采样折线，逐段取最小距离（bow 几何与绘制 arrowCtrlPoint 同源）
+    const q = arrowCtrlPoint(ends.start, ends.end, bow);
+    let best = Infinity;
+    let prev: { x: number; y: number } = ends.start;
+    const N = 16;
+    for (let i = 1; i <= N; i++) {
+      const t = i / N;
+      const mt = 1 - t;
+      const pt = {
+        x: mt * mt * ends.start.x + 2 * mt * t * q.x + t * t * ends.end.x,
+        y: mt * mt * ends.start.y + 2 * mt * t * q.y + t * t * ends.end.y,
+      };
+      best = Math.min(best, ptSegDist(px, py, prev.x, prev.y, pt.x, pt.y));
+      prev = pt;
+    }
+    return best <= strokeTol;
   }
   const b = normBox(s);
   if (s.type === 'ellipse') {

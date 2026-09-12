@@ -26,6 +26,7 @@ export function addAtoms(g: THREE.Group, atoms: Atom[], ballstick: boolean): voi
     const m = new THREE.InstancedMesh(sph, atomMaterial, arr.length);
     m.userData.matKind = 'atom'; // T-4.1 双轨切换按此换材质
     m.userData.elements = arr.map((a) => a.el); // T-4.2 换色板重着色用
+    m.userData.atoms = arr; // 实例 k = arr[k]（Alt+点击原子拾取用，2026-09-12）
     for (let k = 0; k < arr.length; k++) {
       const a = arr[k];
       const r = a.r ?? baseR;

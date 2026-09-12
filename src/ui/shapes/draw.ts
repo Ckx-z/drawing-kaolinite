@@ -209,10 +209,27 @@ function drawText(c: ShapeDrawContext, s: Extract<SceneShape, { type: 'text' }>)
   ctx.restore();
 }
 
+/**
+ * 弧线箭头控制点（bow=0 时与直线一致）：弦中点沿左法向偏移弓高。
+ * 导出供命中检测/SVG 共用同一几何。
+ */
+export function arrowCtrlPoint(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  bow: number,
+): { x: number; y: number } {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { x: (a.x + b.x) / 2 + (-dy / len) * bow, y: (a.y + b.y) / 2 + (dx / len) * bow };
+}
+
 function drawArrow(c: ShapeDrawContext, s: ArrowShape | LineShape, withHead: boolean): void {
   const { ctx } = c;
   const ends = resolveLineEnds(s, c);
   const { start: a, end: b } = ends;
+  const bow = 'bow' in s ? s.bow : 0;
+  const q = arrowCtrlPoint(a, b, bow);
   ctx.save();
   ctx.lineWidth = s.lineWidth;
   ctx.strokeStyle = s.stroke;
@@ -221,20 +238,27 @@ function drawArrow(c: ShapeDrawContext, s: ArrowShape | LineShape, withHead: boo
   if (!a.visible || !b.visible) ctx.setLineDash([4, 4]);
   ctx.beginPath();
   ctx.moveTo(a.x, a.y);
-  ctx.lineTo(b.x, b.y);
+  if (bow) ctx.quadraticCurveTo(q.x, q.y, b.x, b.y);
+  else ctx.lineTo(b.x, b.y);
   ctx.stroke();
   ctx.setLineDash([]);
 
   if (withHead) {
     const head = 'headSize' in s ? s.headSize : 10;
-    const ang = Math.atan2(b.y - a.y, b.x - a.x);
-    ctx.beginPath();
-    ctx.moveTo(b.x, b.y);
-    ctx.lineTo(b.x - head * Math.cos(ang - Math.PI / 6), b.y - head * Math.sin(ang - Math.PI / 6));
-    ctx.lineTo(b.x - head * Math.cos(ang + Math.PI / 6), b.y - head * Math.sin(ang + Math.PI / 6));
-    ctx.closePath();
-    ctx.fillStyle = s.stroke;
-    ctx.fill();
+    const heads = 'heads' in s ? s.heads : 'end';
+    const drawHead = (tip: { x: number; y: number }, from: { x: number; y: number }): void => {
+      // 头部方向沿该端切线（弧线 = 指向控制点反方向；直线退化为弦方向）
+      const ang = Math.atan2(tip.y - from.y, tip.x - from.x);
+      ctx.beginPath();
+      ctx.moveTo(tip.x, tip.y);
+      ctx.lineTo(tip.x - head * Math.cos(ang - Math.PI / 6), tip.y - head * Math.sin(ang - Math.PI / 6));
+      ctx.lineTo(tip.x - head * Math.cos(ang + Math.PI / 6), tip.y - head * Math.sin(ang + Math.PI / 6));
+      ctx.closePath();
+      ctx.fillStyle = s.stroke;
+      ctx.fill();
+    };
+    if (heads !== 'none') drawHead(b, bow ? q : a);
+    if (heads === 'both') drawHead(a, q);
   }
   // 锚定端点小圆（free 端不画）
   ctx.fillStyle = s.stroke;

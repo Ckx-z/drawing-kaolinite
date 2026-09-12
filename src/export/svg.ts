@@ -322,13 +322,39 @@ export function shapesToSVG(o: SvgShapeOptions): string {
       const sy = fmt(start.y * s);
       const ex = fmt(end.x * s);
       const ey = fmt(end.y * s);
-      let body = `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" ${stroke}/>`;
+      // 弧线（bow≠0）：控制点几何与绘制层 arrowCtrlPoint 同源（弦中点 + 左法向 × bow）
+      const bow = sh.type === 'arrow' ? sh.bow : 0;
+      let body: string;
+      if (bow) {
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const qx = ((start.x + end.x) / 2 + (-dy / len) * bow) * s;
+        const qy = ((start.y + end.y) / 2 + (dx / len) * bow) * s;
+        body = `<path d="M ${sx} ${sy} Q ${fmt(qx)} ${fmt(qy)} ${ex} ${ey}" fill="none" ${stroke}/>`;
+      } else {
+        body = `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" ${stroke}/>`;
+      }
       if (sh.type === 'arrow') {
         const head = sh.headSize * s;
-        const ang = Math.atan2(end.y - start.y, end.x - start.x);
-        const p1 = { x: end.x * s - head * Math.cos(ang - Math.PI / 6), y: end.y * s - head * Math.sin(ang - Math.PI / 6) };
-        const p2 = { x: end.x * s - head * Math.cos(ang + Math.PI / 6), y: end.y * s - head * Math.sin(ang + Math.PI / 6) };
-        body += `<polygon points="${fmt(end.x * s)},${fmt(end.y * s)} ${fmt(p1.x)},${fmt(p1.y)} ${fmt(p2.x)},${fmt(p2.y)}" fill="${sh.stroke}"/>`;
+        // 各端头部方向：该端到控制点的切线（直线退化为弦方向）；控制点几何与绘制层同源
+        const ctrl = bow
+          ? (() => {
+              const dx = end.x - start.x;
+              const dy = end.y - start.y;
+              const len = Math.hypot(dx, dy) || 1;
+              return { x: (start.x + end.x) / 2 + (-dy / len) * bow, y: (start.y + end.y) / 2 + (dx / len) * bow };
+            })()
+          : start;
+        const headPoly = (tip: { x: number; y: number }, from: { x: number; y: number }): string => {
+          const ang = Math.atan2(tip.y - from.y, tip.x - from.x);
+          const p1 = { x: tip.x * s - head * Math.cos(ang - Math.PI / 6), y: tip.y * s - head * Math.sin(ang - Math.PI / 6) };
+          const p2 = { x: tip.x * s - head * Math.cos(ang + Math.PI / 6), y: tip.y * s - head * Math.sin(ang + Math.PI / 6) };
+          return `<polygon points="${fmt(tip.x * s)},${fmt(tip.y * s)} ${fmt(p1.x)},${fmt(p1.y)} ${fmt(p2.x)},${fmt(p2.y)}" fill="${sh.stroke}"/>`;
+        };
+        const heads = sh.heads ?? 'end';
+        if (heads !== 'none') body += headPoly(end, ctrl);
+        if (heads === 'both') body += headPoly(start, ctrl);
       }
       parts.push(`<g id="${gid}">${body}</g>`);
     }
@@ -343,7 +369,10 @@ export function shapesToSVG(o: SvgShapeOptions): string {
 export function viewTransformedShape(s: SceneShape, z: number, px: number, py: number): SceneShape {
   const extra: Record<string, unknown> = {};
   if (s.type === 'text') extra.fontSize = s.fontSize * z;
-  if (s.type === 'arrow') extra.headSize = s.headSize * z;
+  if (s.type === 'arrow') {
+    extra.headSize = s.headSize * z;
+    extra.bow = s.bow * z; // 弓高随视口同步缩放（弧线几何所见即所得）
+  }
   return {
     ...s,
     x: s.x * z + px,

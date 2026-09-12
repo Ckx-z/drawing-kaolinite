@@ -244,3 +244,21 @@ describe('图元几何纯函数（绘制/命中共用）', () => {
     void CIF;
   });
 });
+
+describe('箭头样式（2026-09-12：bow 弧线 + heads 双端）', () => {
+  it('bow/heads 默认值（0/end）与显式往返；非法值拒绝', () => {
+    const plain = shapeSchema.parse({ type: 'arrow', id: 's1', x: 0, y: 0, w: 100, h: 0 }) as ArrowShape;
+    expect(plain.bow).toBe(0);
+    expect(plain.heads).toBe('end');
+
+    const curved = shapeSchema.parse({ type: 'arrow', id: 's2', x: 0, y: 0, w: 100, h: 0, bow: -60, heads: 'both' }) as ArrowShape;
+    expect(curved.bow).toBe(-60);
+    expect(curved.heads).toBe('both');
+
+    expect(shapeSchema.safeParse({ type: 'arrow', id: 's3', x: 0, y: 0, w: 1, h: 0, bow: 300 }).success).toBe(false);
+    expect(shapeSchema.safeParse({ type: 'arrow', id: 's4', x: 0, y: 0, w: 1, h: 0, heads: 'mid' }).success).toBe(false);
+    // line 不受影响（无 bow/heads）
+    const ln = shapeSchema.parse({ type: 'line', id: 's5', x: 0, y: 0, w: 50, h: 50 });
+    expect('bow' in ln).toBe(false);
+  });
+});

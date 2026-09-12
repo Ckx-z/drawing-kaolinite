@@ -93,25 +93,42 @@ function RangeControl(props: { compId: string; def: ParamDef; value: number; par
 
 function SelectControl(props: { compId: string; def: ParamDef; value: string }) {
   const { compId, def, value } = props;
+  const [query, setQuery] = useState('');
+  const norm = query.trim().toLowerCase();
+  // 过滤（符号或显示名包含匹配）；当前选中项即使被过滤掉也保留显示，避免 select 显示错位
+  const entries = (def.options ?? []).flatMap((op) => {
+    const v = typeof op === 'string' ? op : op.value;
+    const label = typeof op === 'string' ? op : op.label;
+    return { v, label };
+  });
+  const filtered = norm
+    ? entries.filter((e) => e.v.toLowerCase().includes(norm) || e.label.toLowerCase().includes(norm))
+    : entries;
+  // 非过滤态：当前选中项即使不在 options 也附加显示（避免 select 显示错位）；
+  // 过滤态：不附加（用户正要换值，无关项干扰）
+  const shown = norm || filtered.some((e) => e.v === value) ? filtered : [...entries.filter((e) => e.v === value), ...filtered];
   return (
     <div className="ctl">
       <div className="row">
         <label>{def.label}</label>
       </div>
+      {def.searchable && (
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="输入符号 / 中文名过滤…"
+          style={{ width: '100%', marginBottom: 4 }}
+        />
+      )}
       <select
         value={value}
         onChange={(e) => sceneStore.getState().updateParams(compId, { [def.key]: e.target.value } as never)}
       >
-        {def.options?.map((op) => {
-          // 对象选项存 value 显示 label（如元素 "Si 硅" 存 "Si"）
-          const v = typeof op === 'string' ? op : op.value;
-          const label = typeof op === 'string' ? op : op.label;
-          return (
-            <option key={v} value={v}>
-              {label}
-            </option>
-          );
-        })}
+        {shown.map((e) => (
+          <option key={e.v} value={e.v}>
+            {e.label}
+          </option>
+        ))}
       </select>
     </div>
   );
@@ -192,7 +209,7 @@ function PackedMaskControl(props: { compId: string; params: Record<string, unkno
           />
         ))}
       </div>
-      <p className="hint">☑ 参与 · ☐ 仅第一层；勾选数：{Array.from({ length: total }, (_, k) => bit(k)).filter(Boolean).length}/{total}</p>
+      <p className="hint">☑ 参与 · ☐ 仅第一层；勾选数：{Array.from({ length: total }, (_, k) => bit(k)).filter(Boolean).length}/{total}；也可按住 Alt 直接点击画布中第一层原子切换</p>
     </div>
   );
 }
@@ -392,6 +409,29 @@ function ShapeSection() {
           <option value="dashed">虚线</option>
         </select>
       </div>
+      {shape.type === 'arrow' && (
+        <>
+          <div className="ctl">
+            <div className="row">
+              <label>弯曲（弓高）</label>
+              <span className="val">{Math.round(shape.bow)}px</span>
+            </div>
+            <input type="range" min={-150} max={150} step={2} value={shape.bow}
+              onChange={(e) => upd({ bow: parseFloat(e.target.value) } as never)} />
+            <p className="hint">0 = 直线；正负向两侧弯（电子转移弧线）</p>
+          </div>
+          <div className="ctl">
+            <div className="row">
+              <label>箭头位置</label>
+            </div>
+            <select value={shape.heads} onChange={(e) => upd({ heads: e.target.value as 'end' | 'both' | 'none' } as never)}>
+              <option value="end">终点单头</option>
+              <option value="both">双端（可逆反应）</option>
+              <option value="none">无头（仅线）</option>
+            </select>
+          </div>
+        </>
+      )}
       {!isLine && (
         <div className="ctl">
           <div className="row">

@@ -103,6 +103,33 @@ export default function SceneCanvas() {
     const svc = new RendererService(host);
     svc.setCifText(kaoliniteCif);
     svc.onSelect = (id) => sceneStore.getState().select(id);
+    // Alt+点击原子（2026-09-12）：密排原子层 → 切换该原子所在列的"参与堆叠"掩码位。
+    // 视角下命中的常是顶层原子——按水平最近归属到第一层格点（与 builder 掩码归属同规则）
+    svc.onAtomClick = (compId, atom) => {
+      const s = sceneStore.getState();
+      const comp = s.components.find((c) => c.id === compId);
+      if (!comp || comp.type !== 'packed_layers') return;
+      const n = comp.params.n ?? 7;
+      const mesh = svc.atomMeshOf(compId);
+      if (!mesh) return;
+      const layer0 = mesh.userData.atoms.filter((a) => a.layer === 0);
+      let target = atom;
+      if (atom.layer !== 0) {
+        let bd = Infinity;
+        for (const a of layer0) {
+          const d = (a.x - atom.x) ** 2 + (a.y - atom.y) ** 2;
+          if (d < bd) {
+            bd = d;
+            target = a;
+          }
+        }
+      }
+      const idx = layer0.indexOf(target);
+      if (idx < 0 || idx >= n * n) return;
+      const bits = Array.from({ length: n * n }, (_, k) => (String(comp.params.mask ?? '').charAt(k) === '0' ? '0' : '1'));
+      bits[idx] = bits[idx] === '1' ? '0' : '1';
+      sceneStore.getState().updateParams(compId, { mask: bits.join('') } as never);
+    };
     svc.onTransformChange = (id) => {
       const t = svc.getComponentTransform(id);
       if (t) sceneStore.getState().setTransform(id, t);
