@@ -75,6 +75,21 @@ export interface SceneState {
   addComponent: (type: ComponentType, opts?: AddComponentOptions) => string;
   removeComponent: (id: string) => void;
   select: (id: string | null) => void;
+  /**
+   * 组件多选（T-7.3，Shift+点击）：末位为主选；结果 0 → 全清 / 1 → 转单选 /
+   * ≥2 → 多选态（selectionId=null，gizmo 收起，面板显示批量操作区）。
+   */
+  componentSelectionIds: string[];
+  toggleComponentSelection: (id: string) => void;
+  selectComponentIds: (ids: string[]) => void;
+  /** 批量：位置对齐到主选的某轴分量 */
+  alignComponents: (axis: 0 | 1 | 2) => void;
+  /** 批量：沿轴排序后首尾不动中间等距（≥3 个成员生效） */
+  distributeComponents: (axis: 0 | 1 | 2) => void;
+  /** 批量：统一参数（风格/单原子模式/矿物等；类型不适用该键的成员自动跳过） */
+  applyParamsToSelection: (patch: Record<string, unknown>) => void;
+  /** 批量：统一缩放 */
+  applyScaleToSelection: (scale: number) => void;
   setVisibility: (id: string, visible: boolean) => void;
   /** 锁定/解锁（T-3.3：锁定后点击不选中、gizmo 不吸附；锁定选中组件会取消其选中） */
   toggleLock: (id: string) => void;
@@ -141,6 +156,7 @@ export function createSceneStore(): SceneStore {
   return createStore<SceneState>()((set, get) => ({
     components: [],
     selectionId: null,
+    componentSelectionIds: [],
     palette: {},
     annotations: [],
     shapes: [],
@@ -215,7 +231,103 @@ export function createSceneStore(): SceneStore {
         const comp = get().components.find((c) => c.id === id);
         if (!comp || comp.locked) return;
       }
-      set({ selectionId: id, shapeSelectionIds: id !== null ? [] : get().shapeSelectionIds });
+      set({
+        selectionId: id,
+        shapeSelectionIds: id !== null ? [] : get().shapeSelectionIds,
+        componentSelectionIds: id !== null ? [] : get().componentSelectionIds,
+      });
+    },
+
+    toggleComponentSelection: (id) => {
+      const comp = get().components.find((c) => c.id === id);
+      if (!comp || comp.locked) return;
+      // 基准 = 现有多选；无则从单选起步（Shift 语义：在现有选择上叠加）
+      const curSel = get().selectionId;
+      const base: string[] = get().componentSelectionIds.length
+        ? get().componentSelectionIds
+        : curSel
+          ? [curSel]
+          : [];
+      const next = base.includes(id) ? base.filter((x) => x !== id) : [...base, id];
+      if (next.length === 0) set({ componentSelectionIds: [], selectionId: null, shapeSelectionIds: [] });
+      else if (next.length === 1) set({ componentSelectionIds: [], selectionId: next[0]!, shapeSelectionIds: [] });
+      else set({ componentSelectionIds: next, selectionId: null, shapeSelectionIds: [] });
+    },
+
+    selectComponentIds: (ids) => {
+      const comps = get().components;
+      const wanted = ids.filter((id) => {
+        const c = comps.find((x) => x.id === id);
+        return !!c && !c.locked;
+      });
+      if (wanted.length === 0) set({ componentSelectionIds: [], selectionId: null, shapeSelectionIds: [] });
+      else if (wanted.length === 1) set({ componentSelectionIds: [], selectionId: wanted[0]!, shapeSelectionIds: [] });
+      else set({ componentSelectionIds: wanted, selectionId: null, shapeSelectionIds: [] });
+    },
+
+    alignComponents: (axis) => {
+      const ids = get().componentSelectionIds;
+      if (ids.length < 2) return;
+      const leader = get().components.find((c) => c.id === ids[ids.length - 1]);
+      if (!leader) return;
+      const target = leader.transform.position[axis];
+      const wanted = new Set(ids);
+      set({
+        components: get().components.map((c) => {
+          if (!wanted.has(c.id) || c.locked || c.id === leader.id) return c;
+          const position = c.transform.position.map((v, i) => (i === axis ? target : v)) as Transform['position'];
+          return { ...c, transform: transformSchema.parse({ ...c.transform, position }) };
+        }),
+      });
+    },
+
+    distributeComponents: (axis) => {
+      const ids = get().componentSelectionIds;
+      if (ids.length < 3) return;
+      const wanted = new Set(ids);
+      const members = get()
+        .components.filter((c) => wanted.has(c.id) && !c.locked)
+        .sort((a, b) => a.transform.position[axis] - b.transform.position[axis]);
+      if (members.length < 3) return;
+      const first = members[0]!.transform.position[axis];
+      const last = members[members.length - 1]!.transform.position[axis];
+      const step = (last - first) / (members.length - 1);
+      const targetOf = new Map(members.map((c, i) => [c.id, first + i * step]));
+      set({
+        components: get().components.map((c) => {
+          const t = targetOf.get(c.id);
+          if (t === undefined) return c;
+          const position = c.transform.position.map((v, i) => (i === axis ? t : v)) as Transform['position'];
+          return { ...c, transform: transformSchema.parse({ ...c.transform, position }) };
+        }),
+      });
+    },
+
+    applyParamsToSelection: (patch) => {
+      const ids = new Set(get().componentSelectionIds);
+      if (ids.size < 2) return;
+      set({
+        components: get().components.map((c) => {
+          if (!ids.has(c.id) || c.locked) return c;
+          try {
+            // strictObject 拒绝不适用该类型的参数键 → 该成员自动跳过（如矿物键遇 molecule）
+            return componentSchema.parse({ ...c, params: { ...c.params, ...patch } }) as typeof c;
+          } catch {
+            return c;
+          }
+        }),
+      });
+    },
+
+    applyScaleToSelection: (scale) => {
+      const ids = new Set(get().componentSelectionIds);
+      if (ids.size < 2) return;
+      set({
+        components: get().components.map((c) => {
+          if (!ids.has(c.id) || c.locked) return c;
+          return { ...c, transform: transformSchema.parse({ ...c.transform, scale }) };
+        }),
+      });
     },
 
     setVisibility: (id, visible) => {
@@ -414,6 +526,7 @@ export function createSceneStore(): SceneStore {
       set({
         shapeSelectionIds: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id],
         selectionId: null,
+        componentSelectionIds: [], // T-7.3 与组件多选互斥
       });
     },
 

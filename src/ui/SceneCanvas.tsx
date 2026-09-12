@@ -102,7 +102,11 @@ export default function SceneCanvas() {
     if (!host) return;
     const svc = new RendererService(host);
     svc.setCifText(kaoliniteCif);
-    svc.onSelect = (id) => sceneStore.getState().select(id);
+    svc.onSelect = (id, additive) => {
+      // T-7.3：Shift+点击 = 组件多选切换；普通点击 = 单选（清多选）
+      if (additive && id) sceneStore.getState().toggleComponentSelection(id);
+      else sceneStore.getState().select(id);
+    };
     // Alt+点击原子（2026-09-12）：密排原子层 → 切换该原子所在列的"参与堆叠"掩码位。
     // 视角下命中的常是顶层原子——按水平最近归属到第一层格点（与 builder 掩码归属同规则）
     svc.onAtomClick = (compId, atom) => {

@@ -329,6 +329,133 @@ function AnnotationSection() {
 }
 
 /**
+ * gizmo 吸附控件（T-7.3）：位置网格 / 旋转步进，直接映射 TransformControls
+ * 内置 snap（视图态，不持久化）。单选（变换区上方）与多选批量区共用。
+ */
+function SnapControls(props: { snap: { grid: number | null; angleDeg: number | null }; onChange: (s: { grid: number | null; angleDeg: number | null }) => void }) {
+  const { snap, onChange } = props;
+  return (
+    <>
+      <div className="ctl">
+        <div className="row">
+          <label>吸附：位置网格</label>
+        </div>
+        <select
+          value={snap.grid ?? 'off'}
+          onChange={(e) => onChange({ ...snap, grid: e.target.value === 'off' ? null : Number(e.target.value) })}
+        >
+          <option value="off">关闭</option>
+          <option value="1">1 Å</option>
+          <option value="2">2 Å</option>
+          <option value="5">5 Å</option>
+        </select>
+      </div>
+      <div className="ctl">
+        <div className="row">
+          <label>吸附：旋转步进</label>
+        </div>
+        <select
+          value={snap.angleDeg ?? 'off'}
+          onChange={(e) => onChange({ ...snap, angleDeg: e.target.value === 'off' ? null : Number(e.target.value) })}
+        >
+          <option value="off">关闭</option>
+          <option value="5">5°</option>
+          <option value="15">15°</option>
+          <option value="45">45°</option>
+        </select>
+      </div>
+    </>
+  );
+}
+
+/**
+ * 组件多选批量操作区（T-7.3，Shift+点击 ≥2 个组件时显示）：
+ * 对齐 / 等间距分布 / 统一参数（风格、单原子模式、矿物、缩放——以末位主选为基准，
+ * 类型不适用的成员自动跳过）。每个命令一条撤销记录。
+ */
+function BatchSection(props: { snap: { grid: number | null; angleDeg: number | null }; onSnap: (s: { grid: number | null; angleDeg: number | null }) => void }) {
+  const ids = useStore(sceneStore, (s) => s.componentSelectionIds);
+  const comps = useStore(sceneStore, (s) => s.components);
+  if (ids.length < 2) return null;
+  const members = comps.filter((c) => ids.includes(c.id));
+  const leader = members.find((c) => c.id === ids[ids.length - 1]) ?? members[members.length - 1];
+  if (!leader) return null;
+  const st = sceneStore.getState();
+  const leaderParams = leader.params as Record<string, unknown>;
+  const has = (k: string): boolean => k in leaderParams;
+  return (
+    <section className="right-section">
+      <h3>
+        批量操作<span className="tip">（已选 {ids.length} 项 · 主选 {leader.name}）</span>
+      </h3>
+      <p className="hint">Shift+点击画布可增删选择；Esc 取消。对齐/统一以主选为基准，锁定成员跳过。</p>
+      <div className="ctl">
+        <div className="row">
+          <label>对齐位置（以主选为基准）</label>
+        </div>
+        <div className="btnrow">
+          <button className="mini" onClick={() => st.alignComponents(0)}>对齐 X</button>
+          <button className="mini" onClick={() => st.alignComponents(1)}>对齐 Y</button>
+          <button className="mini" onClick={() => st.alignComponents(2)}>对齐 Z</button>
+        </div>
+        {ids.length >= 3 && (
+          <div className="btnrow" style={{ marginTop: 4 }}>
+            <button className="mini" onClick={() => st.distributeComponents(0)}>等间距 X</button>
+            <button className="mini" onClick={() => st.distributeComponents(2)}>等间距 Z</button>
+          </div>
+        )}
+      </div>
+      <div className="ctl">
+        <div className="row">
+          <label>统一参数（类型不适用者自动跳过）</label>
+        </div>
+        <div className="btnrow">
+          <button
+            className="mini"
+            disabled={!has('style')}
+            onClick={() => st.applyParamsToSelection({ style: leaderParams.style })}
+          >
+            统一渲染风格
+          </button>
+          <button
+            className="mini"
+            disabled={!has('atomMode')}
+            onClick={() =>
+              st.applyParamsToSelection({
+                atomMode: leaderParams.atomMode,
+                singleEl: leaderParams.singleEl,
+                ...(has('singleLayers') ? { singleLayers: leaderParams.singleLayers } : {}),
+              })
+            }
+          >
+            统一单原子模式
+          </button>
+        </div>
+        <div className="btnrow" style={{ marginTop: 4 }}>
+          <button
+            className="mini"
+            disabled={!has('mineral')}
+            onClick={() =>
+              st.applyParamsToSelection({
+                mineral: leaderParams.mineral,
+                ...(has('d001') ? { d001: leaderParams.d001 } : {}),
+              })
+            }
+          >
+            统一矿物
+          </button>
+          <button className="mini" onClick={() => st.applyScaleToSelection(leader.transform.scale)}>
+            统一缩放
+          </button>
+        </div>
+      </div>
+      <div className="subhead">吸 附</div>
+      <SnapControls snap={props.snap} onChange={props.onSnap} />
+    </section>
+  );
+}
+
+/**
  * 图元样式区（T-11.4）：图元选中时显示（与组件参数区互斥——选择本身互斥）。
  * 文本/字号/颜色/线宽/线型/旋转 + Z 序 + 编组。
  */
@@ -482,6 +609,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 export default function ParamPanel() {
   const selected = useStore(sceneStore, (s) => s.components.find((c) => c.id === s.selectionId) ?? null);
+  const multiIds = useStore(sceneStore, (s) => s.componentSelectionIds);
   const hasShapeSel = useStore(sceneStore, (s) => s.shapeSelectionIds.length > 0);
   const [gizmoMode, setGizmoMode] = useState<'translate' | 'rotate'>('translate');
 
@@ -495,6 +623,14 @@ export default function ParamPanel() {
       </>
     );
   }
+
+  // T-7.3 吸附（视图态；gizmo 平移网格/旋转步进）
+  const [snap, setSnap] = useState<{ grid: number | null; angleDeg: number | null }>({ grid: null, angleDeg: null });
+  const applySnap = (next: { grid: number | null; angleDeg: number | null }): void => {
+    setSnap(next);
+    rendererRef.current?.setSnap(next);
+  };
+  if (multiIds.length >= 2) return <BatchSection snap={snap} onSnap={applySnap} />;
 
   if (!selected) {
     return (
@@ -558,6 +694,9 @@ export default function ParamPanel() {
           />
         );
       })}
+
+      <div className="subhead">吸 附</div>
+      <SnapControls snap={snap} onChange={applySnap} />
 
       <div className="subhead">变 换</div>
       <div className="grid3">

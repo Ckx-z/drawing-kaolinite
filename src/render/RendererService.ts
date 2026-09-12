@@ -119,8 +119,8 @@ export class RendererService {
   private readonly onDown = (e: PointerEvent): void => this.handleDown(e);
   private readonly onUp = (e: PointerEvent): void => this.handleUp(e);
 
-  /** 画布点击选中回调（null = 点击空白取消） */
-  onSelect: ((id: string | null) => void) | null = null;
+  /** 画布点击选中回调（null = 点击空白取消；additive = Shift 多选切换，T-7.3） */
+  onSelect: ((id: string | null, additive?: boolean) => void) | null = null;
   /**
    * Alt+点击原子回调（2026-09-12）：命中 InstancedMesh 的具体原子实例。
    * 需配合 instanced.addAtoms 写入的 userData.atoms（桶内原子数组，实例 k = arr[k]）。
@@ -128,6 +128,15 @@ export class RendererService {
   onAtomClick: ((compId: string, atom: Atom) => void) | null = null;
   /** gizmo 拖动结束帧的变换同步回调（T-1.5 状态层接入） */
   onTransformChange: ((id: string) => void) | null = null;
+
+  /**
+   * gizmo 吸附（T-7.3）：grid = 平移网格间距（Å，null 关）；angleDeg = 旋转步进（度，null 关）。
+   * 直接映射 TransformControls 内置 translationSnap / rotationSnap。
+   */
+  setSnap(opts: { grid?: number | null; angleDeg?: number | null }): void {
+    this.tc.setTranslationSnap(opts.grid ?? null);
+    this.tc.setRotationSnap(opts.angleDeg != null ? (opts.angleDeg * Math.PI) / 180 : null);
+  }
 
   constructor(private container: HTMLElement, opts?: { engine?: GeometryEngine }) {
     // T-2.9：默认引擎外包缓存层（内容寻址，命中即免 Worker 重建）
@@ -1227,7 +1236,7 @@ export class RendererService {
         if (compId && atom) this.onAtomClick?.(compId, atom);
         return; // 不触发选中切换（编辑意图）
       }
-      this.onSelect?.(compId);
+      this.onSelect?.(compId, e.shiftKey);
     } else {
       this.onSelect?.(null);
     }

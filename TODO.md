@@ -100,7 +100,7 @@
 - 关联文件：`src/state/commands.ts`、`src/state/history.ts`
 - 完成记录：命令 = 执行前后全量快照（状态仅参数/变换，快照 ~KB 级，天然满足逐字段一致）；`attachHistory(store)` 实例方法包装实现 UI 调用点零改动（方法签名不变）。覆盖 9 类写操作（add/remove/visibility/lock/params/transform/rename/loadScene/clear），select 为视图状态不入栈。合并窗口 800ms：滑块/gizmo 连续拖动合并为一条（一次 Ctrl+Z 撤销整个拖动）；失败操作（zod 抛错/目标缺失）不入栈；栈深默认 100 可配；undo/redo 自动触发 rendererBinding 差异同步。快捷键 Ctrl/Cmd+Z、Ctrl/Cmd+Shift+Z、Ctrl/Cmd+Y（App.tsx）。验收测试 12 条全过（含混合序列撤销到底/重做到顶 JSON 逐字段一致、id 稳定性、合并窗口时钟注入）。vitest 78 passed、build/lint 全绿。实际 0.5d。
 
-### T-2.2 [P1] Web Worker 化几何生成
+### T-2.2 ✅ [P1] Web Worker 化几何生成（2026-09-06 完成，原生 postMessage 方案；worker.ts/geometryWorker.ts，缓存引擎 createCachedEngine）
 - 描述：几何内核调用迁入 Worker（Comlink 或原生 postMessage），主线程仅收 `{atoms, bonds}`；大场景（>15k 原子）参数拖动不卡 UI。
 - 依赖：T-1.3
 - 验收标准：双层壁埃洛石管（15,686 原子）生成期间主线程长任务 < 50ms；滑块连续拖动帧率 ≥ 30fps。
@@ -115,7 +115,7 @@
 - 关联文件：`src/state/moduleLibrary.ts`、`src/ui/LibraryPanel.tsx`（实为独立 `src/ui/ModulePanel.tsx`）
 - 完成记录：实际 0.5d。Dexie 4（表 `modules`：id/name/type/createdAt 索引）+ 内存缓存；迁移策略=legacy `kaolin_modules_v1` 逐条 schema 校验后 bulkPut、**原 key 保留不删**、migrated 标记防重；导入导出 `kaolin-modules/v1`（非法条目跳过计数、同 id 覆盖）；变更通知走 `kaolin-modules-changed` 事件。UI：`ModulePanel`（卡片网格/实例化副本/删除/导入导出）+ TopBar `★存为模块`（`snapshotComponent` 隔离快照 150×110 JPEG）。单测 9 条（fake-indexeddb）：**200 模块入库实测 <100ms**（远优于 2s）、缓存打开 <100ms、迁移幂等不丢、往返无损。浏览器实测：存为模块/复用副本（M2 副本 layers=3/d001=10/六角 全参数还原）/删除去重全过。附带修复：素材库添加后自动选中（demo 行为对齐）。
 
-### T-2.4 [P2] 多矿物 CIF 支持（蒙脱石/伊利石等）—— 已决策（Q1）：参数化开关
+### T-2.4 🔶 [P2] 多矿物 CIF 支持（蒙脱石/伊利石等）—— 主体完成 2026-09-12（五矿物 CIF 接线 + 中文名搜索 + 矿物下拉切换；剩 showInterlayer 显隐开关小尾巴）
 - 描述：接入 `data/` 中地开石/珍珠石/蒙脱石/伊利石 CIF；素材库增加矿物选择。层间阳离子/水分子**默认保留并显示**（体现真实结构）；参数面板新增 `showInterlayer` 勾选控制显隐；预留 `interlayerWater` 开关扩展（显示/隐藏/部分脱水）。
 - 依赖：T-1.3
 - 验收标准：四种矿物各生成一张默认片层且原子计数与化学计量核对一致；勾选/取消 `showInterlayer` 时层间物质原子被正确过滤/恢复（原子数断言），骨架结构不受影响。
@@ -189,7 +189,7 @@
 - 关联文件：`src/ui/LibraryPanel.tsx`、`src/state/moduleLibrary.ts`
 - 完成记录：`filterModules` 纯函数（关键词命中名称+标签（不区分大小写）→ 类型筛选（六类+all）→ 收藏优先、组内 createdAt 倒序，旧条目无时间字段排末组）；schema 增 `favorite` optional（旧条目缺省合法，向后兼容）；`toggleFavorite` 持久化+缓存刷新+事件通知；ModulePanel 增搜索框/类型下拉/收藏星标（.fav 常显，收藏态金色）/无匹配提示；收藏与 tags 随导入导出往返保留。验收测试 5 条：200 模块检索实测 <100ms（远优于验收线）、类型筛选互斥、旧条目（无 version/favorite/createdAt）兼容参与检索与排序、收藏持久化、标签检索。vitest 98 passed（+5）、build/lint 全绿。实际 0.5d。
 
-### T-3.3 [P2] 组件锁定与分组
+### T-3.3 ✅ [P2] 组件锁定与分组（locked/group 字段、groupComponents/ungroupComponents/toggleLock、组感知变换同步；后续 2026-09-12 旋转增量改最短角差）
 - 描述：图层锁定（选中/变换屏蔽）、成组/解组（组内一起选中与变换），补全 schema 中 `locked`/`group` 字段。
 - 依赖：T-1.5、T-2.1
 - 验收标准：锁定组件点击不选中、gizmo 不吸附；成组后拖动/旋转整体一致，解组恢复独立。
@@ -314,8 +314,9 @@
 - 关联文件：`src/ui/shortcuts.ts`（新建）
 - 完成记录：`shortcuts.ts` 声明式注册表（key/mod/shift/label/needsSelection/run 单一事实源，速查浮层同源渲染 → 快捷键与说明永不脱节）；11 项：Ctrl/Cmd+Z 撤销、+Shift+Z/Ctrl+Y 重做、Ctrl+C 复制、Ctrl+V 粘贴（+12Å 偏移，schema 校验+入撤销栈）、Ctrl+D 原地副本、Del/Backspace 删除、H 显隐、Esc 取消、Shift+? 速查浮层（? 或点空白关闭）。剪贴板 = 模块级单槽（选中组件 type/name/params/transform 快照）。App keydown 统一分发（输入框聚焦跳过由调用方保留）。验收：单测 9 条（注册表无键位冲突/速查去重/分发门控/needsSelection/undo-redo 经真实历史栈/H 显隐/? 浮层/未注册不消费/复制粘贴偏移与自动选中）；调试修复两个真 bug——分发器 shift 语义（未声明 shift 的键在按 Shift 时也匹配 → Shift+Z 错触 undo）、addComponent 返回 string 被当对象取 .id；浏览器端到端实测全部生效（截图归档速查浮层）。vitest 216 passed（+9）、build/lint 全绿。实际 1d（预估 0.5–1d）。"首次引导"以速查浮层替代（首启自动展示一次的实现留待体验轮）。
 
-### T-7.3 [P3] 吸附对齐 / 批量操作
+### T-7.3 ✅ [P3] 吸附对齐 / 批量操作（2026-09-12 完成）
 - 描述：组件位置/旋转吸附（网格、水平线、等距角），多选后批量对齐分布；批量参数修改（如统一色板）。
+- 完成记录：**吸附** = TransformControls 内置 translationSnap/rotationSnap（ParamPanel 吸附下拉：网格 1/2/5Å、旋转 5/15/45°，视图态）；"水平线/对齐分布"经 **Shift+点击组件多选**（componentSelectionIds，末位主选，0→全清/1→转单选/≥2→多选态收起 gizmo，与图元选择互斥）+ ParamPanel 批量区实现：对齐 X/Y/Z（主选基准）、等间距 X/Z（首尾不动）、统一渲染风格/单原子模式/矿物/缩放（strictObject 类型不适用自动跳过，锁定成员跳过）；批量方法入 history TRACKED（一条撤销）。色板统一本就是全局色板（T-4.2）无需批量。338 tests（+6）。
 - 依赖：T-3.3
 - 验收标准：吸附开启后拖动落点误差为 0；多选批量操作一条命令可整体撤销。
 - 预估工时：1–2d
@@ -378,7 +379,7 @@
 ### T-9.7 ✅ [P3] M8「管 + 颗粒 + 分子」复合模块（埃洛石@CeO₂ 场景模板化）（2026-09-06 入库）
 - 依赖：T-9.3、T-9.6、T-3.1 ｜ 验收：一键复现示例场景构图 ｜ 工时：1d
 - 完成记录：示例场景（6 组件：双层管+颗粒A/B+H₂O/O₂/Ca²⁺，16,098 原子）经「★ 存组合」整体入库；复用验收——清空→实例化后逐组件 type/position/rotation/params 全部一致（allOk，含原子数 15686/246/159/3/3/1）。**附带修复 preset.ts 既有 bug**：O₂ ×1 组件漏传 kind 参数（实际渲染为 H₂O），补 `params: { kind: 'O₂' }`。**素材积累目标达成：M1~M8 共 9 个成品模块（目标 8–10）**。
-### T-9.8 [P3] M9「界面反应场景模板」（基底+片层+分子+箭头占位）
+### T-9.8 ✅ [P3] M9「界面反应场景模板」（已被 T-11.8 机理图模板库吸收：seed-templates.json「界面反应三步版式」）
 - 依赖：T-9.4、T-4.4 ｜ 验收：模板含标注层占位可直接改文字 ｜ 工时：1d
 
 ---

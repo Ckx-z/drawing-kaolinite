@@ -68,6 +68,11 @@ const TRACKED = [
   'updateAnnotation',
   'removeAnnotation',
   'setPalette',
+  // T-7.3 批量操作（每方法一次 set → 一条命令）
+  'alignComponents',
+  'distributeComponents',
+  'applyParamsToSelection',
+  'applyScaleToSelection',
 ] as const;
 
 type TrackedName = (typeof TRACKED)[number];

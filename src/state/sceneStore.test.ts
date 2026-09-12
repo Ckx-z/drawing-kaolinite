@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sceneDocumentSchema } from '../core/schema';
 import type { Transform } from '../core/types';
+import { attachHistory } from './history';
 import { createSceneStore, type SceneState } from './sceneStore';
 
 /**
@@ -204,5 +205,108 @@ describe('旋转交互（2026-09-12：无限连续旋转 + 组同步最短角差
     expect(store.getState().components[0]!.transform.rotation[1]).toBe(720);
     store.getState().setTransform(id, T({ rotation: [0, -1080, 0] }));
     expect(store.getState().components[0]!.transform.rotation[1]).toBe(-1080);
+  });
+});
+
+describe('组件多选与批量操作（T-7.3）', () => {
+  const T0 = (): Transform => ({ position: [0, 0, 0], rotation: [0, 0, 0], scale: 1 });
+
+  it('Shift 语义：从单选起步叠加；0 → 全清 / 1 → 转单选 / ≥2 → 多选态', () => {
+    const store = createSceneStore();
+    const a = store.getState().addComponent('molecule');
+    const b = store.getState().addComponent('molecule');
+    const c = store.getState().addComponent('molecule');
+    store.getState().select(a); // 单选起步
+    store.getState().toggleComponentSelection(b); // +b → 2 个 → 多选态
+    expect(store.getState().componentSelectionIds).toEqual([a, b]);
+    expect(store.getState().selectionId).toBeNull(); // gizmo 收起
+    store.getState().toggleComponentSelection(c); // +c → 3 个
+    expect(store.getState().componentSelectionIds).toEqual([a, b, c]);
+    store.getState().toggleComponentSelection(a); // -a → 2 个（仍多选）
+    expect(store.getState().componentSelectionIds).toEqual([b, c]);
+    store.getState().toggleComponentSelection(c); // -c → 1 个 → 转单选
+    expect(store.getState().selectionId).toBe(b);
+    expect(store.getState().componentSelectionIds).toEqual([]);
+    store.getState().toggleComponentSelection(b); // -b → 0 → 全清
+    expect(store.getState().selectionId).toBeNull();
+  });
+
+  it('互斥：图元选择清组件多选；普通点击清多选；锁定组件不可入选', () => {
+    const store = createSceneStore();
+    const a = store.getState().addComponent('molecule');
+    const b = store.getState().addComponent('molecule');
+    store.getState().selectComponentIds([a, b]);
+    store.getState().addShape({ type: 'rect', x: 0, y: 0 });
+    store.getState().toggleShapeSelection(store.getState().shapes[0]!.id);
+    expect(store.getState().componentSelectionIds).toEqual([]); // 图元选择互斥
+    store.getState().selectShape(null);
+    store.getState().selectComponentIds([a, b]);
+    store.getState().select(a); // 普通点击回单选
+    expect(store.getState().componentSelectionIds).toEqual([]);
+    // 锁定
+    const locked = store.getState().addComponent('molecule');
+    store.getState().updateParams(locked, {});
+    store.getState().toggleLock(locked);
+    store.getState().selectComponentIds([locked]);
+    expect(store.getState().selectionId).toBeNull();
+  });
+
+  it('批量对齐：以末位主选为基准对齐 X；锁定成员跳过', () => {
+    const store = createSceneStore();
+    const a = store.getState().addComponent('molecule');
+    const b = store.getState().addComponent('molecule');
+    const locked = store.getState().addComponent('molecule');
+    store.getState().setTransform(a, { ...T0(), position: [10, 1, 1] });
+    store.getState().setTransform(b, { ...T0(), position: [20, 2, 2] });
+    store.getState().setTransform(locked, { ...T0(), position: [30, 3, 3] });
+    store.getState().toggleLock(locked);
+    store.getState().selectComponentIds([a, b, locked]); // 主选 = locked？锁定不可入选 → 实际 [a,b]，主选 b
+    store.getState().alignComponents(0);
+    const cs = store.getState().components;
+    expect(cs.find((c) => c.id === a)!.transform.position[0]).toBe(20); // 对齐主选 b 的 x
+    expect(cs.find((c) => c.id === locked)!.transform.position[0]).toBe(30); // 锁定不动
+  });
+
+  it('批量等间距：3 个沿 X 排序（10,20,50）→ 中间成员移到 30（首尾不动）', () => {
+    const store = createSceneStore();
+    const a = store.getState().addComponent('molecule');
+    const b = store.getState().addComponent('molecule');
+    const c = store.getState().addComponent('molecule');
+    store.getState().setTransform(a, { ...T0(), position: [10, 0, 0] });
+    store.getState().setTransform(b, { ...T0(), position: [50, 0, 0] });
+    store.getState().setTransform(c, { ...T0(), position: [20, 0, 0] });
+    store.getState().selectComponentIds([a, b, c]);
+    store.getState().distributeComponents(0);
+    const xs = store.getState().components.map((x) => x.transform.position[0]).sort((p, q) => p - q);
+    expect(xs).toEqual([10, 30, 50]);
+  });
+
+  it('批量参数：统一风格只作用适用类型（molecule 无 style 键自动跳过）', () => {
+    const store = createSceneStore();
+    const sheet = store.getState().addComponent('kaolinite_sheet');
+    const mol = store.getState().addComponent('molecule');
+    const sheet2 = store.getState().addComponent('kaolinite_sheet');
+    store.getState().updateParams(sheet2, { style: '球棍' });
+    store.getState().selectComponentIds([sheet, mol, sheet2]); // 主选 sheet2（球棍）
+    store.getState().applyParamsToSelection({ style: '球棍' });
+    const cs = store.getState().components;
+    expect((cs.find((c) => c.id === sheet)!.params as { style: string }).style).toBe('球棍');
+    expect(cs.find((c) => c.id === mol)!.params).not.toHaveProperty('style'); // molecule 未被污染
+  });
+
+  it('批量统一缩放 + 一条撤销', () => {
+    const store = createSceneStore();
+    const history = attachHistory(store, { mergeWindowMs: 0 });
+    const a = store.getState().addComponent('molecule');
+    const b = store.getState().addComponent('molecule');
+    store.getState().setTransform(a, { ...T0(), scale: 2 });
+    store.getState().selectComponentIds([a, b]);
+    store.getState().applyScaleToSelection(2);
+    expect(store.getState().components.every((c) => c.transform.scale === 2)).toBe(true);
+    const depth = history.depths().undo;
+    history.undo();
+    // molecule 出厂缩放为 4（defaultTransformFor）——一条撤销回退到 applyScale 前状态
+    expect(store.getState().components.find((c) => c.id === b)!.transform.scale).toBe(4);
+    expect(history.depths().undo).toBe(depth - 1);
   });
 });
