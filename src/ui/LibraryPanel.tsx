@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import seedTemplates from '../../data/seed-templates.json';
-import { formulaTo3D } from '../core/molecules/formula';
+import { formulaTo3D, resolveImportPath } from '../core/molecules/formula';
 import { smilesTo3D } from '../core/molecules/smiles';
 import type { ComponentType } from '../core/types';
 import { rendererRef } from '../state/rendererRef';
@@ -68,26 +68,30 @@ export default function LibraryPanel() {
   };
 
   /**
-   * 分子导入（T-2.8 SMILES + 2026-09-08 化学式双路）：先按 SMILES 解析
-   * （CCO=乙醇），失败自动转化学式（大小写不敏感：si/SI → Si，fe2o3 → Fe2O3），
-   * 生成紧密团簇模型。两路都失败才报错。
+   * 分子导入（T-2.8 SMILES + 2026-09-08 化学式双路；2026-09-12 分流修正）：
+   * "纯化学式形态"（单元素符号 O/Si/Au、两元素二元式 CO/NO/CN）**化学式优先**——
+   * 这类输入若被 SMILES 抢先会被隐式氢加成（CO→甲醇、O→水，用户报告 bug）；
+   * 其余（CCO=乙醇等真 SMILES）仍 SMILES 优先，失败自动转化学式。
    */
   const addMolecule = (): void => {
     const s = smiles.trim();
     if (!s) return;
-    try {
-      smilesTo3D(s); // 预校验（非法即抛错，不入库）
-      const id = sceneStore.getState().addComponent('molecule', {
-        name: s,
-        params: { smiles: s, kind: 'H₂O' },
-      });
-      sceneStore.getState().select(id);
-      rendererRef.current?.frameComponent(id);
-      setSmiles('');
-      setSmilesMsg('已导入 SMILES 分子');
-      return;
-    } catch {
-      // 落入化学式分支
+    const formulaFirst = resolveImportPath(s) === 'formula-first';
+    if (!formulaFirst) {
+      try {
+        smilesTo3D(s); // 预校验（非法即抛错，不入库）
+        const id = sceneStore.getState().addComponent('molecule', {
+          name: s,
+          params: { smiles: s, kind: 'H₂O' },
+        });
+        sceneStore.getState().select(id);
+        rendererRef.current?.frameComponent(id);
+        setSmiles('');
+        setSmilesMsg('已导入 SMILES 分子');
+        return;
+      } catch {
+        // 落入化学式分支
+      }
     }
     try {
       const { canonical } = formulaTo3D(s); // 预校验（非法即抛错，不入库）
@@ -130,7 +134,7 @@ export default function LibraryPanel() {
             onKeyDown={(e) => {
               if (e.key === 'Enter') addMolecule();
             }}
-            placeholder="SMILES / 化学式：CCO、Si、fe2o3"
+            placeholder="SMILES / 化学式：CCO 乙醇、CO 一氧化碳、fe2o3"
             style={{ flex: 1, minWidth: 0 }}
           />
           <button

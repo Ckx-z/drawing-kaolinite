@@ -13,6 +13,7 @@ import {
   FormulaError,
   formulaTo3D,
   parseFormula,
+  resolveImportPath,
 } from './formula';
 
 const CIF = readFileSync(new URL('../../../data/kaolinite.cif', import.meta.url), 'utf8');
@@ -29,9 +30,17 @@ describe('parseFormula：大小写不敏感解析', () => {
     expect(show(parseFormula('Co'))).toBe('Co1'); // 首大次小 = 钴
   });
 
-  it('全大写 = 大小写信息缺失 → 宽松归一（CO → Co；一氧化碳请输 SMILES "CO" 由分子链路接管）', () => {
-    expect(show(parseFormula('CO'))).toBe('Co1');
-    expect(show(parseFormula('FE2O3'))).toBe('Fe2 O3');
+  it('全大写宽松归一（2026-09-12 更新：CO → C+O 一氧化碳，不再→Co）', () => {
+    const tokens = parseFormula('CO');
+    expect(tokens).toEqual([
+      { el: 'C', count: 1 },
+      { el: 'O', count: 1 },
+    ]);
+    // 双字母元素全大写形态仍可归一（FE2O3 首字母拆失败自动回退双字母）
+    expect(canonicalFormula(parseFormula('FE2O3'))).toBe('Fe2O3');
+    expect(canonicalFormula(parseFormula('AU2O3'))).toBe('Au2O3');
+    // SI 例外保留（2026-09-08 需求：SI → 硅）
+    expect(canonicalFormula(parseFormula('SI'))).toBe('Si');
   });
 
   it('小写 / 全大写 / 混合大小写均归一识别（si/SI/sI → Si）', () => {
@@ -211,5 +220,64 @@ describe('全周期表元素识别（2026-09-11 修复：此前 84 种元素无�
   it('真非法输入仍拒绝（q 不在周期表）', () => {
     expect(() => formulaTo3D('qqq')).toThrow();
     expect(() => formulaTo3D('Q1')).toThrow();
+  });
+});
+
+describe('导入分流修复（2026-09-12：纯化学式形态不再被 SMILES 加氢）', () => {
+  it('resolveImportPath：单元素与两元素二元式 → 化学式优先；真 SMILES → SMILES 优先', () => {
+    for (const s of ['O', 'N', 'C', 'S', 'P', 'B', 'F', 'Cl', 'Br', 'I', 'Si', 'Fe', 'Au']) {
+      expect(resolveImportPath(s), `${s} 应化学式优先`).toBe('formula-first');
+    }
+    for (const s of ['CO', 'NO', 'CN', 'CS', 'SO', 'BO', 'CF', 'SN', 'NS', 'PO', 'CI']) {
+      expect(resolveImportPath(s), `${s} 应化学式优先（二元双原子）`).toBe('formula-first');
+    }
+    for (const s of ['CCO', 'CCC', 'OCC', 'NCC', 'c1ccccc1', 'C(=O)O', 'CO2', 'H2O', 'NaCl', 'fe2o3']) {
+      expect(resolveImportPath(s), `${s} 应 SMILES 优先`).toBe('smiles-first');
+    }
+  });
+
+  it('A 类：单元素符号导入 → 单原子球（不再变水/氨/甲烷）', () => {
+    const cases: Array<[string, string, number]> = [
+      ['O', 'O', 1], ['N', 'N', 1], ['C', 'C', 1], ['S', 'S', 1], ['P', 'P', 1],
+      ['B', 'B', 1], ['F', 'F', 1], ['Cl', 'Cl', 1], ['Br', 'Br', 1], ['I', 'I', 1],
+    ];
+    for (const [input, el, n] of cases) {
+      const r = formulaTo3D(input);
+      expect(r.canonical, `${input} 应为单原子 ${el}`).toBe(el);
+      expect(r.atoms).toHaveLength(n);
+      expect(r.atoms.filter((a) => a.el === 'H'), `${input} 不应加氢`).toHaveLength(0);
+    }
+  });
+
+  it('B 类：两元素二元式 → 无氢双原子（CO=一氧化碳，不再变甲醇）', () => {
+    const cases: Array<[string, string, string]> = [
+      ['CO', 'C', 'O'], ['NO', 'N', 'O'], ['CN', 'C', 'N'], ['CS', 'C', 'S'],
+      ['SO', 'S', 'O'], ['BO', 'B', 'O'], ['CF', 'C', 'F'], ['SN', 'S', 'N'],
+      ['NS', 'N', 'S'], ['PO', 'P', 'O'], ['CI', 'C', 'I'],
+    ];
+    for (const [input, e1, e2] of cases) {
+      const r = formulaTo3D(input);
+      expect(r.atoms).toHaveLength(2);
+      expect(r.atoms.map((a) => a.el).sort(), `${input} 应为 ${e1}+${e2}`).toEqual([e1, e2].sort());
+      expect(r.canonical).toBe(input);
+    }
+  });
+
+  it('附加修复：全大写带数字不再错拆（CO2≠Co2 / NO2≠No2 / NH3≠Nh3）', () => {
+    expect(formulaTo3D('CO2').canonical).toBe('CO2');
+    expect(formulaTo3D('NO2').canonical).toBe('NO2');
+    expect(formulaTo3D('NH3').canonical).toBe('NH3');
+    expect(formulaTo3D('SO2').canonical).toBe('SO2');
+    const co2 = formulaTo3D('CO2');
+    expect(co2.atoms.filter((a) => a.el === 'O')).toHaveLength(2);
+  });
+
+  it('不回归：小写/混合输入与 SI→Si 保持', () => {
+    expect(formulaTo3D('fe2o3').canonical).toBe('Fe2O3');
+    expect(formulaTo3D('nacl').canonical).toBe('NaCl');
+    expect(formulaTo3D('si').canonical).toBe('Si');
+    expect(formulaTo3D('SI').canonical).toBe('Si');
+    expect(formulaTo3D('sI').canonical).toBe('Si');
+    expect(formulaTo3D('CaWO4').canonical).toBe('CaWO4');
   });
 });

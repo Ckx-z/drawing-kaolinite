@@ -55,6 +55,38 @@ function splitBlock(block: string): string[] | null {
   return els;
 }
 
+/**
+ * 全大写块拆分（2026-09-12 修复 CO2→Co2 错拆）：首符号单字母优先试拆
+ * （CO2 → C+O2 二氧化碳；NO2 → N+O2；NH3 → N+H3），拆失败回退双字母
+ * 优先（FE2O3：F 后 E 非元素 → 回退 Fe2O3 不变）。大小写即意图——
+ * 想要 Co/No/Nh 请输正确大小写。
+ */
+function splitBlockUpper(block: string): string[] | null {
+  if (block === 'SI') return ['Si']; // 2026-09-08 既有需求：SI → 硅（S+I 硫碘组合罕见）
+  const one = block[0]!;
+  if (block.length >= 2 && ELEMENTS[one]) {
+    const rest = splitBlock(block.slice(1));
+    if (rest) return [one, ...rest];
+  }
+  return splitBlock(block);
+}
+
+/**
+ * 双路导入分流判定（2026-09-12 修复"附加多余氢"）：
+ * 单个元素符号（O/N/C…118 种）或"首单字母+第二符号"的两元素拼接
+ * （CO/NO/CN…二元双原子）返回 'formula-first'——这类"纯化学式形态"
+ * 若被 SMILES 路抢先会被隐式氢加成（CO→甲醇 CH₃OH、O→水）。
+ * 其余（CCO 乙醇等真 SMILES、含键号/括号/数字串）返回 'smiles-first'。
+ * 注：想要双字母元素请输正确大小写（Sn 锡 / Po 钋 / Cs 铯）。
+ */
+export function resolveImportPath(s: string): 'formula-first' | 'smiles-first' {
+  const t = s.trim();
+  if (/^[A-Z][a-z]?$/.test(t) && ELEMENTS[t]) return 'formula-first';
+  const m = /^([A-Z])([A-Z][a-z]?)$/.exec(t);
+  if (m && ELEMENTS[m[1]!] && ELEMENTS[m[2]!]) return 'formula-first';
+  return 'smiles-first';
+}
+
 /** 严格模式字母块拆分：[A-Z][a-z]? 状态机（CO → C+O 一氧化碳；Co → 钴） */
 function splitStrict(block: string): string[] | null {
   const els: string[] = [];
@@ -89,7 +121,13 @@ function tokenize(input: string, strictCase: boolean): FormulaToken[] | null {
     const m = /^([A-Za-z]+)(\d*)/.exec(rest);
     if (!m || m[0].length === 0) return null; // 含非法字符
     const block = m[1]!;
-    const els = strictCase ? splitStrict(block) : splitBlock(block);
+    // 全大写块（大小写信息缺失）→ 单字母优先变体（CO2→C+O2）；其余双字母优先
+    const isUpperBlock = block === block.toUpperCase();
+    const els = strictCase
+      ? splitStrict(block)
+      : isUpperBlock
+        ? splitBlockUpper(block)
+        : splitBlock(block);
     if (!els) return null;
     const count = m[2] ? Number(m[2]) : 1;
     if (!Number.isInteger(count) || count < 1) return null;
