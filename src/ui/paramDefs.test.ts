@@ -57,7 +57,8 @@ describe('PARAM_DEFS 与 DEFAULT_PARAMS/schema 一致性', () => {
         if (def.type !== 'select') continue;
         const v = (DEFAULT_PARAMS[t] as Record<string, string>)[def.key];
         expect(def.options, `${t}.${def.key} 缺少 options`).toBeDefined();
-        expect(def.options, `${t}.${def.key} 默认值 ${v} 不在选项中`).toContain(v);
+        const vals = def.options!.map((op) => (typeof op === 'string' ? op : op.value));
+        expect(vals, `${t}.${def.key} 默认值 ${v} 不在选项中`).toContain(v);
       }
     }
   });
@@ -84,5 +85,20 @@ describe('PARAM_DEFS 与 DEFAULT_PARAMS/schema 一致性', () => {
       PARAM_DEFS.nanoparticle.find((d) => d.key === 'singleLayers'),
       '颗粒无层结构，不应有单原子层数控件',
     ).toBeUndefined();
+  });
+
+  it('元素下拉扩全周期表（2026-09-12：密排层 el 与单原子 singleEl 共用 118 项）', () => {
+    const elDef = PARAM_DEFS.packed_layers.find((d) => d.key === 'el');
+    expect(elDef!.options).toHaveLength(118);
+    const vals = elDef!.options!.map((op) => (typeof op === 'string' ? op : op.value));
+    for (const sym of ['Si', 'Au', 'Pt', 'W', 'La', 'Nd', 'U', 'Og']) {
+      expect(vals, `密排层元素下拉应含 ${sym}`).toContain(sym);
+    }
+    // 显示为 "符号 中文名"（对象选项 label）
+    const au = elDef!.options!.find((op) => typeof op !== 'string' && op.value === 'Au') as { value: string; label: string };
+    expect(au.label).toBe('Au 金');
+    // 单原子元素（片层）共用同一来源
+    const singleElDef = PARAM_DEFS.kaolinite_sheet.find((d) => d.key === 'singleEl');
+    expect(singleElDef!.options).toHaveLength(118);
   });
 });

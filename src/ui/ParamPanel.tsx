@@ -102,11 +102,16 @@ function SelectControl(props: { compId: string; def: ParamDef; value: string }) 
         value={value}
         onChange={(e) => sceneStore.getState().updateParams(compId, { [def.key]: e.target.value } as never)}
       >
-        {def.options?.map((op) => (
-          <option key={op} value={op}>
-            {op}
-          </option>
-        ))}
+        {def.options?.map((op) => {
+          // 对象选项存 value 显示 label（如元素 "Si 硅" 存 "Si"）
+          const v = typeof op === 'string' ? op : op.value;
+          const label = typeof op === 'string' ? op : op.label;
+          return (
+            <option key={v} value={v}>
+              {label}
+            </option>
+          );
+        })}
       </select>
     </div>
   );

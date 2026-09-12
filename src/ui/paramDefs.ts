@@ -2,6 +2,7 @@
  * 参数面板定义 + 素材库条目 —— 自 demo/index.html PARAM_DEFS/LIB 移植（T-1.6）
  * 范围与 DATA_DICT / schema 一致；paramDefs.test.ts 守护"默认值落在定义范围内"。
  */
+import { ELEMENTS } from '../core/elements';
 import type { ComponentType } from '../core/types';
 
 export interface ParamDef {
@@ -12,7 +13,8 @@ export interface ParamDef {
   /** toggle 型的 on/off 值（字符串枚举 ↔ 勾选态映射） */
   on?: string;
   off?: string;
-  options?: readonly string[];
+  /** 下拉选项：纯值，或 { value, label } 分离（如元素显示 "Si 硅" 存 "Si"） */
+  options?: readonly (string | { value: string; label: string })[];
   /** 数值边界：常量或随其他参数动态（如"单原子层数"上限 = 当前堆叠层数） */
   min?: number | ((params: Record<string, unknown>) => number);
   max?: number | ((params: Record<string, unknown>) => number);
@@ -24,8 +26,14 @@ export interface ParamDef {
   when?: (params: Record<string, unknown>) => boolean;
 }
 
-/** 单原子可选元素（单原子模式与密排原子层共用） */
-const SINGLE_EL_OPTIONS = ['Si', 'Al', 'O', 'Fe', 'Ce', 'Ti', 'C'] as const;
+/**
+ * 单原子可选元素（单原子模式与密排原子层共用）。
+ * 2026-09-12：从元素库派生全周期表 118 项（显示 "符号 中文名"，常用元素因
+ * 表序在前仍排在下拉上部）；此前固定 7 项，其余元素无法选择。
+ */
+const SINGLE_EL_OPTIONS: ReadonlyArray<{ value: string; label: string }> = Object.entries(
+  ELEMENTS,
+).map(([sym, info]) => ({ value: sym, label: `${sym} ${info.name}` }));
 
 /** 单原子模式基础字段（片层/管/颗粒共用；元素选择仅在开启时显示） */
 const ATOM_MODE_BASE: ParamDef[] = [

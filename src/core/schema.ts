@@ -10,6 +10,7 @@
  * - 全部对象用 strictObject：未知字段（拼写错误）当场拒绝，科研数据正确性优先。
  */
 import { z } from 'zod';
+import { ELEMENTS } from './elements';
 import { shapeSchema } from './shapes/schema';
 
 /* ---------- 通用 ---------- */
@@ -42,11 +43,16 @@ const renderStyle = z.enum(['空间填充', '球棍']);
  * singleEl 仅在 single 模式下有意义；随场景 JSON 持久化（每实例独立）。
  */
 const atomMode = z.enum(['full', 'single']).default('full');
-const singleElOf = (fallback: string) =>
+/**
+ * 元素符号校验（2026-09-12 收紧）：必须是元素库真实成员（此前仅正则格式，
+ * "Zz" 也放行）；存量场景的元素全在 118 种内，完全兼容。
+ */
+const elementSymbolOf = (fallback: string) =>
   z
     .string()
-    .refine((s) => /^[A-Z][a-z]?$/.test(s), '元素符号格式（首大写可选次小写）')
+    .refine((s) => ELEMENTS[s] !== undefined, '未知元素（不在周期表 118 种内）')
     .default(fallback);
+const singleElOf = elementSymbolOf;
 /**
  * 单原子层数（2026-09-10）：single 模式下显示前 N 层单原子层（其余层不生成）。
  * 默认 3 = 意图"全部层"——运行时由 builder clamp 到实际 layers/walls
@@ -131,11 +137,8 @@ export const substrateParamsSchema = z.strictObject({
  * （mask 掩码，不参与的原子列只保留第一层 → 台阶/缺陷示意）。
  */
 export const packedLayerParamsSchema = z.strictObject({
-  /** 元素符号（天然单原子组件；校验同 singleEl） */
-  el: z
-    .string()
-    .refine((s) => /^[A-Z][a-z]?$/.test(s), '元素符号格式（首大写可选次小写）')
-    .default('Si'),
+  /** 元素符号（天然单原子组件；须为周期表真实元素） */
+  el: elementSymbolOf('Si'),
   /** 每边原子数（第一层 n×n 格点；上限 12 保证面板网格逐个勾选可用） */
   n: z.number().int().min(2).max(12).default(7),
   /** 堆叠层数（Layer Count） */

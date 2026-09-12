@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { buildHalloysiteTube, buildKaoliniteSheet } from './builders';
 import { groupByLayer } from './crystal';
-import { particleParamsSchema, sheetParamsSchema, tubeParamsSchema } from './schema';
+import { packedLayerParamsSchema, particleParamsSchema, sheetParamsSchema, tubeParamsSchema } from './schema';
 import { attachHistory } from '../state/history';
 import { createSceneStore } from '../state/sceneStore';
 
@@ -154,6 +154,19 @@ describe('schema 校验与兼容', () => {
   it('旧场景缺键 → default 补 3（意图"全部层"）', () => {
     const parsed = sheetParamsSchema.parse(sheetInput);
     expect(parsed.singleLayers).toBe(3);
+  });
+
+  it('元素校验收紧（2026-09-12）：真实元素合法、非元素串拒绝', () => {
+    const sheetBase = { Lx: 60, Ly: 50, layers: 3, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false };
+    for (const ok of ['Au', 'Pt', 'W', 'Nd']) {
+      expect(sheetParamsSchema.safeParse({ ...sheetBase, singleEl: ok }).success, `singleEl=${ok} 应合法`).toBe(true);
+    }
+    for (const bad of ['Zz', 'Xx', 'DD']) {
+      expect(sheetParamsSchema.safeParse({ ...sheetBase, singleEl: bad }).success, `singleEl=${bad} 应拒绝`).toBe(false);
+    }
+    const packedBase = { n: 5, layers: 2, dist: 4, stacking: 'AB', mask: '' };
+    expect(packedLayerParamsSchema.safeParse({ ...packedBase, el: 'Au' }).success).toBe(true);
+    expect(packedLayerParamsSchema.safeParse({ ...packedBase, el: 'Zz' }).success).toBe(false);
   });
 
   it('颗粒不引入 singleLayers（strictObject 拒绝未知键，锁定无层语义）', () => {
