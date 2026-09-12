@@ -5,6 +5,7 @@
  * 首次进入自动载入示例场景（对齐 demo 启动行为）。
  */
 import { useEffect, useState } from 'react';
+import { trace } from '../crashTrace';
 import { rendererRef } from '../state/rendererRef';
 import { sceneHistory, sceneStore } from '../state/sceneStore';
 import { deleteSelectedShapes, nudgeSelectedShapes } from './shapes/interaction';
@@ -20,7 +21,11 @@ export default function App() {
   const [cheat, setCheat] = useState(false);
 
   useEffect(() => {
-    if (sceneStore.getState().components.length === 0) loadPresetScene();
+    trace('app-mount');
+    if (sceneStore.getState().components.length === 0) {
+      loadPresetScene();
+      trace('preset-loaded');
+    }
     // 调试/二次开发入口
     (window as unknown as Record<string, unknown>).__KAOLIN = { store: sceneStore, renderer: rendererRef };
   }, []);

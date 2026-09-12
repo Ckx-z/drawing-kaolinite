@@ -10,6 +10,7 @@
  *  - 渲染同步不在 store 内：bindRenderer（rendererBinding.ts）订阅差异后调渲染服务。
  */
 import { createStore, type StoreApi } from 'zustand/vanilla';
+import { trace } from '../crashTrace';
 import { attachHistory } from './history';
 import {
   DEFAULT_PARAMS,
@@ -538,6 +539,7 @@ export function createSceneStore(): SceneStore {
 
     setTool: (tool) => {
       if (!(SHAPE_TOOLS as readonly string[]).includes(tool)) return;
+      trace(`setTool ${tool}`);
       set({ tool });
     },
 

@@ -91,6 +91,7 @@
 | 桌面端稳定性 | `src/core/worker.ts` + `cache.ts` + `index.css` | 2026-09-08 修复：Worker `?worker&inline`（data URL，零运行时 fetch）+ 4s 握手超时回退主线程 + IndexedDB 4s 门直通 + canvas CSS 100% 钉死/body overflow:hidden/顶栏 wrap；233 tests |
 | 交互与导入增强 | `App.tsx`/`RendererService.panView` + `molecules/formula.ts` + `schema.ts` + `paramDefs.ts` | 2026-09-09：方向键平移（rAF 键集合，输入框守卫）；化学式导入（大小写归一 + 紧密团簇，params.formula 持久化，SMILES 优先双路）；单原子模式（atomMode/singleEl，片层/管/颗粒，toggle+when UI）；248 tests |
 | 机理图图元层 | `src/core/shapes/` + `src/ui/shapes/` + view/interaction/draw + templateLibrary + store/history/svg/RendererService | T-11 全部（2026-09-10）：一期叠加形态（五件套/锚定跟随/撤销/五格式导出）+ 二期：纯 2D 示意图模式（shapeViewStore pan/zoom 无限画布，数据不动视口变换）、磁吸对齐（六线 6px 最优吸附 + 10px 网格 + 洋红参考线）、机理图模板库（Dexie + 4 种子版式 + 自存模板 + 历史事务一条撤销）；269 tests |
+| 黑屏修复与诊断 | `src/ui/ParamPanel.tsx` + `src/ui/ErrorBoundary.tsx` + `src/crashTrace.ts` | 2026-09-12：用图元工具画图后整窗黑屏——ParamPanel 条件 Hook 违规（T-7.3 引入）致 React 卸载全树；snap useState 移至所有 early return 之前（A/B 实证修复）；全局 ErrorBoundary 错误面板替代黑屏；crashTrace 面包屑（关键节点 + JS 异常 + WebGL 丢失 → /tmp/kaolin-trace.log）；338 tests |
 | 导出保存对话框 | `src/ui/saveFile.ts` + `src-tauri`（save_file 命令 + tauri-plugin-dialog + capabilities） | 2026-09-09：桌面端 `<a download>` 无效的根治——原生保存对话框选路径后 Rust 写盘；分层 PNG 选目录批量写；取消静默；浏览器 showSaveFilePicker 优先 |
 
 ---

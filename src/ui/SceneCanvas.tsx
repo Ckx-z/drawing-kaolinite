@@ -8,6 +8,7 @@ import { useEffect, useRef } from 'react';
 import kaoliniteCif from '../../data/kaolinite.cif?raw';
 import { createCachedEngine, defaultTubePrebakeRequests, prebake } from '../core/cache';
 import { createWorkerEngine } from '../core/worker';
+import { trace } from '../crashTrace';
 import { drawAnnotations } from './annotations/draw';
 import { drawDraft, drawGrid, drawGuides, drawShapes } from './shapes/draw';
 import { createShapeInteraction } from './shapes/interaction';
@@ -164,7 +165,9 @@ export default function SceneCanvas() {
     // （每浏览器一次；独立 Worker 引擎，与画布引擎共享磁盘缓存。
     //   Worker 加载失败（ready=false）时跳过——主线程同步预烘焙会造成明显卡顿）
     const prebakeTimer = setTimeout(() => {
+      trace('prebake-timer');
       if (localStorage.getItem('kaolin_prebake_v2')) return;
+      trace('prebake-start');
       const inner = createWorkerEngine();
       const engine = createCachedEngine(inner);
       void (inner.ready ?? Promise.resolve(true))
@@ -172,9 +175,14 @@ export default function SceneCanvas() {
           ok ? prebake(engine, defaultTubePrebakeRequests(kaoliniteCif)) : Promise.resolve(0),
         )
         .then((n) => {
+          trace(`prebake-done n=${n}`);
           if (n > 0) localStorage.setItem('kaolin_prebake_v2', String(n));
         })
-        .finally(() => engine.dispose());
+        .catch((err: unknown) => trace(`prebake-error ${String(err)}`))
+        .finally(() => {
+          trace('prebake-engine-dispose');
+          engine.dispose();
+        });
     }, 4000);
 
     return () => {

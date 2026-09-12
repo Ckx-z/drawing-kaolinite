@@ -612,6 +612,10 @@ export default function ParamPanel() {
   const multiIds = useStore(sceneStore, (s) => s.componentSelectionIds);
   const hasShapeSel = useStore(sceneStore, (s) => s.shapeSelectionIds.length > 0);
   const [gizmoMode, setGizmoMode] = useState<'translate' | 'rotate'>('translate');
+  // T-7.3 吸附（视图态；gizmo 平移网格/旋转步进）。
+  // 必须在所有 early return 之前——条件 Hook 会让 React 在 hasShapeSel 翻转时
+  // 抛 "Rendered more hooks" 并卸载整棵应用树（2026-09-12 打包版黑屏根因）
+  const [snap, setSnap] = useState<{ grid: number | null; angleDeg: number | null }>({ grid: null, angleDeg: null });
 
   // T-11.4：图元选中时优先显示图元样式区（选择互斥 → 组件参数区隐藏）
   if (hasShapeSel) {
@@ -624,8 +628,6 @@ export default function ParamPanel() {
     );
   }
 
-  // T-7.3 吸附（视图态；gizmo 平移网格/旋转步进）
-  const [snap, setSnap] = useState<{ grid: number | null; angleDeg: number | null }>({ grid: null, angleDeg: null });
   const applySnap = (next: { grid: number | null; angleDeg: number | null }): void => {
     setSnap(next);
     rendererRef.current?.setSnap(next);

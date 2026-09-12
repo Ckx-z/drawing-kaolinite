@@ -1,13 +1,20 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './ui/App';
+import ErrorBoundary from './ui/ErrorBoundary';
 import { sceneStore } from './state/sceneStore';
 import { rendererRef } from './state/rendererRef';
+import { installCrashTrace, trace } from './crashTrace';
 import './index.css';
+
+installCrashTrace();
+trace('main-boot');
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );
 

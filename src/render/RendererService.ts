@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { trace } from '../crashTrace';
 import {
   buildHalloysiteTube,
   buildKaoliniteSheet,
@@ -1072,6 +1073,7 @@ export class RendererService {
 
   /** 把构建结果装载到 group（data=null 走基底挤出几何）；完成后通知 UI 刷新原子数 */
   private applyGeometry(rec: ComponentRecord, comp: RenderComponent, data: GeometryData | null): void {
+    trace(`geometry-apply ${comp.name} atoms=${data?.atoms?.length ?? 0} bonds=${data?.bonds?.length ?? 0}`);
     this.clearGroup(rec.group);
     if (data) {
       const style = (comp.params as { style?: string }).style;
@@ -1106,14 +1108,16 @@ export class RendererService {
 
   private buildData(comp: SceneComponent): GeometryData | null {
     switch (comp.type) {
-      case 'kaolinite_sheet':
+      case 'kaolinite_sheet': {
         const cif1 = mineralOf((comp.params as { mineral?: string }).mineral).cifText || this.cifText;
         if (!cif1) throw new Error('未设置 CIF 数据（setCifText）');
         return buildKaoliniteSheet(cif1, comp.params);
-      case 'halloysite_tube':
+      }
+      case 'halloysite_tube': {
         const cif2 = mineralOf((comp.params as { mineral?: string }).mineral).cifText || this.cifText;
         if (!cif2) throw new Error('未设置 CIF 数据（setCifText）');
         return buildHalloysiteTube(cif2, comp.params);
+      }
       case 'nanoparticle':
         return buildParticle(comp.params);
       case 'molecule': {
