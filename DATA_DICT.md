@@ -20,6 +20,20 @@
 | `locked` | bool | 锁定（T-3.3：点击不选中、gizmo 不吸附） |
 | `group` | string? | 分组 id（T-3.3：同组成员整体变换；缺省 = 独立） |
 
+## 一b、矿物中文名映射表（2026-09-12，minerals.ts 唯一来源）
+
+导入框输入中文名/英文名（≥4 字符前缀）直接添加对应 CIF 结构片层；片层/管参数面板「矿物」下拉可切换（d001 联动重置为该矿物 c 轴周期）。
+
+| 中文名（别名） | 英文名 | 化学式 | CIF | 堆叠周期 d001 | 对称展开/晶胞 | 计量 |
+|---|---|---|---|---|---|---|
+| 高岭石 | Kaolinite | Al2Si2O5(OH)4 | kaolinite.cif（AMCSD 0012232） | 7.4 Å | 26 原子 | Al4Si4O18 |
+| 地开石 | Dickite | Al2Si2O5(OH)4 | Al2Si2O9H4-Dickite.cif（AMCSD 0000126） | 14.74 Å（双层晶胞） | 52 原子 | Al8Si8O36 |
+| 珍珠石（珍珠陶土） | Nacrite | Al2Si2O5(OH)4 | Al2Si2O9H4-Nacrite.cif（AMCSD 0012394） | 14.59 Å（双层晶胞） | 68 原子 | Al8Si8O36H16（含显式 H 位点） |
+| 蒙脱石 | Montmorillonite | Ca0.5Al2Si4O12 | Al2Si4O12Ca0.5-Montmorillonite.cif（COD 9002779，Viani 2002） | 15.0 Å | 38 原子 | Al4Si8O24Ca2（P1 已全展开；Ca0.5 占位按位点全显示） |
+| 伊利石 | Illite | KAl4Si2O12 | Al4KSi2O12-Illite.cif | 20.14 Å（双层晶胞） | 76 原子 | K4Al16Si8O48 |
+
+几何生成严格走 parseCIF → expandSymmetry → buildSlab（无硬编码坐标）；基线由 `src/core/minerals.test.ts` 锁定。羟基：高岭石/地开石按 O-H 位点标签补 H；珍珠石用 CIF 显式 H；蒙脱石/伊利石 CIF 无 H 位点（模型即无 H，原样遵循）。矿物组件存为模块时自动写中文/英文/化学式 tags（模块库中文搜索可检索）。
+
 ## 二、kaolinite_sheet 高岭土片层
 
 | 参数 | 类型 | 范围 | 默认 | 单位 | 说明 |

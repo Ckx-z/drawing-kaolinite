@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import seedTemplates from '../../data/seed-templates.json';
 import { formulaTo3D, resolveImportPath } from '../core/molecules/formula';
+import { findMineral } from '../core/minerals';
 import { smilesTo3D } from '../core/molecules/smiles';
 import type { ComponentType } from '../core/types';
 import { rendererRef } from '../state/rendererRef';
@@ -76,6 +77,19 @@ export default function LibraryPanel() {
   const addMolecule = (): void => {
     const s = smiles.trim();
     if (!s) return;
+    // 矿物中文名/英文名识别（2026-09-12）：命中 → 直接添加该矿物的 CIF 结构片层
+    const mineral = findMineral(s);
+    if (mineral) {
+      const id = sceneStore.getState().addComponent('kaolinite_sheet', {
+        name: mineral.zh[0],
+        params: { mineral: mineral.key, d001: mineral.d001Default } as never,
+      });
+      sceneStore.getState().select(id);
+      rendererRef.current?.frameComponent(id);
+      setSmiles('');
+      setSmilesMsg(`已导入 ${mineral.zh[0]}（${mineral.en} · ${mineral.formula} · CIF 晶体结构）`);
+      return;
+    }
     const formulaFirst = resolveImportPath(s) === 'formula-first';
     if (!formulaFirst) {
       try {
@@ -129,18 +143,19 @@ export default function LibraryPanel() {
             value={smiles}
             onChange={(e) => {
               setSmiles(e.target.value);
-              setSmilesMsg('');
+              const m = findMineral(e.target.value);
+              setSmilesMsg(m ? `↳ ${m.zh[0]} · ${m.en} · ${m.formula} —— 回车导入 CIF 结构片层` : '');
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') addMolecule();
             }}
-            placeholder="SMILES / 化学式：CCO 乙醇、CO 一氧化碳、fe2o3"
+            placeholder="SMILES / 化学式 / 矿物名：CCO、CO、高岭石、蒙脱石"
             style={{ flex: 1, minWidth: 0 }}
           />
           <button
             className="mini"
             onClick={addMolecule}
-            title="先按 SMILES 解析（如 CCO 乙醇）；失败自动转化学式（大小写不敏感：si/SI → Si，fe2o3 → Fe2O3）"
+            title="支持：SMILES（CCO）/ 化学式（CO、fe2o3）/ 矿物中英文名（高岭石、蒙脱石）—— 矿物走对应 CIF 晶体结构"
           >
             导入
           </button>

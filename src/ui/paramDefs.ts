@@ -3,6 +3,7 @@
  * 范围与 DATA_DICT / schema 一致；paramDefs.test.ts 守护"默认值落在定义范围内"。
  */
 import { ELEMENTS } from '../core/elements';
+import { MINERAL_KEYS, MINERALS } from '../core/minerals';
 import type { ComponentType } from '../core/types';
 
 export interface ParamDef {
@@ -26,7 +27,25 @@ export interface ParamDef {
   when?: (params: Record<string, unknown>) => boolean;
   /** 长列表下拉（如 118 项元素）显示过滤输入框：按符号或中文名包含匹配（2026-09-12） */
   searchable?: boolean;
+  /**
+   * 选中值联动改写其他参数（2026-09-12）：返回的键值与本次选中值合并提交
+   * updateParams（同一命令，可整体撤销）。如切矿物时重置 d001 为该矿物 c 轴周期。
+   */
+  sideEffect?: (value: string, params: Record<string, unknown>) => Record<string, unknown>;
 }
+
+/** 矿物下拉选项（五种层状硅酸盐，显示"中文名 英文名"） */
+const MINERAL_OPTIONS = MINERAL_KEYS.map((k) => ({ value: k, label: `${MINERALS[k].zh[0]} ${MINERALS[k].en}` }));
+
+/** 矿物字段：切换时联动重置 d001 为该矿物 c 轴周期（堆叠平移语义） */
+const mineralField = (): ParamDef => ({
+  key: 'mineral',
+  label: '矿物（CIF 结构来源）',
+  type: 'select',
+  options: MINERAL_OPTIONS,
+  searchable: true,
+  sideEffect: (v) => ({ d001: MINERALS[v as keyof typeof MINERALS]?.d001Default ?? 7.4 }),
+});
 
 /**
  * 单原子可选元素（单原子模式与密排原子层共用）。
@@ -69,7 +88,8 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     { key: 'Lx', label: '横向尺寸', unit: 'Å', min: 20, max: 150, step: 2 },
     { key: 'Ly', label: '纵向尺寸', unit: 'Å', min: 20, max: 150, step: 2 },
     { key: 'layers', label: '堆叠层数', min: 1, max: 3, step: 1 },
-    { key: 'd001', label: '层间距 d₀₀₁', unit: 'Å', min: 7.2, max: 12, step: 0.1 },
+    { key: 'd001', label: '堆叠周期 d₀₀₁', unit: 'Å', min: 7.2, max: 25, step: 0.1 },
+    mineralField(),
     { key: 'shape', label: '片层轮廓', type: 'select', options: ['矩形', '六角'] },
     { key: 'style', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
     { key: 'edgeH', label: '边缘羟基饱和（实验）', type: 'checkbox' },
@@ -81,7 +101,8 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     { key: 'innerR', label: '内半径', unit: 'Å', min: 8, max: 40, step: 1 },
     { key: 'length', label: '管长', unit: 'Å', min: 30, max: 200, step: 5 },
     { key: 'walls', label: '管壁层数', min: 1, max: 3, step: 1 },
-    { key: 'd001', label: '壁间距（水合）', unit: 'Å', min: 7.4, max: 11, step: 0.1 },
+    { key: 'd001', label: '壁间周期 d₀₀₁', unit: 'Å', min: 7.4, max: 25, step: 0.1 },
+    mineralField(),
     { key: 'progress', label: '★ 卷曲进度（片→管）', min: 0.02, max: 1, step: 0.01, disp: (v) => `${Math.round(v * 100)}%` },
     { key: 'taperDeg', label: '锥角', unit: '°', min: -20, max: 20, step: 1 },
     { key: 'curlAxis', label: '卷曲方向', type: 'select', options: ['a', 'b'] },

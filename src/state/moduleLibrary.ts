@@ -12,6 +12,7 @@
 import Dexie, { type Table } from 'dexie';
 import { moduleSchema } from '../core/schema';
 import type { ModuleEntry } from '../core/types';
+import { mineralOf } from '../core/minerals';
 import type { SceneEntry } from './sceneStore';
 
 export const MODULES_FORMAT = 'kaolin-modules/v1' as const;
@@ -71,9 +72,18 @@ export function moduleEntryFromComponent(
     params: comp.params,
     transform: comp.transform,
     thumb,
+    // 2026-09-12：矿物组件自动带中文名/英文名/化学式标签 → 模块库搜索框中文可检索
+    tags: mineralTagsOf(comp),
     createdAt: new Date().toISOString(),
     moduleVersion: 1,
   }) as ModuleEntry;
+}
+
+/** 矿物片层/管组件 → [中文名, 英文名, 化学式] 检索标签；非矿物组件无标签 */
+function mineralTagsOf(comp: SceneEntry): string[] | undefined {
+  if (comp.type !== 'kaolinite_sheet' && comp.type !== 'halloysite_tube') return undefined;
+  const m = mineralOf((comp.params as { mineral?: string }).mineral);
+  return [...m.zh, m.en, m.formula];
 }
 
 /**

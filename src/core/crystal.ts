@@ -67,10 +67,11 @@ export function parseCIF(text: string): ParsedCIF {
       continue;
     }
 
-    // 多行文本块（; ... ;）—— 跳过
-    if (line === ';') {
+    // 多行文本块（;...;）—— 跳过。开始行可带同行文本（COD 风格 ";The nature..."），
+    // 结束行为单独 ";"；两者都以列首分号识别（2026-09-12 修复蒙脱石 CIF 整体吞行）
+    if (line.startsWith(';')) {
       i++;
-      while (i < lines.length && lines[i].trim() !== ';') i++;
+      while (i < lines.length && !lines[i].trim().startsWith(';')) i++;
       i++;
       continue;
     }
@@ -93,7 +94,7 @@ export function parseCIF(text: string): ParsedCIF {
       const rows: string[][] = [];
       while (i < lines.length) {
         const t = lines[i].trim();
-        if (!t || t.startsWith('_') || /^loop_/i.test(t) || /^data_/i.test(t) || t === ';') break;
+        if (!t || t.startsWith('_') || /^loop_/i.test(t) || /^data_/i.test(t) || t.startsWith(';')) break;
         // 按空白切分，尊重引号
         const vals = t.match(/'[^']*'|"[^"]*"|\S+/g) ?? [];
         rows.push(vals.map(stripQuote));

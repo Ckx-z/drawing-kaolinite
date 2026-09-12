@@ -91,8 +91,8 @@ function RangeControl(props: { compId: string; def: ParamDef; value: number; par
   );
 }
 
-function SelectControl(props: { compId: string; def: ParamDef; value: string }) {
-  const { compId, def, value } = props;
+function SelectControl(props: { compId: string; def: ParamDef; value: string; params: Record<string, unknown> }) {
+  const { compId, def, value, params } = props;
   const [query, setQuery] = useState('');
   const norm = query.trim().toLowerCase();
   // 过滤（符号或显示名包含匹配）；当前选中项即使被过滤掉也保留显示，避免 select 显示错位
@@ -122,7 +122,11 @@ function SelectControl(props: { compId: string; def: ParamDef; value: string }) 
       )}
       <select
         value={value}
-        onChange={(e) => sceneStore.getState().updateParams(compId, { [def.key]: e.target.value } as never)}
+        onChange={(e) =>
+          sceneStore
+            .getState()
+            .updateParams(compId, { [def.key]: e.target.value, ...def.sideEffect?.(e.target.value, params) } as never)
+        }
       >
         {shown.map((e) => (
           <option key={e.v} value={e.v}>
@@ -529,7 +533,16 @@ export default function ParamPanel() {
       {PARAM_DEFS[selected.type].map((def) => {
         if (def.when && !def.when(selected.params as Record<string, unknown>)) return null; // 条件显隐
         const v = (selected.params as Record<string, unknown>)[def.key];
-        if (def.type === 'select') return <SelectControl key={def.key} compId={selected.id} def={def} value={String(v)} />;
+        if (def.type === 'select')
+          return (
+            <SelectControl
+              key={def.key}
+              compId={selected.id}
+              def={def}
+              value={String(v)}
+              params={selected.params as Record<string, unknown>}
+            />
+          );
         if (def.type === 'toggle') return <ToggleControl key={def.key} compId={selected.id} def={def} value={String(v)} />;
         if (def.type === 'checkbox')
           return <CheckControl key={def.key} compId={selected.id} def={def} checked={Boolean(v)} />;

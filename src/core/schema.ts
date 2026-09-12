@@ -66,12 +66,15 @@ export const sheetParamsSchema = z.strictObject({
   Lx: z.number().min(20).max(150),
   Ly: z.number().min(20).max(150),
   layers: z.number().int().min(1).max(3),
-  d001: z.number().min(7.2).max(12),
+  /** 层间平移 = c 轴周期（高岭石 7.4；双层晶胞矿物 14.7~20.1，2026-09-12 上限放宽） */
+  d001: z.number().min(7.2).max(25),
   shape: z.enum(['矩形', '六角']),
   style: renderStyle,
   edgeH: z.boolean(),
   // T-2.7：晶学严格模式（保留 β/γ 夹角的真实三斜投影）；默认示意正交化（D03）
   strictCell: z.boolean().default(false),
+  /** 矿物种类（2026-09-12）：五选一，几何 CIF 来源与 d001 默认随其切换；缺省高岭石（旧场景兼容） */
+  mineral: z.enum(['kaolinite', 'dickite', 'nacrite', 'montmorillonite', 'illite']).default('kaolinite'),
   // 单原子模式（2026-09-08）：全部原子统一为 singleEl（简化示意）；
   // singleLayers（2026-09-10）：single 下只显示前 N 层（builder clamp 到 layers）
   atomMode,
@@ -84,13 +87,16 @@ export const tubeParamsSchema = z.strictObject({
   innerR: z.number().min(8).max(40),
   length: z.number().min(30).max(200),
   walls: z.number().int().min(1).max(3),
-  d001: z.number().min(7.4).max(11),
+  /** 壁间平移（双层晶胞矿物上限放宽至 25，2026-09-12） */
+  d001: z.number().min(7.4).max(25),
   progress: z.number().min(0.02).max(1),
   taperDeg: z.number().min(-20).max(20),
   style: renderStyle,
   // T-2.6：卷曲方向（'a' 基线 / 'b' 真实轴向美感）与端口噪声幅度（0 = 关）
   curlAxis: z.enum(['a', 'b']).default('a'),
   portNoise: z.number().min(0).max(2).default(0),
+  /** 矿物种类（2026-09-12）：卷曲用 CIF 来源（埃洛石=高岭石层，可换其他矿物层做示意） */
+  mineral: z.enum(['kaolinite', 'dickite', 'nacrite', 'montmorillonite', 'illite']).default('kaolinite'),
   // 单原子模式（2026-09-08）；singleLayers（2026-09-10）：single 下只卷前 N 壁
   atomMode,
   singleEl: singleElOf('Si'),
@@ -308,6 +314,7 @@ export const DEFAULT_PARAMS = {
     style: '空间填充',
     edgeH: false,
     strictCell: false,
+    mineral: 'kaolinite',
     atomMode: 'full',
     singleEl: 'Si',
     singleLayers: 3,
@@ -322,6 +329,7 @@ export const DEFAULT_PARAMS = {
     style: '空间填充',
     curlAxis: 'a' as const,
     portNoise: 0,
+    mineral: 'kaolinite',
     atomMode: 'full',
     singleEl: 'Si',
     singleLayers: 3,

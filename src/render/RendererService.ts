@@ -19,6 +19,7 @@ import {
   buildPackedLayers,
   buildParticle,
 } from '../core/builders';
+import { mineralOf } from '../core/minerals';
 import type { Atom, GeometryData } from '../core/geometry';
 import type { Annotation, MoleculeParams, SceneComponent, Transform } from '../core/types';
 import { drawAnnotations } from '../ui/annotations/draw';
@@ -1018,7 +1019,12 @@ export class RendererService {
     }
     const token = (this.buildTokens.get(comp.id) ?? 0) + 1;
     this.buildTokens.set(comp.id, token);
-    const req: GeometryRequest = { kind: comp.type, cifText: this.cifText, params: comp.params };
+    // 2026-09-12：片层/管的 CIF 按组件 mineral 参数取（缺省回退全局 setCifText——高岭石）
+    const cif =
+      comp.type === 'kaolinite_sheet' || comp.type === 'halloysite_tube'
+        ? mineralOf((comp.params as { mineral?: string }).mineral).cifText || this.cifText
+        : this.cifText;
+    const req: GeometryRequest = { kind: comp.type, cifText: cif, params: comp.params };
     this.engine
       .build(req)
       .then((result) => {
@@ -1074,11 +1080,13 @@ export class RendererService {
   private buildData(comp: SceneComponent): GeometryData | null {
     switch (comp.type) {
       case 'kaolinite_sheet':
-        if (!this.cifText) throw new Error('未设置 CIF 数据（setCifText）');
-        return buildKaoliniteSheet(this.cifText, comp.params);
+        const cif1 = mineralOf((comp.params as { mineral?: string }).mineral).cifText || this.cifText;
+        if (!cif1) throw new Error('未设置 CIF 数据（setCifText）');
+        return buildKaoliniteSheet(cif1, comp.params);
       case 'halloysite_tube':
-        if (!this.cifText) throw new Error('未设置 CIF 数据（setCifText）');
-        return buildHalloysiteTube(this.cifText, comp.params);
+        const cif2 = mineralOf((comp.params as { mineral?: string }).mineral).cifText || this.cifText;
+        if (!cif2) throw new Error('未设置 CIF 数据（setCifText）');
+        return buildHalloysiteTube(cif2, comp.params);
       case 'nanoparticle':
         return buildParticle(comp.params);
       case 'molecule': {
