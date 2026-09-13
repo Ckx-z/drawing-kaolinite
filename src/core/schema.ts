@@ -132,6 +132,9 @@ export const moleculeParamsSchema = z.strictObject({
   smiles: z.string().min(1).optional(),
   // 2026-09-08：化学式导入（大小写不敏感，规范化串如 Fe2O3）；几何 = formulaTo3D 紧密团簇
   formula: z.string().min(1).max(64).optional(),
+  // T-2.10（2026-09-13）：MOL/SDF 文件全文（V2000）；几何 = parseSdfOrMol
+  // 文件构象（存源数据不存网格，D02 同精神）；20KB 上限防滥用
+  mol: z.string().min(1).max(20000).optional(),
 });
 
 export const substrateParamsSchema = z.strictObject({

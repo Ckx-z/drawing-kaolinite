@@ -37,6 +37,7 @@ import { pngToPdf } from '../export/pdf';
 import { encodeTIFF, resolveExportSize } from '../export/tiff';
 import { smilesTo3D } from '../core/molecules/smiles';
 import { formulaTo3D } from '../core/molecules/formula';
+import { parseSdfOrMol } from '../core/molecules/mol';
 import type { SceneShape } from '../core/shapes/schema';
 import { drawShapes } from '../ui/shapes/draw';
 import { shapeViewStore } from '../ui/shapes/view';
@@ -1203,6 +1204,10 @@ export class RendererService {
         return buildParticle(comp.params);
       case 'molecule': {
         const mp = comp.params as MoleculeParams;
+        if (mp.mol) {
+          const m = parseSdfOrMol(mp.mol); // T-2.10（与 Worker 路径同源）
+          return { atoms: m.atoms, bonds: m.bonds };
+        }
         if (mp.smiles) {
           const mol = smilesTo3D(mp.smiles); // T-2.8：确定性重建（存参数不存网格）
           return { atoms: mol.atoms, bonds: mol.bonds.map(([i, j]) => [i, j]) };

@@ -2,10 +2,11 @@
  * 素材库面板 —— T-1.6/T-2.3/T-2.8
  * 上：素材库（点击添加组件并取景）+ SMILES 分子导入；下：我的模块（IndexedDB 持久化，点击复用）。
  */
-import { useEffect, useState } from 'react';
+import { useRef,  useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import seedTemplates from '../../data/seed-templates.json';
 import { formulaTo3D, resolveImportPath } from '../core/molecules/formula';
+import { parseSdfOrMol } from '../core/molecules/mol';
 import { findMineral } from '../core/minerals';
 import { smilesTo3D } from '../core/molecules/smiles';
 import type { ComponentType } from '../core/types';
@@ -74,6 +75,36 @@ export default function LibraryPanel() {
    * 这类输入若被 SMILES 抢先会被隐式氢加成（CO→甲醇、O→水，用户报告 bug）；
    * 其余（CCO=乙醇等真 SMILES）仍 SMILES 优先，失败自动转化学式。
    */
+  // T-2.10：MOL/SDF 文件导入（ChemDraw/Materials Studio 等导出；V2000 构象精确）
+  // 双入口：📁 按钮选择器 + 拖拽文件到输入框（行为一致）
+  const fileRef = useRef<HTMLInputElement>(null);
+  const importMolText = (text: string, fallbackName: string): void => {
+    try {
+      const m = parseSdfOrMol(text); // 预校验（非法即抛错，不入库）
+      const name = m.name || fallbackName;
+      const id = sceneStore.getState().addComponent('molecule', {
+        name,
+        params: { mol: text, kind: 'H₂O' },
+      });
+      sceneStore.getState().select(id);
+      rendererRef.current?.frameComponent(id);
+      setSmilesMsg(`已导入 ${name}（${m.atoms.length} 原子 · MOL 构象）`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '解析失败';
+      setSmilesMsg(`✕ MOL/SDF 解析失败：${msg}`);
+    }
+  };
+  const onMolFile = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const f = e.target.files?.[0];
+    e.target.value = ''; // 同文件可重复导入
+    if (f) void f.text().then((t) => importMolText(t, f.name.replace(/\.(mol|sdf)$/i, '')));
+  };
+  const onDropMol = (e: React.DragEvent): void => {
+    e.preventDefault();
+    const f = e.dataTransfer.files?.[0];
+    if (f) void f.text().then((t) => importMolText(t, f.name.replace(/\.(mol|sdf)$/i, '')));
+  };
+
   const addMolecule = (): void => {
     const s = smiles.trim();
     if (!s) return;
@@ -137,7 +168,12 @@ export default function LibraryPanel() {
           </div>
         ))}
       </div>
-      <div style={{ marginTop: 10 }}>
+      <div
+        style={{ marginTop: 10 }}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={onDropMol}
+        title="也可将 .mol / .sdf 分子文件拖到这里导入"
+      >
         <div style={{ display: 'flex', gap: 6 }}>
           <input
             value={smiles}
@@ -159,6 +195,14 @@ export default function LibraryPanel() {
           >
             导入
           </button>
+          <button
+            className="mini"
+            onClick={() => fileRef.current?.click()}
+            title="导入 .mol / .sdf 分子文件（ChemDraw、Materials Studio 等导出，V2000）——使用文件内精确 3D 构象"
+          >
+            📁 文件
+          </button>
+          <input ref={fileRef} type="file" accept=".mol,.sdf,text/plain" onChange={onMolFile} style={{ display: 'none' }} />
         </div>
         {smilesMsg && <p className="hint">{smilesMsg}</p>}
       </div>

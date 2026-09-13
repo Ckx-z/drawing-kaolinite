@@ -21,6 +21,7 @@ import {
 import GeometryWorker from './geometryWorker?worker&inline';
 import type { GeometryData } from './geometry';
 import { formulaTo3D } from './molecules/formula';
+import { parseSdfOrMol } from './molecules/mol';
 import { smilesTo3D } from './molecules/smiles';
 import type { MoleculeParams, PackedLayerParams, ParticleParams, SheetParams, TubeParams } from './types';
 
@@ -74,6 +75,10 @@ export function computeGeometry(req: GeometryRequest): GeometryResult {
       return buildParticle(req.params as ParticleParams);
     case 'molecule': {
       const mp = req.params as MoleculeParams;
+      if (mp.mol) {
+        const m = parseSdfOrMol(mp.mol); // T-2.10：MOL/SDF 文件构象（专业软件导出，精确 3D）
+        return { atoms: m.atoms, bonds: m.bonds };
+      }
       if (mp.smiles) {
         const mol = smilesTo3D(mp.smiles); // T-2.8：SMILES 分子在 Worker 内确定性构建
         return { atoms: mol.atoms, bonds: mol.bonds.map(([i, j]) => [i, j]) };
