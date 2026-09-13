@@ -101,4 +101,18 @@ describe('PARAM_DEFS 与 DEFAULT_PARAMS/schema 一致性', () => {
     const singleElDef = PARAM_DEFS.kaolinite_sheet.find((d) => d.key === 'singleEl');
     expect(singleElDef!.options).toHaveLength(118);
   });
+
+  it('单原子层数：上限随堆叠层数动态；层数=1 时区间退化须有禁用说明（2026-09-13 修复回归）', () => {
+    const def = PARAM_DEFS.kaolinite_sheet.find((d) => d.key === 'singleLayers')!;
+    expect(def.min).toBe(1);
+    expect((def.max as (p: Record<string, unknown>) => number)({ layers: 3 })).toBe(3);
+    expect((def.max as (p: Record<string, unknown>) => number)({ layers: 1 })).toBe(1); // 退化：滑块 1~1
+    // 退化场景必须给用户原因（RangeControl 据此渲染禁用态 + 提示）
+    const hint = def.stuckHint!({ layers: 1 });
+    expect(hint).toContain('1');
+    expect(hint.length).toBeGreaterThan(4);
+    // 管壁版同款
+    const tubeDef = PARAM_DEFS.halloysite_tube.find((d) => d.key === 'singleLayers')!;
+    expect(tubeDef.stuckHint!({ walls: 1 })).toContain('1');
+  });
 });

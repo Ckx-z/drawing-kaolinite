@@ -32,6 +32,12 @@ export interface ParamDef {
    * updateParams（同一命令，可整体撤销）。如切矿物时重置 d001 为该矿物 c 轴周期。
    */
   sideEffect?: (value: string, params: Record<string, unknown>) => Record<string, unknown>;
+  /**
+   * 滑块区间退化（动态 max ≤ min，如堆叠层数=1 时"单原子层数"上限=1）时的
+   * 禁用说明（2026-09-13：min=max 的原生 range 拖不动且无禁用视觉，用户
+   * 看到"能点但无反应"）。未提供时显示通用文案。
+   */
+  stuckHint?: (params: Record<string, unknown>) => string;
 }
 
 /** 矿物下拉选项（五种层状硅酸盐，显示"中文名 英文名"） */
@@ -81,6 +87,8 @@ const singleLayersField = (layersKey: 'layers' | 'walls'): ParamDef => ({
   max: (p) => Number(p[layersKey] ?? 3),
   step: 1,
   when: (p) => p.atomMode === 'single',
+  // 堆叠/壁层数=1 → 滑块区间 1~1 退化，给出人话原因而非死滑块
+  stuckHint: (p) => `${layersKey === 'layers' ? '堆叠层数' : '管壁层数'}为 ${Number(p[layersKey] ?? 3)}，已全部显示`,
 });
 
 export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {

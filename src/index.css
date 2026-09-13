@@ -255,6 +255,12 @@ input[type='number'] {
   margin: 0;
   padding: 0;
 }
+/* 区间退化（min≥max）的显式禁用态：灰 + 不可点光标 */
+.ctl input[type='range']:disabled {
+  accent-color: #9aa0a6;
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .ctl select {
   width: 100%;
 }

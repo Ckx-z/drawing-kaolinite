@@ -72,6 +72,10 @@ function RangeControl(props: { compId: string; def: ParamDef; value: number; par
   const max = typeof def.max === 'function' ? def.max(params) : (def.max ?? 100);
   // 显示值钳制到当前边界（存量值超界时滑块仍可用，store 原值由 builder clamp）
   const value = Math.min(Math.max(props.value, min), max);
+  // 区间退化（动态 max ≤ min，如堆叠层数=1 的"单原子层数"）：原生 range 在
+  // min===max 时拖不动且无禁用视觉——显式禁用 + 原因说明（2026-09-13）
+  const stuck = min >= max;
+  const stuckText = def.stuckHint ? def.stuckHint(params) : '可调范围为空（受关联参数限制）';
   return (
     <div className="ctl">
       <div className="row">
@@ -84,10 +88,13 @@ function RangeControl(props: { compId: string; def: ParamDef; value: number; par
         max={max}
         step={def.step}
         value={value}
+        disabled={stuck}
+        title={stuck ? stuckText : undefined}
         onChange={(e) =>
           sceneStore.getState().updateParams(compId, { [def.key]: parseFloat(e.target.value) } as never)
         }
       />
+      {stuck && <p className="hint">{stuckText}——调整关联参数（如堆叠层数）后可改</p>}
     </div>
   );
 }
