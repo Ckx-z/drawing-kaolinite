@@ -32,6 +32,8 @@ export interface MineralDef {
   cifText: string;
   /** 堆叠平移默认值 = c 轴周期（Å） */
   d001Default: number;
+  /** 层间物种元素（T-2.4：showInterlayer=false 时隐藏；空 = 无层间物） */
+  interlayer: readonly string[];
 }
 
 export const MINERALS: Record<MineralKey, MineralDef> = {
@@ -42,6 +44,7 @@ export const MINERALS: Record<MineralKey, MineralDef> = {
     formula: 'Al2Si2O5(OH)4',
     cifText: kaoliniteCif,
     d001Default: 7.4,
+    interlayer: [],
   },
   dickite: {
     key: 'dickite',
@@ -50,6 +53,7 @@ export const MINERALS: Record<MineralKey, MineralDef> = {
     formula: 'Al2Si2O5(OH)4',
     cifText: dickiteCif,
     d001Default: 14.74,
+    interlayer: [],
   },
   nacrite: {
     key: 'nacrite',
@@ -58,6 +62,7 @@ export const MINERALS: Record<MineralKey, MineralDef> = {
     formula: 'Al2Si2O5(OH)4',
     cifText: nacriteCif,
     d001Default: 14.59,
+    interlayer: [],
   },
   montmorillonite: {
     key: 'montmorillonite',
@@ -66,6 +71,7 @@ export const MINERALS: Record<MineralKey, MineralDef> = {
     formula: 'Ca0.5Al2Si4O12',
     cifText: montmorilloniteCif,
     d001Default: 15.0,
+    interlayer: ['Ca', 'Na'],
   },
   illite: {
     key: 'illite',
@@ -74,6 +80,7 @@ export const MINERALS: Record<MineralKey, MineralDef> = {
     formula: 'KAl4Si2O12',
     cifText: illiteCif,
     d001Default: 20.14,
+    interlayer: ['K'],
   },
 };
 

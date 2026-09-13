@@ -8,6 +8,7 @@
 import * as C from './crystal';
 import type { Atom, Bond, GeometryData } from './geometry';
 import { centerAtoms } from './molecules/center';
+import { mineralOf } from './minerals';
 import type { MoleculeParams, PackedLayerParams, ParticleParams, SheetParams, TubeParams } from './types';
 
 /* 确定性伪随机（同一种子同一颗粒形，保证模块复现） */
@@ -61,6 +62,12 @@ export function buildKaoliniteSheet(cifText: string, p: SheetParams): GeometryDa
   const nc = singleModeLayers(p.layers, p);
   const slab = C.buildSlab(parsed, { na, nb, nc, d001: p.d001, orthogonal: !p.strictCell });
   let atoms = slab.atoms;
+  // T-2.4：隐藏层间物种（蒙脱石 Ca/Na、伊利石 K——注册表 interlayer 元素集；
+  // 在羟基化前过滤，层间水氧不会被当成表面羟基补 H）
+  if (p.showInterlayer === false) {
+    const hide = new Set(mineralOf(p.mineral).interlayer);
+    if (hide.size) atoms = atoms.filter((a) => !hide.has(a.el));
+  }
   if (p.shape === '六角') {
     atoms = C.clipHexagon(atoms, Math.min(p.Lx, p.Ly) * 0.52);
     C.center(atoms);

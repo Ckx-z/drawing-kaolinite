@@ -28,13 +28,7 @@ describe('PARAM_DEFS 与 DEFAULT_PARAMS/schema 一致性', () => {
         const min = bound(def.min, params, -Infinity);
         const max = bound(def.max, params, Infinity);
         expect(v, `${t}.${def.key}=${v} 低于 min=${min}`).toBeGreaterThanOrEqual(min);
-        if (typeof def.max === 'function') {
-          // 动态上限键（singleLayers）：默认值是"全部层"哨兵 3，可能超过当前动态上限
-          // （如默认 layers=1）——超界由 RangeControl 钳制显示 + builder clamp，此处只守 schema 静态上限
-          expect(v, `${t}.${def.key}=${v} 超过 schema 静态上限`).toBeLessThanOrEqual(3);
-        } else {
-          expect(v, `${t}.${def.key}=${v} 高于 max=${max}`).toBeLessThanOrEqual(max);
-        }
+        expect(v, `${t}.${def.key}=${v} 高于 max=${max}`).toBeLessThanOrEqual(max);
       }
     }
   });

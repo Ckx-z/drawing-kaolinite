@@ -115,7 +115,7 @@
 - 关联文件：`src/state/moduleLibrary.ts`、`src/ui/LibraryPanel.tsx`（实为独立 `src/ui/ModulePanel.tsx`）
 - 完成记录：实际 0.5d。Dexie 4（表 `modules`：id/name/type/createdAt 索引）+ 内存缓存；迁移策略=legacy `kaolin_modules_v1` 逐条 schema 校验后 bulkPut、**原 key 保留不删**、migrated 标记防重；导入导出 `kaolin-modules/v1`（非法条目跳过计数、同 id 覆盖）；变更通知走 `kaolin-modules-changed` 事件。UI：`ModulePanel`（卡片网格/实例化副本/删除/导入导出）+ TopBar `★存为模块`（`snapshotComponent` 隔离快照 150×110 JPEG）。单测 9 条（fake-indexeddb）：**200 模块入库实测 <100ms**（远优于 2s）、缓存打开 <100ms、迁移幂等不丢、往返无损。浏览器实测：存为模块/复用副本（M2 副本 layers=3/d001=10/六角 全参数还原）/删除去重全过。附带修复：素材库添加后自动选中（demo 行为对齐）。
 
-### T-2.4 🔶 [P2] 多矿物 CIF 支持（蒙脱石/伊利石等）—— 主体完成 2026-09-12（五矿物 CIF 接线 + 中文名搜索 + 矿物下拉切换；剩 showInterlayer 显隐开关小尾巴）
+### T-2.4 ✅ [P2] 多矿物 CIF 支持（蒙脱石/伊利石等）—— 完成 2026-09-13（五矿物 CIF + 中文名搜索 + 矿物下拉 + showInterlayer 层间物种开关：伊利石 K⁺/蒙脱石 Ca²⁺·Na⁺ 注册表驱动）
 - 描述：接入 `data/` 中地开石/珍珠石/蒙脱石/伊利石 CIF；素材库增加矿物选择。层间阳离子/水分子**默认保留并显示**（体现真实结构）；参数面板新增 `showInterlayer` 勾选控制显隐；预留 `interlayerWater` 开关扩展（显示/隐藏/部分脱水）。
 - 依赖：T-1.3
 - 验收标准：四种矿物各生成一张默认片层且原子计数与化学计量核对一致；勾选/取消 `showInterlayer` 时层间物质原子被正确过滤/恢复（原子数断言），骨架结构不受影响。

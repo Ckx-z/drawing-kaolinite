@@ -58,7 +58,8 @@ const singleElOf = elementSymbolOf;
  * 默认 3 = 意图"全部层"——运行时由 builder clamp 到实际 layers/walls
  * （片层 1–3 层时默认即全部，与旧行为一致）；旧场景缺键经 default 补全。
  */
-const singleLayersOf = z.number().int().min(1).max(3).default(3);
+// 默认 1（2026-09-13）：出厂 layers/walls=1，默认 1 保持一致；拖大自动联动抬升层数
+const singleLayersOf = z.number().int().min(1).max(3).default(1);
 
 /* ---------- 各类型 params（范围 = DATA_DICT §二~六 = demo PARAM_DEFS） ---------- */
 
@@ -80,7 +81,9 @@ export const sheetParamsSchema = z.strictObject({
   atomMode,
   singleEl: singleElOf('Si'),
   singleLayers: singleLayersOf,
-  // D05 预留：showInterlayer（T-2.4 多矿物接入时启用，当前类型不暴露）
+  // T-2.4 层间物种开关（2026-09-13 启用）：false = 隐藏层间阳离子/层间水
+  //（蒙脱石 Ca²⁺/Na⁺、伊利石 K⁺；元素集见 minerals.ts 注册表 interlayer）
+  showInterlayer: z.boolean().default(true),
 });
 
 export const tubeParamsSchema = z.strictObject({
@@ -317,7 +320,8 @@ export const DEFAULT_PARAMS = {
     mineral: 'kaolinite',
     atomMode: 'full',
     singleEl: 'Si',
-    singleLayers: 3,
+    singleLayers: 1,
+    showInterlayer: true,
   },
   halloysite_tube: {
     innerR: 14,
@@ -332,7 +336,7 @@ export const DEFAULT_PARAMS = {
     mineral: 'kaolinite',
     atomMode: 'full',
     singleEl: 'Si',
-    singleLayers: 3,
+    singleLayers: 1,
   },
   nanoparticle: { radius: 9, grains: 160, seed: 7, mode: '簇装', atomMode: 'full', singleEl: 'Ce' },
   molecule: { kind: 'H₂O' },

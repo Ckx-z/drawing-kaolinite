@@ -3,7 +3,7 @@
  * 范围与 DATA_DICT / schema 一致；paramDefs.test.ts 守护"默认值落在定义范围内"。
  */
 import { ELEMENTS } from '../core/elements';
-import { MINERAL_KEYS, MINERALS } from '../core/minerals';
+import { MINERAL_KEYS, MINERALS, type MineralKey } from '../core/minerals';
 import type { ComponentType } from '../core/types';
 
 export interface ParamDef {
@@ -118,6 +118,12 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     { key: 'strictCell', label: '晶学严格模式（保留 β/γ 夹角）', type: 'checkbox' },
     ...ATOM_MODE_BASE,
     singleLayersField('layers'),
+    {
+      key: 'showInterlayer',
+      label: '显示层间物种（K⁺/Ca²⁺ 等）',
+      type: 'checkbox',
+      when: (p) => (MINERALS[(p.mineral as MineralKey) ?? 'kaolinite']?.interlayer.length ?? 0) > 0,
+    },
   ],
   halloysite_tube: [
     { key: 'innerR', label: '内半径', unit: 'Å', min: 8, max: 40, step: 1 },

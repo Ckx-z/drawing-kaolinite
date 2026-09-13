@@ -151,9 +151,9 @@ describe('schema 校验与兼容', () => {
     expect(tubeParamsSchema.safeParse({ ...tubeInput, singleLayers: 4 }).success).toBe(false);
   });
 
-  it('旧场景缺键 → default 补 3（意图"全部层"）', () => {
+  it('旧场景缺键 → default 补 1（2026-09-13 起出厂=1，与 layers=1 一致）', () => {
     const parsed = sheetParamsSchema.parse(sheetInput);
-    expect(parsed.singleLayers).toBe(3);
+    expect(parsed.singleLayers).toBe(1);
   });
 
   it('元素校验收紧（2026-09-12）：真实元素合法、非元素串拒绝', () => {
