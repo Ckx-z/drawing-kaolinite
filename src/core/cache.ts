@@ -33,8 +33,14 @@ export function fingerprint(v: unknown): string {
 }
 
 export function cacheKey(req: GeometryRequest): string {
-  return `geo:${req.kind}:${fingerprint(req.params)}:${fingerprint(req.cifText)}`;
+  return `geo${GEO_CACHE_VERSION}:${req.kind}:${fingerprint(req.params)}:${fingerprint(req.cifText)}`;
 }
+
+/**
+ * 几何缓存代次：构建算法语义变化时 +1，旧条目自然失效（新键不命中，LRU 淘汰）。
+ * v2（2026-09-13）：分子构建出口统一质心居中——旧缓存坐标偏心，必须作废。
+ */
+export const GEO_CACHE_VERSION = 2;
 
 /* ---------- IndexedDB（独立库，避免动模块库的 schema 版本） ---------- */
 

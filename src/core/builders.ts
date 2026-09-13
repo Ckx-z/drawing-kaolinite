@@ -7,6 +7,7 @@
  */
 import * as C from './crystal';
 import type { Atom, Bond, GeometryData } from './geometry';
+import { centerAtoms } from './molecules/center';
 import type { MoleculeParams, PackedLayerParams, ParticleParams, SheetParams, TubeParams } from './types';
 
 /* 确定性伪随机（同一种子同一颗粒形，保证模块复现） */
@@ -329,7 +330,7 @@ export const MOLECULES: Record<MoleculeParams['kind'], MoleculeDef> = {
 export function buildMolecule(kind: MoleculeParams['kind']): GeometryData {
   const m = MOLECULES[kind] ?? MOLECULES['H₂O'];
   return {
-    atoms: m.atoms.map((a) => ({ ...a })),
+    atoms: centerAtoms(m.atoms.map((a) => ({ ...a }))), // 原点 = 质心（与 SMILES/化学式出口一致，2026-09-13）
     bonds: m.bonds.map((b) => [...b] as Bond),
   };
 }

@@ -13,6 +13,7 @@ import {
   createCachedEngine,
   defaultTubePrebakeRequests,
   fingerprint,
+  GEO_CACHE_VERSION,
   prebake,
 } from './cache';
 import type { GeometryEngine, GeometryRequest, GeometryResult } from './worker';
@@ -82,8 +83,8 @@ describe('指纹（缓存失效判据）', () => {
 
   it('缓存键含 kind 与两段指纹', () => {
     const key = cacheKey(REQ);
-    expect(key.startsWith('geo:molecule:')).toBe(true);
-    expect(key.match(/:/g)).toHaveLength(5); // geo:kind:fp(params):fp(cif)，指纹自带 1 个冒号
+    expect(key.startsWith(`geo${GEO_CACHE_VERSION}:molecule:`)).toBe(true); // 代次前缀：几何算法变更时 bump
+    expect(key.match(/:/g)).toHaveLength(5); // geoN:kind:fp(params):fp(cif)，指纹自带 1 个冒号
   });
 });
 

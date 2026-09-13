@@ -12,6 +12,7 @@
  */
 import { ELEMENTS } from '../elements';
 import type { Atom, Bond } from '../geometry';
+import { centerAtoms } from './center';
 
 export class FormulaError extends Error {
   constructor(message: string) {
@@ -248,5 +249,6 @@ export function buildFormulaCluster(tokens: FormulaToken[]): { atoms: Atom[]; bo
 /** 一步到位：输入串 → 团簇几何（computeGeometry / UI 预校验共用入口） */
 export function formulaTo3D(input: string): { atoms: Atom[]; bonds: Bond[]; canonical: string } {
   const tokens = parseFormula(input);
-  return { ...buildFormulaCluster(tokens), canonical: canonicalFormula(tokens) };
+  const mol = buildFormulaCluster(tokens);
+  return { atoms: centerAtoms(mol.atoms), bonds: mol.bonds, canonical: canonicalFormula(tokens) }; // 原点 = 质心（2026-09-13）
 }

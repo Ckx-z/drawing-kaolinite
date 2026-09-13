@@ -14,6 +14,7 @@
  * 全程零运行时依赖、离线可用、确定性输出（存参数不存网格，D02）。
  */
 import { ELEMENTS } from '../elements';
+import { centerAtoms } from './center';
 
 export class SmilesError extends Error {
   constructor(
@@ -625,5 +626,6 @@ export function smilesToMolecule(graph: SmilesGraph): Mol3D {
 
 /** SMILES → 3D（一步入口：解析 + 构象；非法 SMILES 抛 SmilesError） */
 export function smilesTo3D(smiles: string): Mol3D {
-  return smilesToMolecule(parseSmiles(smiles));
+  const mol = smilesToMolecule(parseSmiles(smiles));
+  return { ...mol, atoms: centerAtoms(mol.atoms) }; // 原点 = 质心（拖拽/对齐不偏心，2026-09-13）
 }
