@@ -107,4 +107,62 @@ describe('模板库（T-11.8）', () => {
     expect(groups.size).toBe(1);
     expect(groups.has('tpl-g1')).toBe(false);
   });
+
+  it('快照式复现（2026-09-13 五原则）：组件 transform 逐位原样 + 相机/形态/2D 视图恢复 + 老模板兼容', async () => {
+    const store = createSceneStore();
+    const history = attachHistory(store, { mergeWindowMs: 0 });
+    const { rendererRef } = await import('./rendererRef');
+    const { shapeViewStore } = await import('../ui/shapes/view');
+
+    // 假渲染服务：记录相机恢复调用
+    const camPos = { set: (x: number, y: number, z: number) => { camPos.v = [x, y, z]; }, v: null as null | number[] };
+    const tgt = { set: (x: number, y: number, z: number) => { tgt.v = [x, y, z]; }, v: null as null | number[] };
+    const calls: string[] = [];
+    const fakeSvc = {
+      camera: { position: camPos, lookAt: () => calls.push('lookAt'), updateProjectionMatrix: () => calls.push('proj') },
+      orbit: { target: tgt, update: () => calls.push('orbitUpdate') },
+    };
+    const prev = rendererRef.current;
+    rendererRef.current = fakeSvc as never;
+    try {
+      // ① 组件坐标逐位快照
+      const tpl: TemplateEntry = {
+        id: 'tpl-snap', name: '快照测试',
+        components: [{
+          id: 'old1', type: 'kaolinite_sheet', name: '片层A',
+          params: { Lx: 40, Ly: 36, layers: 2, d001: 7.4, shape: '矩形', style: '空间填充', edgeH: false, mineral: 'kaolinite' },
+          transform: { position: [-8.5, 3.25, 0], rotation: [10, -25, 5], scale: 1.2 },
+          visible: true,
+        }] as never,
+        shapes: [],
+        mode: 'diagram',
+        camera: { position: [12, -34, 56], target: [1, 2, 3] },
+        view: { zoom: 1.75, panX: 40, panY: -20 },
+      };
+      applyTemplate(store, tpl);
+      const comp = store.getState().components[0]!;
+      expect(comp.transform.position).toEqual([-8.5, 3.25, 0]);   // 绝对坐标逐位
+      expect(comp.transform.rotation).toEqual([10, -25, 5]);
+      expect(comp.transform.scale).toBe(1.2);                      // 比例锁定
+      // ② 视角/形态/2D 视图恢复
+      expect(store.getState().mode).toBe('diagram');
+      expect(camPos.v).toEqual([12, -34, 56]);
+      expect(tgt.v).toEqual([1, 2, 3]);
+      expect(calls).toContain('lookAt');
+      const v = shapeViewStore.getState();
+      expect([v.zoom, v.panX, v.panY]).toEqual([1.75, 40, -20]);
+
+      // ③ 老模板（无 camera/mode/view）：不恢复视角（相机不被触碰）
+      camPos.v = null; tgt.v = null;
+      applyTemplate(store, { id: 'old', name: '老模板', shapes: [] });
+      expect(camPos.v).toBeNull();
+      expect(tgt.v).toBeNull();
+
+      // ④ 一次撤销整组回退（群组整体）
+      history.undo();
+      expect(store.getState().shapes).toHaveLength(0);
+    } finally {
+      rendererRef.current = prev;
+    }
+  });
 });

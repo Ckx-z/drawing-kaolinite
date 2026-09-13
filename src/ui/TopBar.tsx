@@ -237,6 +237,10 @@ export default function TopBar() {
     }
     const name = `我的模板（${s.shapes.length} 图元${s.components.length ? ` + ${s.components.length} 组件` : ''}）`;
     const { saveTemplate } = await import('../state/templateLibrary');
+    const { shapeViewStore } = await import('./shapes/view');
+    // 快照采集（2026-09-13 用户五原则）：相机/形态/2D 视图随模板保存，
+    // 载入时原样恢复——不重排、不取景
+    const svc = rendererRef.current;
     await saveTemplate({
       id: `tpl-user-${Date.now()}`,
       name,
@@ -245,6 +249,11 @@ export default function TopBar() {
       shapes: structuredClone(s.shapes) as never,
       annotations: structuredClone(s.annotations) as never,
       createdAt: new Date().toISOString(),
+      mode: s.mode,
+      camera: svc
+        ? { position: svc.camera.position.toArray() as [number, number, number], target: svc.orbit.target.toArray() as [number, number, number] }
+        : undefined,
+      view: { zoom: shapeViewStore.getState().zoom, panX: shapeViewStore.getState().panX, panY: shapeViewStore.getState().panY },
     });
     sceneStore.getState().bumpTemplates(); // 模板分区立即出现新卡片
     flash(`已存为模板「${name}」，左侧模板分区可一键载入`);

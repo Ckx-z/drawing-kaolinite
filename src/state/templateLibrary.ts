@@ -13,6 +13,8 @@ import { componentSchema } from '../core/schema';
 import type { SceneShape } from '../core/shapes/schema';
 import type { Annotation } from '../core/types';
 import { runInBatch } from './history';
+import { rendererRef } from './rendererRef';
+import { shapeViewStore } from '../ui/shapes/view';
 import type { SceneState } from './sceneStore';
 
 /* ---------- 数据模型 ---------- */
@@ -27,6 +29,13 @@ export const templateSchema = z.strictObject({
   shapes: z.array(z.unknown()),
   annotations: z.array(z.unknown()).optional(),
   createdAt: z.string().optional(),
+  // ---- 快照式复现（2026-09-13 用户五原则：位置/视角/比例/层级/群组锁定）----
+  /** 保存时相机（position + 轨道目标）；缺省（旧模板）不恢复视角 */
+  camera: z.object({ position: z.tuple([z.number(), z.number(), z.number()]), target: z.tuple([z.number(), z.number(), z.number()]) }).optional(),
+  /** 画布形态（3D 混合 / 纯示意图） */
+  mode: z.enum(['mixed', 'diagram']).optional(),
+  /** 纯示意图模式的视图（zoom/pan） */
+  view: z.object({ zoom: z.number(), panX: z.number(), panY: z.number() }).optional(),
 });
 
 /** 模板条目（annotations 手写类型避免 z.infer 交叉冲突） */
@@ -39,6 +48,9 @@ export interface TemplateEntry {
   shapes: SceneShape[];
   annotations?: Annotation[];
   createdAt?: string;
+  camera?: { position: [number, number, number]; target: [number, number, number] };
+  mode?: 'mixed' | 'diagram';
+  view?: { zoom: number; panX: number; panY: number };
 }
 
 class TemplateDB extends Dexie {
@@ -136,5 +148,31 @@ export function applyTemplate(store: { getState: () => SceneState }, tpl: Templa
     for (const ids of groups.values()) {
       if (ids.length > 1) store.getState().groupShapes(ids);
     }
+
+    // ---- 快照式视角复现（2026-09-13 用户五原则之"视角锁定"）----
+    restoreTemplateSnapshot(store, tpl);
   });
+}
+
+/**
+ * 恢复模板保存时的形态/相机/2D 视图（快照复现，禁止 frameAll/重排类取景）。
+ * 旧模板（无 camera/view/mode 字段）跳过对应项，保持载入前视角。
+ */
+export function restoreTemplateSnapshot(
+  store: { getState: () => SceneState },
+  tpl: TemplateEntry,
+): void {
+  const st = store.getState();
+  if (tpl.mode && tpl.mode !== st.mode) st.setMode(tpl.mode);
+  const svc = rendererRef.current;
+  if (tpl.camera && svc) {
+    const [px_, py_, pz_] = tpl.camera.position;
+    const [tx, ty, tz] = tpl.camera.target;
+    svc.camera.position.set(px_, py_, pz_);
+    svc.orbit.target.set(tx, ty, tz);
+    svc.camera.lookAt(tx, ty, tz);
+    svc.camera.updateProjectionMatrix();
+    svc.orbit.update();
+  }
+  if (tpl.view) shapeViewStore.getState().setView(tpl.view);
 }
