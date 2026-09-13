@@ -9,6 +9,7 @@ import kaoliniteCif from '../../data/kaolinite.cif?raw';
 import { createCachedEngine, defaultTubePrebakeRequests, prebake } from '../core/cache';
 import { createWorkerEngine } from '../core/worker';
 import { trace } from '../crashTrace';
+import { drawMeasurements } from './measure/draw';
 import { drawAnnotations } from './annotations/draw';
 import { drawDraft, drawGrid, drawGuides, drawShapes } from './shapes/draw';
 import { createShapeInteraction } from './shapes/interaction';
@@ -76,6 +77,15 @@ function AnnotationOverlay(): React.ReactElement {
               project: (p) => svc.projectToScreen(p, W, H),
               selectionId: s.shapeSelectionIds.at(-1) ?? null,
             });
+            drawMeasurements({
+              ctx,
+              width: W,
+              height: H,
+              project: (p) => svc.projectToScreen(p, W, H),
+              resolve: (ref) => svc.atomWorldPos(ref.compId, ref.index),
+              picks: s.measurePick,
+              measurements: s.measurements,
+            });
             drawDraft(ctx);
             drawGuides(ctx);
           }
@@ -110,10 +120,15 @@ export default function SceneCanvas() {
     };
     // Alt+点击原子（2026-09-12）：密排原子层 → 切换该原子所在列的"参与堆叠"掩码位。
     // 视角下命中的常是顶层原子——按水平最近归属到第一层格点（与 builder 掩码归属同规则）
-    svc.onAtomClick = (compId, atom) => {
+    // 其他组件（2026-09-13）→ 键长/键角测量拾取（2 点键长、第 3 点升级键角、Esc 清空）
+    svc.onAtomClick = (compId, atom, index) => {
       const s = sceneStore.getState();
       const comp = s.components.find((c) => c.id === compId);
-      if (!comp || comp.type !== 'packed_layers') return;
+      if (!comp) return;
+      if (comp.type !== 'packed_layers') {
+        sceneStore.getState().toggleMeasurePick(compId, index);
+        return;
+      }
       const n = comp.params.n ?? 7;
       const mesh = svc.atomMeshOf(compId);
       if (!mesh) return;

@@ -13,6 +13,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { trace } from '../crashTrace';
+import { measureLabel } from '../core/measures';
+import type { Measurement } from '../core/measures';
+import { drawMeasurements } from '../ui/measure/draw';
 import {
   buildHalloysiteTube,
   buildKaoliniteSheet,
@@ -80,6 +83,8 @@ export interface ExportOptions {
   annotations?: Annotation[];
   /** 机理图图元层（T-11.5）：位图/SVG 导出时叠画（视口坐标按比例换算） */
   shapes?: SceneShape[];
+  /** 键长/键角测量（2026-09-13）：原子引用经 atomWorldPos 解析后叠画 */
+  measurements?: Measurement[];
 }
 
 /** SVG 导出的原子显示半径基准（与 instanced.ts 同款约定） */
@@ -106,6 +111,26 @@ export class RendererService {
     const m = rec.group.children.find((ch) => (ch as { userData: { matKind?: string } }).userData.matKind === 'atom');
     return (m as unknown as { userData: { atoms: Atom[] } }) ?? null;
   }
+
+  /**
+   * 原子世界坐标（2026-09-13 键长/键角测量）：局部坐标经组件变换（与 SVG 导出同款
+   * position·rotation·scale 复合）。组件不存在/越界返回 null（测量项自动失效）。
+   */
+  atomWorldPos(compId: string, index: number): [number, number, number] | null {
+    const rec = this.records.get(compId);
+    const a = rec?.data?.atoms[index];
+    if (!rec?.data || !a || !rec.comp) return null;
+    const t = rec.comp.transform;
+    const mtx = new THREE.Matrix4().compose(
+      new THREE.Vector3().fromArray(t.position),
+      new THREE.Quaternion().setFromEuler(
+        new THREE.Euler((t.rotation[0] * Math.PI) / 180, (t.rotation[1] * Math.PI) / 180, (t.rotation[2] * Math.PI) / 180),
+      ),
+      new THREE.Vector3().setScalar(t.scale),
+    );
+    const v = new THREE.Vector3(a.x, a.y, a.z).applyMatrix4(mtx);
+    return [v.x, v.y, v.z];
+  }
   /** T-11.6：3D 场集体可见性（纯 2D 模式 = false；盖在组件自身 visible 之上） */
   private sceneVisible = true;
   private cifText = '';
@@ -126,7 +151,7 @@ export class RendererService {
    * Alt+点击原子回调（2026-09-12）：命中 InstancedMesh 的具体原子实例。
    * 需配合 instanced.addAtoms 写入的 userData.atoms（桶内原子数组，实例 k = arr[k]）。
    */
-  onAtomClick: ((compId: string, atom: Atom) => void) | null = null;
+  onAtomClick: ((compId: string, atom: Atom, index: number) => void) | null = null;
   /** gizmo 拖动结束帧的变换同步回调（T-1.5 状态层接入） */
   onTransformChange: ((id: string) => void) | null = null;
 
@@ -568,7 +593,7 @@ export class RendererService {
   }
 
   /** 离屏渲染帧 + 标注/图元叠画 → 2D 画布（PNG/TIFF/PDF 共用；annotations/shapes 可选） */
-  snapshotWithOverlay(w: number, h: number, annotations: Annotation[], shapes?: SceneShape[]): HTMLCanvasElement {
+  snapshotWithOverlay(w: number, h: number, annotations: Annotation[], shapes?: SceneShape[], measurements?: Measurement[]): HTMLCanvasElement {
     const oc = document.createElement('canvas');
     oc.width = w;
     oc.height = h;
@@ -610,6 +635,18 @@ export class RendererService {
       });
       ctx.restore();
     }
+    // 键长/键角测量层（2026-09-13）：直接投影到导出坐标（与标注同链路）
+    if (measurements?.length) {
+      drawMeasurements({
+        ctx,
+        width: w,
+        height: h,
+        project: (p) => this.projectToScreen(p, w, h),
+        resolve: (ref) => this.atomWorldPos(ref.compId, ref.index),
+        picks: [],
+        measurements,
+      });
+    }
     return oc;
   }
 
@@ -627,7 +664,7 @@ export class RendererService {
     );
     const st = this.beginOffscreen(w, h, opts.alpha ?? false);
     try {
-      const canvas = this.snapshotWithOverlay(w, h, opts.annotations ?? [], opts.shapes);
+      const canvas = this.snapshotWithOverlay(w, h, opts.annotations ?? [], opts.shapes, opts.measurements);
       return { dataUrl: canvas.toDataURL('image/png'), width: w, height: h };
     } finally {
       this.endOffscreen(st);
@@ -655,7 +692,7 @@ export class RendererService {
     );
     const st = this.beginOffscreen(plan.w, plan.h, opts.alpha ?? false);
     try {
-      const oc = this.snapshotWithOverlay(plan.w, plan.h, opts.annotations ?? [], opts.shapes);
+      const oc = this.snapshotWithOverlay(plan.w, plan.h, opts.annotations ?? [], opts.shapes, opts.measurements);
       const ctx = oc.getContext('2d');
       if (!ctx) throw new Error('无法创建 2D 画布（TIFF 导出）');
       const img = ctx.getImageData(0, 0, plan.w, plan.h);
@@ -714,7 +751,7 @@ export class RendererService {
    * 分组 SVG 矢量导出（T-5.3）：从原子/键数据直接生成（线稿档画风，平色+描边），
    * 每组件 <g id="组件名">。原子/键世界坐标 = 局部坐标经组件变换（含缩放半径）。
    */
-  exportSVG(opts?: { background?: string; strokeWidth?: number; annotations?: Annotation[]; shapes?: SceneShape[] }): string {
+  exportSVG(opts?: { background?: string; strokeWidth?: number; annotations?: Annotation[]; shapes?: SceneShape[]; measurements?: Measurement[] }): string {
     this.scene.updateMatrixWorld(true);
     const size = this.renderer.getSize(new THREE.Vector2());
     const comps: SvgComponentInput[] = [];
@@ -789,8 +826,42 @@ export class RendererService {
         project: (p) => this.projectToScreen(p, size.x, size.y),
       });
     }
+    // 键长/键角测量层（2026-09-13）：与标注同投影，矢量输出
+    const measurements = opts?.measurements ?? [];
+    if (measurements.length) {
+      const parts: string[] = ['<g id="measurements" stroke="#0e7490" stroke-width="1.6" fill="none">'];
+      const fmt = (v: number) => (Math.round(v * 100) / 100).toString();
+      for (const m of measurements) {
+        const pts = m.picks.map((r) => this.atomWorldPos(r.compId, r.index));
+        if (pts.some((p) => !p)) continue;
+        const scr = pts.map((p) => this.projectToScreen(p!, size.x, size.y));
+        if (scr.some((p) => !p.visible)) continue;
+        const [s0, s1, s2] = scr;
+        if (m.kind === 'bond' && s0 && s1) {
+          parts.push(`<line x1="${fmt(s0.x)}" y1="${fmt(s0.y)}" x2="${fmt(s1.x)}" y2="${fmt(s1.y)}"/>`);
+          parts.push(this.measureBadgeSVG((s0.x + s1.x) / 2, (s0.y + s1.y) / 2 - 12, measureLabel('bond', [pts[0]!, pts[1]!])));
+        } else if (m.kind === 'angle' && s0 && s1 && s2) {
+          parts.push(`<polyline points="${fmt(s0.x)},${fmt(s0.y)} ${fmt(s1.x)},${fmt(s1.y)} ${fmt(s2.x)},${fmt(s2.y)}" fill="none"/>`);
+          const a1 = Math.atan2(s0.y - s1.y, s0.x - s1.x);
+          const a2d = Math.atan2(s2.y - s1.y, s2.x - s1.x);
+          const large = 0;
+          const sweep = a2d > a1 ? 1 : 0;
+          parts.push(`<path d="M ${fmt(s1.x + 14 * Math.cos(a1))} ${fmt(s1.y + 14 * Math.sin(a1))} A 14 14 0 ${large} ${sweep} ${fmt(s1.x + 14 * Math.cos(a2d))} ${fmt(s1.y + 14 * Math.sin(a2d))}"/>`);
+          const mid = (a1 + a2d) / 2 + (Math.abs(a2d - a1) > Math.PI ? Math.PI : 0);
+          parts.push(this.measureBadgeSVG(s1.x + Math.cos(mid) * 34, s1.y + Math.sin(mid) * 34, measureLabel('angle', [pts[0]!, pts[1]!, pts[2]!])));
+        }
+      }
+      parts.push('</g>');
+      extra += (extra ? '\n' : '') + parts.join('\n');
+    }
     if (!extra) return svgBody;
     return svgBody.replace('</svg>', `${extra}\n</svg>`);
+  }
+
+  /** 测量标签徽章（白底圆角 + 深色文字；SVG 与画布版视觉一致） */
+  private measureBadgeSVG(x: number, y: number, text: string): string {
+    const w = text.length * 7.2 + 10;
+    return `<g><rect x="${(x - w / 2).toFixed(1)}" y="${(y - 9).toFixed(1)}" width="${w.toFixed(1)}" height="18" rx="4" fill="rgba(255,255,255,0.92)" stroke="#0e7490" stroke-width="1"/><text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="#0f172a" stroke="none">${text}</text></g>`;
   }
 
   /**
@@ -877,7 +948,7 @@ export class RendererService {
     this.tc.visible = false;
     const st = this.beginOffscreen(plan.w, plan.h, false);
     try {
-      return this.snapshotWithOverlay(plan.w, plan.h, opts.annotations ?? []);
+      return this.snapshotWithOverlay(plan.w, plan.h, opts.annotations ?? [], undefined, opts.measurements);
     } finally {
       this.endOffscreen(st);
       this.tc.visible = tcVisible;
@@ -925,7 +996,7 @@ export class RendererService {
     const hCM = (wCM * h) / w;
     const st = this.beginOffscreen(w, h, opts.alpha ?? false);
     try {
-      const dataUrl = this.snapshotWithOverlay(w, h, opts.annotations ?? [], opts.shapes).toDataURL('image/png');
+      const dataUrl = this.snapshotWithOverlay(w, h, opts.annotations ?? [], opts.shapes, opts.measurements).toDataURL('image/png');
       return { blob: pngToPdf(dataUrl, wCM, hCM), widthCM: wCM, heightCM: hCM };
     } finally {
       this.endOffscreen(st);
@@ -1237,7 +1308,7 @@ export class RendererService {
       if (e.altKey && hit.instanceId !== undefined && hit.object.userData.matKind === 'atom') {
         const bucket = hit.object.userData.atoms as Atom[] | undefined;
         const atom = bucket?.[hit.instanceId];
-        if (compId && atom) this.onAtomClick?.(compId, atom);
+        if (compId && atom) this.onAtomClick?.(compId, atom, hit.instanceId ?? 0);
         return; // 不触发选中切换（编辑意图）
       }
       this.onSelect?.(compId, e.shiftKey);

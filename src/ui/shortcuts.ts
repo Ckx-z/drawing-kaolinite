@@ -169,11 +169,12 @@ export const SHORTCUTS: ShortcutDef[] = [
     },
   },
   {
-    key: 'escape', label: '取消选中（含组件多选）/ 关闭浮层 / 回选择工具',
+    key: 'escape', label: '取消选中（含组件多选/测量拾取）/ 关闭浮层 / 回选择工具',
     run: ({ host, toggleCheatSheet }) => {
       host.getState().select(null);
       host.getState().selectShape(null);
       host.getState().selectComponentIds([]); // T-7.3 清组件多选
+      host.getState().clearMeasurePick(); // 键长/键角拾取清空（2026-09-13）
       host.getState().setTool('select');
       toggleCheatSheet();
     },

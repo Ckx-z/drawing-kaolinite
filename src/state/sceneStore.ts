@@ -11,6 +11,7 @@
  */
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { trace } from '../crashTrace';
+import { pickAtom, type AtomRef, type Measurement } from '../core/measures';
 import { attachHistory } from './history';
 import {
   DEFAULT_PARAMS,
@@ -83,6 +84,13 @@ export interface SceneState {
   componentSelectionIds: string[];
   toggleComponentSelection: (id: string) => void;
   selectComponentIds: (ids: string[]) => void;
+  /** 键长/键角测量（2026-09-13，会话态：不进场景文档/撤销栈） */
+  measurePick: AtomRef[];
+  measurements: Measurement[];
+  toggleMeasurePick: (compId: string, index: number) => void;
+  clearMeasurePick: () => void;
+  removeMeasurement: (id: string) => void;
+  clearMeasurements: () => void;
   /** 批量：位置对齐到主选的某轴分量 */
   alignComponents: (axis: 0 | 1 | 2) => void;
   /** 批量：沿轴排序后首尾不动中间等距（≥3 个成员生效） */
@@ -158,6 +166,8 @@ export function createSceneStore(): SceneStore {
     components: [],
     selectionId: null,
     componentSelectionIds: [],
+    measurePick: [],
+    measurements: [],
     palette: {},
     annotations: [],
     shapes: [],
@@ -238,6 +248,22 @@ export function createSceneStore(): SceneStore {
         componentSelectionIds: id !== null ? [] : get().componentSelectionIds,
       });
     },
+
+    /* ---------- 键长/键角测量（会话态，不进撤销） ---------- */
+    toggleMeasurePick: (compId, index) => {
+      const { measurePick, measurements } = get();
+      const r = pickAtom(measurePick, { compId, index }, measurements, () => `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`);
+      set({
+        measurePick: r.pick,
+        measurements: [
+          ...measurements.filter((m) => m.id !== r.removeId),
+          ...(r.commit ? [r.commit] : []),
+        ],
+      });
+    },
+    clearMeasurePick: () => set({ measurePick: [] }),
+    removeMeasurement: (id) => set({ measurements: get().measurements.filter((m) => m.id !== id) }),
+    clearMeasurements: () => set({ measurements: [], measurePick: [] }),
 
     toggleComponentSelection: (id) => {
       const comp = get().components.find((c) => c.id === id);

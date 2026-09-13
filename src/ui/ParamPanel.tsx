@@ -7,6 +7,7 @@ import { useStore } from 'zustand';
 import type { PaletteSetting, Transform } from '../core/types';
 import { PALETTES, resolveColor } from '../render/palette';
 import { rendererRef } from '../state/rendererRef';
+import { measureLabel } from '../core/measures';
 import { sceneStore } from '../state/sceneStore';
 import { PARAM_DEFS, type ParamDef } from './paramDefs';
 
@@ -259,6 +260,38 @@ function NumCell(props: { label: string; value: number; step: number; onSet: (v:
  * 标注层区（T-4.4）：比例尺 / 文本标签（引线锚定选中组件的世界坐标）。
  * 标注存场景 JSON（annotations），交互显示走 SceneCanvas 叠加 canvas。
  */
+/** 键长/键角测量区（2026-09-13）：Alt+点击原子拾取；列表逐项删除/清空 */
+function MeasureSection() {
+  const measurements = useStore(sceneStore, (s) => s.measurements);
+  const pickN = useStore(sceneStore, (s) => s.measurePick.length);
+  const label = (m: (typeof measurements)[number]): string => {
+    const svc = rendererRef.current;
+    const pts = svc ? m.picks.map((r) => svc.atomWorldPos(r.compId, r.index)) : [];
+    if (pts.some((p) => !p)) return m.kind === 'bond' ? '键长（原子已失效）' : '键角（原子已失效）';
+    return measureLabel(m.kind, pts as [number, number, number][]);
+  };
+  return (
+    <>
+      <div className="subhead">测 量</div>
+      <p className="hint">
+        Alt+点击原子：两点 = 键长，第三点升级键角；Esc 取消拾取。
+      </p>
+      {pickN > 0 && <p className="hint">拾取中：已选 {pickN} 个原子</p>}
+      {measurements.map((m) => (
+        <div key={m.id} className="btnrow">
+          <span className="layer-name">{label(m)}</span>
+          <button className="mini" onClick={() => sceneStore.getState().removeMeasurement(m.id)}>✕</button>
+        </div>
+      ))}
+      {measurements.length > 0 && (
+        <div className="btnrow">
+          <button className="mini" onClick={() => sceneStore.getState().clearMeasurements()}>清空测量</button>
+        </div>
+      )}
+    </>
+  );
+}
+
 function AnnotationSection() {
   const annotations = useStore(sceneStore, (s) => s.annotations);
   const selected = useStore(sceneStore, (s) => s.components.find((c) => c.id === s.selectionId) ?? null);
@@ -624,6 +657,7 @@ export default function ParamPanel() {
         <ShapeSection />
         <PaletteSection />
         <AnnotationSection />
+        <MeasureSection />
       </>
     );
   }
@@ -647,6 +681,7 @@ export default function ParamPanel() {
         </p>
         <PaletteSection />
         <AnnotationSection />
+        <MeasureSection />
         <h3>图层</h3>
         <p className="hint">画布为空。</p>
       </section>
@@ -729,6 +764,7 @@ export default function ParamPanel() {
 
       <PaletteSection />
       <AnnotationSection />
+      <MeasureSection />
     </section>
   );
 }

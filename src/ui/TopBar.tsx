@@ -121,7 +121,7 @@ export default function TopBar() {
   const onExportPNG = async (): Promise<void> => {
     const svc = rendererRef.current;
     if (!svc) return;
-    const { dataUrl, width, height } = svc.exportPNG({ dpi, alpha, annotations: sceneStore.getState().annotations, shapes: sceneStore.getState().shapes });
+    const { dataUrl, width, height } = svc.exportPNG({ dpi, alpha, annotations: sceneStore.getState().annotations, shapes: sceneStore.getState().shapes, measurements: sceneStore.getState().measurements });
     const ok = await saveBlob(`kaolin-16cm-${dpi}dpi.png`, await dataUrlToBlob(dataUrl));
     if (ok) flash(`已导出 ${width} × ${height} px（16cm @ ${dpi}dpi${alpha ? '，透明底' : ''}）`);
   };
@@ -145,7 +145,7 @@ export default function TopBar() {
   const onExportSVG = async (): Promise<void> => {
     const svc = rendererRef.current;
     if (!svc) return;
-    const svg = svc.exportSVG({ background: alpha ? undefined : '#F4F5F7', strokeWidth: 1, annotations: sceneStore.getState().annotations, shapes: sceneStore.getState().shapes });
+    const svg = svc.exportSVG({ background: alpha ? undefined : '#F4F5F7', strokeWidth: 1, annotations: sceneStore.getState().annotations, shapes: sceneStore.getState().shapes, measurements: sceneStore.getState().measurements });
     const ok = await saveText('kaolin-scene.svg', svg, 'image/svg+xml');
     if (ok) flash('已导出分组 SVG（每组件一个分组，PPT 转形状后可逐组件编辑）');
   };
@@ -154,7 +154,7 @@ export default function TopBar() {
   const onExportPDF = async (): Promise<void> => {
     const svc = rendererRef.current;
     if (!svc) return;
-    const { blob, widthCM, heightCM } = svc.exportPDF({ dpi, alpha, annotations: sceneStore.getState().annotations, shapes: sceneStore.getState().shapes });
+    const { blob, widthCM, heightCM } = svc.exportPDF({ dpi, alpha, annotations: sceneStore.getState().annotations, shapes: sceneStore.getState().shapes, measurements: sceneStore.getState().measurements });
     const ok = await saveBlob(`kaolin-${widthCM}x${heightCM}cm.pdf`, blob);
     if (ok) flash(`已导出 PDF（页面 ${widthCM} × ${heightCM} cm @ ${dpi}dpi 位图${alpha ? '，透明底' : ''}）`);
   };
@@ -189,7 +189,7 @@ export default function TopBar() {
   const onExportTIFF = async (): Promise<void> => {
     const svc = rendererRef.current;
     if (!svc) return;
-    const { blob, width, height, degraded, effectiveDpi } = svc.exportTIFF({ dpi, alpha, annotations: sceneStore.getState().annotations, shapes: sceneStore.getState().shapes });
+    const { blob, width, height, degraded, effectiveDpi } = svc.exportTIFF({ dpi, alpha, annotations: sceneStore.getState().annotations, shapes: sceneStore.getState().shapes, measurements: sceneStore.getState().measurements });
     const ok = await saveBlob(`kaolin-16cm-${Math.round(effectiveDpi)}dpi.tiff`, blob);
     if (!ok) return;
     flash(
