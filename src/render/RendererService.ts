@@ -87,6 +87,13 @@ export interface ExportOptions {
   measurements?: Measurement[];
 }
 
+/**
+ * 3D 视角滚轮缩放灵敏度（OrbitControls.zoomSpeed，默认 1）。
+ * 2026-09-13 用户反馈滚轮缩放幅度太大 → 0.5（每次滚动变化约为原来一半）。
+ * 仅作用于滚轮/触控板捏合的 dolly 通道；平移、旋转、frameAll 取景不受影响。
+ */
+const WHEEL_ZOOM_SPEED = 0.5;
+
 /** SVG 导出的原子显示半径基准（与 instanced.ts 同款约定） */
 function baseRadiusFor(el: string, ballstick: boolean): number {
   const info = getElement(el);
@@ -181,6 +188,9 @@ export class RendererService {
     this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
     this.orbit.enableDamping = true;
     this.orbit.dampingFactor = 0.08;
+    // 滚轮 dolly 灵敏度（2026-09-13 用户反馈：默认 1 幅度太大）——
+    // 只作用于滚轮/捏合缩放通道，平移旋转与取景操作不受影响
+    this.orbit.zoomSpeed = WHEEL_ZOOM_SPEED;
 
     this.tc = new TransformControls(this.camera, this.renderer.domElement);
     this.tc.setSize(0.85);

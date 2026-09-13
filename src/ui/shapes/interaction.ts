@@ -332,7 +332,11 @@ export function createShapeInteraction(dom: HTMLCanvasElement): () => void {
     }
   };
 
-  /** T-11.6 纯示意图：滚轮以指针为中心缩放（view 变换，图元数据不动） */
+  /**
+   * T-11.6 纯示意图：滚轮以指针为中心缩放（view 变换，图元数据不动）。
+   * 灵敏度 0.0015 → 0.00075（2026-09-13 用户反馈滚轮幅度太大，减半更平滑）
+   */
+  const WHEEL_ZOOM_SENSITIVITY = 0.00075;
   const onWheel = (e: WheelEvent): void => {
     if (store.getState().mode !== 'diagram') return;
     e.preventDefault();
@@ -341,7 +345,7 @@ export function createShapeInteraction(dom: HTMLCanvasElement): () => void {
     const px = e.clientX - r.left;
     const py = e.clientY - r.top;
     const v = shapeViewStore.getState();
-    const nz = Math.min(4, Math.max(0.25, v.zoom * Math.exp(-e.deltaY * 0.0015)));
+    const nz = Math.min(4, Math.max(0.25, v.zoom * Math.exp(-e.deltaY * WHEEL_ZOOM_SENSITIVITY)));
     shapeViewStore.getState().setView({
       zoom: nz,
       panX: px - (px - v.panX) * (nz / v.zoom),
