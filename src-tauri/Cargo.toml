@@ -1,6 +1,6 @@
 [package]
 name = "kaolin-assets"
-version = "0.1.0"
+version = "0.2.0"
 description = "Kaolin-Assets · 高岭土机理图绘制软件"
 authors = ["Kaolin-Assets 课题组"]
 edition = "2021"

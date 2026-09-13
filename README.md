@@ -1,5 +1,7 @@
 # Kaolin-Assets · 高岭土机理图绘制软件
 
+![version](https://img.shields.io/badge/version-0.2.0-blue) ![tests](https://img.shields.io/badge/tests-351-green) ![platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-lightgrey)
+
 > 模块化科研绘图工具：像搭积木一样组合"片层 / 纳米管 / 颗粒 / 分子 / 基底"，
 > 生成 SCI 论文与 PPT 汇报用的 2D/3D 机理图。所有素材由 **CIF 晶体学数据 + 参数** 程序化生成，
 > **存参数不存网格**——模块永久可无损二次编辑，无任何现成模型库依赖。
@@ -9,6 +11,7 @@
 | 交付物 | 位置 | 说明 |
 |---|---|---|
 | **生产工程（主力）** | `src/` + `npm run dev` | React 19 + TypeScript + Vite 6；P0/P1 全部完成，P2 进行中 |
+| **桌面安装包 v0.2.0** | `src-tauri/target/release/bundle/` | Tauri v2：.app / .dmg（Apple Silicon）；文件关联 .kaolin-scene.json |
 | 三维 Demo（历史基线） | [demo/index.html](demo/index.html) | 技术验证基线，双击即用；`node demo/core/test.js` 回归 |
 | 种子模块库 | `data/seed-modules.json` | M2~M8 共 9 个成品模块（含缩略图），模块面板「导入」一键恢复 |
 | CIF 种子库 | `data/*.cif` | 高岭石 / 地开石 / 珍珠石 / 蒙脱石 / 伊利石（AMCSD/COD 开放数据） |
@@ -20,7 +23,8 @@
 ```bash
 npm install
 npm run dev        # 浏览器打开 http://localhost:5173/
-npm run test       # vitest 168 条（内核基线 / schema / 状态 / 导出 / SMILES）
+npm run test       # vitest 351 条（几何 / 矿物 / 分子 / 测量 / 状态 / 导出 / SMILES）
+npx tauri build    # 桌面安装包（.app + .dmg，首次约 5 分钟）
 npm run build      # tsc + vite 产物
 node demo/core/test.js   # 几何内核历史基线回归（ALL OK）
 ```
@@ -34,13 +38,21 @@ node demo/core/test.js   # 几何内核历史基线回归（ALL OK）
 - CIF → 对称展开（26 原子/晶胞，Al₄Si₄O₁₈ 化学计量吻合）→ 超胞切片（1–3 层、矩形/六角）
 - 保弧长卷曲成管：进度 0→100% 动画；Al-OH 内壁 / Si-O 外壁；开口端自动断键；锥形管；多壁（层间距可调）
 - CeO₂ 风格簇装颗粒（确定性种子）/ 光滑颗粒；H₂O/O₂/CO₂/N₂/阳离子内置库
-- **SMILES 分子导入**：粘贴字符串 → 3D 构象（内置解析器 + 规则式构象生成，零依赖离线）
+- **SMILES 分子导入**：粘贴字符串 → 3D 构象（内置解析器 + 规则式构象生成，零依赖离线）；化学式（Fe2O3/PtCl4/CO）大小写不敏感导入；**分子几何质心居中**（拖拽对齐不偏心）
+- **五种矿物 CIF 直驱**：高岭石 / 地开石 / 珍珠石 / 蒙脱石 / 伊利石——中文名搜索直达，d001 随矿物自动联动，原子数与晶胞化学计量严格一致
+- **密排原子层**：任意元素 × n×n 格点 × 1–8 层 ABAB/ABCABC 堆叠；逐原子开关「参与堆叠」（台阶/缺陷示意）
+- **单原子模式**：片层/管/颗粒原子统一替换为任意元素（118 种全周期表），支持「仅前 N 层」
 
 **编辑与组合**
 - 组件独立变换（gizmo）、图层面板、显隐/锁定、成组（组内整体变换）
 - 悬停/选中高亮（BBox 轻量拾取，60fps 无感）+ 画布↔图层面板双向联动
 - 撤销/重做（全部写操作可逆，滑块拖动合并为一步）
 - 组合模块：整景一键存/取，实例化后各组件仍独立可调
+- **机理图图元层**：矩形/椭圆/箭头（弧线弓高/单双端）/连线/文本；视口内拖拽编辑、8 手柄缩放、编组 Z 序；箭头可锚定 3D 组件随视角跟随
+- **纯 2D 示意图模式** + 磁吸对齐（六线 6px + 网格）+ 机理图模板库（4 种子版式 + 自存模板）
+- **多选批量**：Shift+点击多选 → 对齐 / 等距分布 / 统一参数风格
+- **键长/键角测量**：Alt+点击原子——两点键长（Å）、第三点键角（°），随 PNG/SVG 导出
+- **无限连续旋转**（多圈无跳变）+ gizmo 吸附（1/2/5Å、5°/15°/45°）
 
 **模块库**：IndexedDB 持久化（200 条 <100ms）、关键词/类型检索、收藏置顶、`.kaolin-modules.json` 导入导出
 
@@ -55,8 +67,18 @@ node demo/core/test.js   # 几何内核历史基线回归（ALL OK）
 ## 🛠 技术栈
 
 React 19 · TypeScript 5.8（严格模式）· Vite 6 · Three.js r147（InstancedMesh + PMREM）· Zustand 5 ·
-zod 4（schema 单一事实源）· Dexie 4（IndexedDB）· Vitest（168 条）· Web Worker（几何生成）。
-桌面端规划：Tauri v2（P3）。架构与算法详见 [docs/技术方案设计.md](docs/技术方案设计.md)。
+zod 4（schema 单一事实源）· Dexie 4（IndexedDB）· Vitest（351 条）· Web Worker（几何生成）。
+桌面端：**Tauri v2 已交付**（.app/.dmg、原生保存对话框、场景文件双击打开、崩溃面包屑日志）。架构与算法详见 [docs/技术方案设计.md](docs/技术方案设计.md)。
+
+## 📋 v0.2.0 更新日志（2026-09-13）
+
+- **键长/键角测量**：Alt+点击原子两点测键长、第三点升级键角（H₂O 实测 104.6°），随 PNG/SVG 导出
+- **修复：用图元工具画图后整窗黑屏**——ParamPanel 条件 Hook 违规致 React 卸载全树（A/B 实证根因）；新增全局 ErrorBoundary 与崩溃面包屑日志（/tmp/kaolin-trace.log）
+- **修复：分子摆放偏心**——SMILES/化学式/预设分子统一质心居中，几何缓存代次 v2
+- 修复：鼠标旋转无限连续（四元数多圈）、CO 导入多氢、蒙脱石 CIF 解析为空、中文矿物名搜索、CO₂→Co2 错拆
+- 元素库扩至 **118 种全周期表**；单原子层数 N；密排原子层逐原子堆叠开关
+- 示范产物：煤矸石负载钯催化氧化甲苯机理图（`demo/coal-gangue-Pd-toluene.*`）
+- 桌面端：原生保存对话框、场景文件双击打开、后退/前进按钮、多选批量、磁吸对齐、模板库
 
 ## 📈 路线图进度
 
@@ -66,6 +88,6 @@ zod 4（schema 单一事实源）· Dexie 4（IndexedDB）· Vitest（168 条）
 | 0.5 | 工程治理（TODO 47 条 / 决策闭环 / 记忆系统） | ✅ 2026-09-05 |
 | 1 | P0 工程基座 T-1.1~1.7 | ✅ 2026-09-05 |
 | 2 | P1 日常可用 + 素材 9 个 + P2 出版功能 | 🔶 P1✅ 素材✅，P2 进行中 |
-| 3+ | 桌面端（Tauri/EMF）/ 标注层 / 多语言 | ⬜ |
+| 3 | 桌面端 Tauri（macOS ✅）/ 标注层 ✅ / 图元层 ✅ / EMF·Windows ⬜ | 🔶 |
 
 任务级进度见 [TODO.md](TODO.md)，当前状态见 [PROJECT_STATE.md](PROJECT_STATE.md)。

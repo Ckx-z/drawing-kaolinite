@@ -1,7 +1,7 @@
 {
   "name": "kaolin-assets",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "高岭土科研机理图绘制软件 —— 模块化素材库 + 参数化几何内核",
   "scripts": {

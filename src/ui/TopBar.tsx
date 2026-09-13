@@ -254,7 +254,7 @@ export default function TopBar() {
     <header className="topbar">
       <div className="brand">
         <span className="logo">◈</span> Kaolin-Assets
-        <em>高岭土机理图绘制软件 · 生产工程 v0.1.0</em>
+        <em>高岭土机理图绘制软件 · v0.2.0</em>
       </div>
       <div className="tb-group" title="撤销/重做（快捷键 ⌘Z / ⇧⌘Z）——覆盖组件、参数、图元、标注、色板的全部编辑">
         <button
