@@ -261,6 +261,11 @@ export const sceneDocumentSchema = z.strictObject({
   annotations: z.array(annotationSchema).optional(),
   // T-11.1：机理图图元层（旧场景缺省合法）
   shapes: z.array(shapeSchema).optional(),
+  // 视角快照（2026-09-13，与模板五原则一致）：保存时相机/形态/2D 视图，
+  // 打开原样恢复；旧场景无字段 → 调用方回退 frameAll
+  camera: z.object({ position: z.tuple([z.number(), z.number(), z.number()]), target: z.tuple([z.number(), z.number(), z.number()]) }).optional(),
+  mode: z.enum(['mixed', 'diagram']).optional(),
+  view: z.object({ zoom: z.number(), panX: z.number(), panY: z.number() }).optional(),
 });
 
 /* ---------- 模块库条目（单组件模块 + 组合模块 T-3.1） ---------- */

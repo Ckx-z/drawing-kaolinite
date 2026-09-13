@@ -11,6 +11,8 @@
  */
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { trace } from '../crashTrace';
+import { rendererRef } from './rendererRef';
+import { shapeViewStore } from '../ui/shapes/view';
 import { pickAtom, type AtomRef, type Measurement } from '../core/measures';
 import { attachHistory } from './history';
 import {
@@ -117,7 +119,8 @@ export interface SceneState {
   /** 导出为合法场景文档（kaolin-scene/v1） */
   toSceneDocument: () => SceneDocument;
   /** 载入场景（对象或 JSON 文本均可；经校验 + normalizeScene 补 id）并清空选择 */
-  loadScene: (raw: unknown | string) => void;
+  /** 返回 true = 已按场景快照恢复视角（调用方跳过 frameAll）；false = 旧场景，回退取景 */
+  loadScene: (raw: unknown | string) => boolean;
   clear: () => void;
 
   /* ---------- 机理图图元层（T-11.1） ---------- */
@@ -455,6 +458,9 @@ export function createSceneStore(): SceneStore {
       const palette = get().palette;
       const annotations = get().annotations;
       const shapes = get().shapes;
+      // 视角快照（2026-09-13）：相机/形态/2D 视图随场景保存，打开原样恢复
+      const svc = rendererRef.current;
+      const v = shapeViewStore.getState();
       return sceneDocumentSchema.parse({
         format: SCENE_FORMAT,
         saved: new Date().toISOString(),
@@ -462,6 +468,11 @@ export function createSceneStore(): SceneStore {
         ...(palette.id || palette.overrides ? { palette } : {}),
         ...(annotations.length ? { annotations } : {}),
         ...(shapes.length ? { shapes } : {}),
+        mode: get().mode,
+        camera: svc
+          ? { position: svc.camera.position.toArray() as [number, number, number], target: svc.orbit.target.toArray() as [number, number, number] }
+          : undefined,
+        view: { zoom: v.zoom, panX: v.panX, panY: v.panY },
       });
     },
 
@@ -476,7 +487,24 @@ export function createSceneStore(): SceneStore {
         shapes: (doc.shapes ?? []).map((s) => shapeSchema.parse(s)), // T-11.1：补默认字段
         shapeSelectionIds: [],
         tool: 'select',
+        ...(doc.mode ? { mode: doc.mode } : {}), // 视角快照：形态随场景恢复
       });
+      // 视角快照恢复（2026-09-13，模板五原则同源）：有 camera 字段原样恢复，
+      // 返回 true 供调用方跳过 frameAll；旧场景无字段返回 false（回退取景）。
+      // 顺序：mode 先行（订阅里的 resetView 已跑）→ 相机 → 2D 视图最后覆盖。
+      const svc = rendererRef.current;
+      if (doc.camera && svc) {
+        const [px_, py_, pz_] = doc.camera.position;
+        const [tx, ty, tz_] = doc.camera.target;
+        svc.camera.position.set(px_, py_, pz_);
+        svc.orbit.target.set(tx, ty, tz_);
+        svc.camera.lookAt(tx, ty, tz_);
+        svc.camera.updateProjectionMatrix();
+        svc.orbit.update();
+        if (doc.view) shapeViewStore.getState().setView(doc.view);
+        return true;
+      }
+      return false;
     },
 
     clear: () =>

@@ -24,8 +24,8 @@ if ('__TAURI_INTERNALS__' in window) {
   void import('@tauri-apps/api/event').then(({ listen }) =>
     listen<string>('scene-open-content', (e) => {
       try {
-        sceneStore.getState().loadScene(e.payload);
-        rendererRef.current?.frameAll();
+        const restored = sceneStore.getState().loadScene(e.payload);
+        if (!restored) rendererRef.current?.frameAll(); // 旧场景无视角快照 → 回退取景
       } catch (err) {
         alert(`场景文件解析失败：${(err as Error).message}`);
       }

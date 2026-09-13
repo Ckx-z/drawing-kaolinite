@@ -107,8 +107,8 @@ export default function TopBar() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        sceneStore.getState().loadScene(String(reader.result));
-        rendererRef.current?.frameAll();
+        const restored = sceneStore.getState().loadScene(String(reader.result));
+        if (!restored) rendererRef.current?.frameAll(); // 旧场景无视角快照 → 回退取景
         flash('场景已载入，所有参数均可继续修改');
       } catch (err) {
         alert(`场景文件解析失败：${(err as Error).message}`);
