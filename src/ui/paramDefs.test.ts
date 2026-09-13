@@ -68,18 +68,17 @@ describe('PARAM_DEFS 与 DEFAULT_PARAMS/schema 一致性', () => {
     expect(progress?.disp?.(0.45)).toBe('45%');
   });
 
-  it('单原子层数滑块：片层/管有且上限随堆叠/壁层数动态，颗粒无', () => {
+  it('单原子层数滑块：片层/管有且上限恒 3（联动抬升取代动态上限），颗粒无', () => {
     const sheetDef = PARAM_DEFS.kaolinite_sheet.find((d) => d.key === 'singleLayers');
     expect(sheetDef, '片层应有单原子层数控件').toBeDefined();
     expect(sheetDef!.when?.({ atomMode: 'full' } as never)).toBe(false); // 仅 single 模式显示
     expect(sheetDef!.when?.({ atomMode: 'single' } as never)).toBe(true);
-    const maxOf = sheetDef!.max as (p: Record<string, unknown>) => number;
-    expect(maxOf({ layers: 1 })).toBe(1);
-    expect(maxOf({ layers: 3 })).toBe(3);
+    // 2026-09-13 起 max 恒为常量 3（联动抬升取代动态上限，滑块任何层数下可拖）
+    expect(sheetDef!.max).toBe(3);
 
     const tubeDef = PARAM_DEFS.halloysite_tube.find((d) => d.key === 'singleLayers');
     expect(tubeDef, '管应有单原子层数控件').toBeDefined();
-    expect((tubeDef!.max as (p: Record<string, unknown>) => number)({ walls: 2 })).toBe(2);
+    expect(tubeDef!.max).toBe(3); // 同片层：常量上限（2026-09-13）
 
     expect(
       PARAM_DEFS.nanoparticle.find((d) => d.key === 'singleLayers'),
@@ -102,17 +101,21 @@ describe('PARAM_DEFS 与 DEFAULT_PARAMS/schema 一致性', () => {
     expect(singleElDef!.options).toHaveLength(118);
   });
 
-  it('单原子层数：上限随堆叠层数动态；层数=1 时区间退化须有禁用说明（2026-09-13 修复回归）', () => {
+  it('单原子层数：上限恒 3（任何堆叠层数下滑块可拖）；超层数拖动自动抬升堆叠层数（2026-09-13 修复回归）', () => {
     const def = PARAM_DEFS.kaolinite_sheet.find((d) => d.key === 'singleLayers')!;
     expect(def.min).toBe(1);
-    expect((def.max as (p: Record<string, unknown>) => number)({ layers: 3 })).toBe(3);
-    expect((def.max as (p: Record<string, unknown>) => number)({ layers: 1 })).toBe(1); // 退化：滑块 1~1
-    // 退化场景必须给用户原因（RangeControl 据此渲染禁用态 + 提示）
-    const hint = def.stuckHint!({ layers: 1 });
-    expect(hint).toContain('1');
-    expect(hint.length).toBeGreaterThan(4);
-    // 管壁版同款
+    expect(def.max).toBe(3); // 常量上限：layers=1 时滑块 1~3 仍可拖（不再退化 1~1）
+    // 拖到 3 超过当前堆叠层数 1 → 联动抬升 layers（同一命令，一次撤销）
+    expect(def.sideEffect!(3, { layers: 1 })).toEqual({ layers: 3 });
+    expect(def.sideEffect!(2, { layers: 3 })).toEqual({}); // 未超过不联动
+    // 反向：堆叠层数调低于单原子层数 → 单原子层数跟着降
+    const layersDef = PARAM_DEFS.kaolinite_sheet.find((d) => d.key === 'layers')!;
+    expect(layersDef.sideEffect!(1, { singleLayers: 3 })).toEqual({ singleLayers: 1 });
+    expect(layersDef.sideEffect!(3, { singleLayers: 2 })).toEqual({});
+    // 管壁版同款联动
     const tubeDef = PARAM_DEFS.halloysite_tube.find((d) => d.key === 'singleLayers')!;
-    expect(tubeDef.stuckHint!({ walls: 1 })).toContain('1');
+    expect(tubeDef.sideEffect!(2, { walls: 1 })).toEqual({ walls: 2 });
+    const wallsDef = PARAM_DEFS.halloysite_tube.find((d) => d.key === 'walls')!;
+    expect(wallsDef.sideEffect!(1, { singleLayers: 3 })).toEqual({ singleLayers: 1 });
   });
 });

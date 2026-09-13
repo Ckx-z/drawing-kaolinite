@@ -90,9 +90,12 @@ function RangeControl(props: { compId: string; def: ParamDef; value: number; par
         value={value}
         disabled={stuck}
         title={stuck ? stuckText : undefined}
-        onChange={(e) =>
-          sceneStore.getState().updateParams(compId, { [def.key]: parseFloat(e.target.value) } as never)
-        }
+        onChange={(e) => {
+          const v = parseFloat(e.target.value);
+          // 滑块联动（2026-09-13：如单原子层数超过堆叠层数 → 同命令抬升堆叠层数）
+          const extra = def.sideEffect ? def.sideEffect(v, params) : {};
+          sceneStore.getState().updateParams(compId, { [def.key]: v, ...extra } as never);
+        }}
       />
       {stuck && <p className="hint">{stuckText}——调整关联参数（如堆叠层数）后可改</p>}
     </div>

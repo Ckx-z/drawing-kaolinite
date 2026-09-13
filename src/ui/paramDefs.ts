@@ -31,7 +31,7 @@ export interface ParamDef {
    * 选中值联动改写其他参数（2026-09-12）：返回的键值与本次选中值合并提交
    * updateParams（同一命令，可整体撤销）。如切矿物时重置 d001 为该矿物 c 轴周期。
    */
-  sideEffect?: (value: string, params: Record<string, unknown>) => Record<string, unknown>;
+  sideEffect?: (value: string | number, params: Record<string, unknown>) => Record<string, unknown>;
   /**
    * 滑块区间退化（动态 max ≤ min，如堆叠层数=1 时"单原子层数"上限=1）时的
    * 禁用说明（2026-09-13：min=max 的原生 range 拖不动且无禁用视觉，用户
@@ -77,25 +77,39 @@ const ATOM_MODE_BASE: ParamDef[] = [
 
 /**
  * 单原子层数字段（2026-09-10）：single 模式下显示前 N 层单原子层。
- * 滑块上限动态 = 当前堆叠/壁层数（layersKey 指定读哪个参数）；
+ * 2026-09-13 交互修复：上限放宽为 schema 常量 3（滑块在任何堆叠层数下都可拖），
+ * 拖动超过当前堆叠/壁层数时 sideEffect 自动抬升对应层数（同一命令可整体撤销）；
  * 颗粒无层结构，不追加本字段。
  */
 const singleLayersField = (layersKey: 'layers' | 'walls'): ParamDef => ({
   key: 'singleLayers',
   label: '单原子层数',
   min: 1,
-  max: (p) => Number(p[layersKey] ?? 3),
+  max: 3,
   step: 1,
   when: (p) => p.atomMode === 'single',
-  // 堆叠/壁层数=1 → 滑块区间 1~1 退化，给出人话原因而非死滑块
-  stuckHint: (p) => `${layersKey === 'layers' ? '堆叠层数' : '管壁层数'}为 ${Number(p[layersKey] ?? 3)}，已全部显示`,
+  sideEffect: (value, p) =>
+    typeof value === 'number' && value > Number(p[layersKey] ?? 3) ? { [layersKey]: value } : {},
+});
+
+/** 堆叠/壁层数字段：调低于当前单原子层数时联动下调（双向闭合，见 singleLayersField） */
+const layersCountField = (layersKey: 'layers' | 'walls', label: string): ParamDef => ({
+  key: layersKey,
+  label,
+  min: 1,
+  max: 3,
+  step: 1,
+  sideEffect: (value, p) =>
+    typeof value === 'number' && typeof p.singleLayers === 'number' && p.singleLayers > value
+      ? { singleLayers: value }
+      : {},
 });
 
 export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
   kaolinite_sheet: [
     { key: 'Lx', label: '横向尺寸', unit: 'Å', min: 20, max: 150, step: 2 },
     { key: 'Ly', label: '纵向尺寸', unit: 'Å', min: 20, max: 150, step: 2 },
-    { key: 'layers', label: '堆叠层数', min: 1, max: 3, step: 1 },
+    layersCountField('layers', '堆叠层数'),
     { key: 'd001', label: '堆叠周期 d₀₀₁', unit: 'Å', min: 7.2, max: 25, step: 0.1 },
     mineralField(),
     { key: 'shape', label: '片层轮廓', type: 'select', options: ['矩形', '六角'] },
@@ -108,7 +122,7 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
   halloysite_tube: [
     { key: 'innerR', label: '内半径', unit: 'Å', min: 8, max: 40, step: 1 },
     { key: 'length', label: '管长', unit: 'Å', min: 30, max: 200, step: 5 },
-    { key: 'walls', label: '管壁层数', min: 1, max: 3, step: 1 },
+    layersCountField('walls', '管壁层数'),
     { key: 'd001', label: '壁间周期 d₀₀₁', unit: 'Å', min: 7.4, max: 25, step: 0.1 },
     mineralField(),
     { key: 'progress', label: '★ 卷曲进度（片→管）', min: 0.02, max: 1, step: 0.01, disp: (v) => `${Math.round(v * 100)}%` },
