@@ -31,13 +31,20 @@ export default function App() {
     }
     // 调试/二次开发入口
     (window as unknown as Record<string, unknown>).__KAOLIN = { store: sceneStore, renderer: rendererRef };
-    // 自动保存 + 崩溃恢复（2026-09-13）：编辑防抖快照；启动查上次未保存会话
+    // 自动保存 + 崩溃恢复（2026-09-13）：编辑防抖快照；启动查上次未保存会话。
+    // 顺序关键：先读后装——install 的初始快照会覆盖 key='current'，读必须在其前
     const bootAt = Date.now();
-    const uninstall = installAutosave(sceneStore);
     void readAutosave(bootAt).then((row) => {
       if (row) setRecover({ doc: row.doc, savedAt: row.savedAt });
     });
-    return uninstall;
+    const uninstall = installAutosave(sceneStore);
+    // 正常退出（关窗/退出）清掉快照：只有异常退出（崩溃/被杀）才留档提示恢复
+    const onLeave = (): void => void clearAutosave();
+    window.addEventListener('pagehide', onLeave);
+    return () => {
+      window.removeEventListener('pagehide', onLeave);
+      uninstall();
+    };
   }, []);
 
   useEffect(() => {

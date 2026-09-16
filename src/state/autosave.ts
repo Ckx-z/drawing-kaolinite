@@ -6,6 +6,7 @@
  */
 import Dexie, { type Table } from 'dexie';
 import type { SceneDocument } from '../core/types';
+import { trace } from '../crashTrace';
 import type { SceneState } from './sceneStore';
 
 interface AutosaveRow {
@@ -65,9 +66,12 @@ export async function saveSnapshot(store: { getState: () => SceneState }): Promi
   const s = store.getState();
   if (!s.components.length && !s.shapes.length && !s.annotations.length) return;
   try {
-    await getDB().autosave.put({ key: 'current', doc: s.toSceneDocument(), savedAt: Date.now() });
-  } catch {
-    /* IndexedDB 不可用——自动保存静默降级 */
+    const doc = s.toSceneDocument();
+    await getDB().autosave.put({ key: 'current', doc, savedAt: Date.now() });
+    trace(`autosave-saved comps=${doc.components.length}`);
+  } catch (err) {
+    trace(`autosave-error ${String(err).slice(0, 200)}`);
+    /* IndexedDB 不可用——自动保存静默降级（trace 落盘便于诊断） */
   }
 }
 
