@@ -82,7 +82,7 @@ function AnnotationOverlay(): React.ReactElement {
               width: W,
               height: H,
               project: (p) => svc.projectToScreen(p, W, H),
-              resolve: (ref) => svc.atomWorldPos(ref.compId, ref.index),
+              resolve: (ref) => svc.measureAtomWorldPos(ref.compId, ref.index),
               picks: s.measurePick,
               measurements: s.measurements,
             });

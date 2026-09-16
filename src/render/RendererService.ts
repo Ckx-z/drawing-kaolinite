@@ -121,6 +121,18 @@ export class RendererService {
   }
 
   /**
+   * 测量用原子坐标（2026-09-16 一致性）：atomWorldPos + 可见性——组件隐藏
+   * （含纯 2D 模式整体隐藏 sceneVisible=false）返回 null，测量项在屏幕叠加
+   * 与导出（PNG/SVG）两侧一致隐藏（测量标注的是原子，原子不可见则标注无意义）。
+   */
+  measureAtomWorldPos(compId: string, index: number): [number, number, number] | null {
+    if (!this.sceneVisible) return null;
+    const rec = this.records.get(compId);
+    if (!rec?.comp?.visible) return null;
+    return this.atomWorldPos(compId, index);
+  }
+
+  /**
    * 原子世界坐标（2026-09-13 键长/键角测量）：局部坐标经组件变换（与 SVG 导出同款
    * position·rotation·scale 复合）。组件不存在/越界返回 null（测量项自动失效）。
    */
@@ -653,7 +665,7 @@ export class RendererService {
         width: w,
         height: h,
         project: (p) => this.projectToScreen(p, w, h),
-        resolve: (ref) => this.atomWorldPos(ref.compId, ref.index),
+        resolve: (ref) => this.measureAtomWorldPos(ref.compId, ref.index),
         picks: [],
         measurements,
       });
@@ -843,7 +855,7 @@ export class RendererService {
       const parts: string[] = ['<g id="measurements" stroke="#0e7490" stroke-width="1.6" fill="none">'];
       const fmt = (v: number) => (Math.round(v * 100) / 100).toString();
       for (const m of measurements) {
-        const pts = m.picks.map((r) => this.atomWorldPos(r.compId, r.index));
+        const pts = m.picks.map((r) => this.measureAtomWorldPos(r.compId, r.index)); // 可见性一致（隐藏组件/2D 模式不导出）
         if (pts.some((p) => !p)) continue;
         const scr = pts.map((p) => this.projectToScreen(p!, size.x, size.y));
         if (scr.some((p) => !p.visible)) continue;
