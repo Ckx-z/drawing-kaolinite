@@ -12,6 +12,8 @@ import { deleteSelectedShapes, nudgeSelectedShapes } from './shapes/interaction'
 import LayerPanel from './LayerPanel';
 import LibraryPanel from './LibraryPanel';
 import ParamPanel from './ParamPanel';
+import { clearAutosave, installAutosave, readAutosave } from '../state/autosave';
+import type { SceneDocument } from '../core/types';
 import { loadPresetScene } from './preset';
 import SceneCanvas from './SceneCanvas';
 import { SHORTCUTS, cheatsheetEntries, handleShortcut, type ShortcutHost } from './shortcuts';
@@ -19,6 +21,7 @@ import TopBar from './TopBar';
 
 export default function App() {
   const [cheat, setCheat] = useState(false);
+  const [recover, setRecover] = useState<{ doc: SceneDocument; savedAt: number } | null>(null);
 
   useEffect(() => {
     trace('app-mount');
@@ -28,6 +31,13 @@ export default function App() {
     }
     // 调试/二次开发入口
     (window as unknown as Record<string, unknown>).__KAOLIN = { store: sceneStore, renderer: rendererRef };
+    // 自动保存 + 崩溃恢复（2026-09-13）：编辑防抖快照；启动查上次未保存会话
+    const bootAt = Date.now();
+    const uninstall = installAutosave(sceneStore);
+    void readAutosave(bootAt).then((row) => {
+      if (row) setRecover({ doc: row.doc, savedAt: row.savedAt });
+    });
+    return uninstall;
   }, []);
 
   useEffect(() => {
@@ -97,8 +107,32 @@ export default function App() {
     };
   }, []);
 
+  const onRecover = (): void => {
+    const ok = sceneStore.getState().loadScene(recover!.doc);
+    if (!ok) rendererRef.current?.frameAll();
+    setRecover(null);
+  };
+  const onDiscardRecover = (): void => {
+    void clearAutosave();
+    setRecover(null);
+  };
+
   return (
     <div className="app">
+      {recover && (
+        <div
+          role="status"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px',
+            background: '#1f2937', color: '#e5e7eb', fontSize: 13,
+            borderBottom: '1px solid #374151',
+          }}
+        >
+          <span>📦 检测到上次未保存的场景（{new Date(recover.savedAt).toLocaleString()}）——软件退出前自动快照</span>
+          <button className="mini" onClick={onRecover} style={{ padding: '2px 12px' }}>恢复</button>
+          <button className="mini" onClick={onDiscardRecover} style={{ padding: '2px 12px' }}>忽略</button>
+        </div>
+      )}
       <TopBar />
       <main className="layout">
         <LibraryPanel />
