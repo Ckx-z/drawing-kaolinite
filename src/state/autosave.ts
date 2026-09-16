@@ -36,6 +36,9 @@ const DEBOUNCE_MS = 2000;
  */
 export function installAutosave(store: { getState: () => SceneState; subscribe: (fn: (s: SceneState, prev: SceneState) => void) => () => void }): () => void {
   let timer: ReturnType<typeof setTimeout> | 0 = 0;
+  // 安装即补一次初始快照：启动预载（loadPresetScene）发生在订阅安装之前，
+  // 其写入会被订阅错过——若用户预载后未再编辑就退出，上次会话将无快照可恢复
+  void saveSnapshot(store);
   const unsub = store.subscribe((s, prev) => {
     if (
       s.components === prev.components &&
