@@ -281,6 +281,24 @@ body {
   color: var(--txt);
   border-color: var(--acc);
 }
+
+/* 画布左下角模式徽标 + 状态栏右侧 */
+.canvas-badge {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  z-index: 15;
+  pointer-events: none;
+  font-size: 11.5px;
+  color: rgba(60, 65, 75, 0.55);
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 5px;
+  padding: 2px 8px;
+}
+.status-right {
+  display: inline-flex;
+  gap: 14px;
+}
 button.primary {
   background: var(--acc);
   border-color: var(--acc);
@@ -324,8 +342,8 @@ button {
   white-space: nowrap;
 }
 button:hover {
-  border-color: var(--acc);
-  color: #fff;
+  border-color: #4a5462;
+  color: #e6ebf2;
 }
 button:disabled {
   opacity: 0.38;
@@ -673,8 +691,8 @@ input[type='checkbox'] {
 
 /* T-7.1：悬停联动高亮（画布悬停 ↔ 图层面板行） */
 .layer-row.hov {
-  border-color: #ff8a3d;
-  background: rgba(255, 138, 61, 0.08);
+  border-color: var(--acc);
+  background: var(--acc-soft);
 }
 
 /* T-7.2：快捷键速查浮层 */

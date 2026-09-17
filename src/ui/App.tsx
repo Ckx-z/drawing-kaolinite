@@ -5,6 +5,7 @@
  * 首次进入自动载入示例场景（对齐 demo 启动行为）。
  */
 import { useEffect, useState } from 'react';
+import { useStore } from 'zustand';
 import { trace } from '../crashTrace';
 import { rendererRef } from '../state/rendererRef';
 import { sceneHistory, sceneStore } from '../state/sceneStore';
@@ -15,14 +16,28 @@ import ParamPanel from './ParamPanel';
 import { clearAutosave, installAutosave, readAutosave } from '../state/autosave';
 import type { SceneDocument } from '../core/types';
 import { loadPresetScene } from './preset';
+import { statusHint } from './statusHints';
 import SceneCanvas from './SceneCanvas';
 import { SHORTCUTS, cheatsheetEntries, handleShortcut, type ShortcutHost } from './shortcuts';
 import TopBar from './TopBar';
+
+/** 上下文状态提示（2026-09-16）：订阅 tool/mode/选择态，复用 statusHint 纯函数 */
+function StatusHint() {
+  const tool = useStore(sceneStore, (s) => s.tool);
+  const mode = useStore(sceneStore, (s) => s.mode);
+  const hasSel = useStore(
+    sceneStore,
+    (s) => Boolean(s.selectionId) || s.shapeSelectionIds.length > 0,
+  );
+  const multiN = useStore(sceneStore, (s) => s.componentSelectionIds.length);
+  return <span>{statusHint({ tool, mode, hasSelection: hasSel, multiCount: multiN })}</span>;
+}
 
 export default function App() {
   const [cheat, setCheat] = useState(false);
   const [recover, setRecover] = useState<{ doc: SceneDocument; savedAt: number } | null>(null);
   // 侧栏折叠 + 专注画布（2026-09-16）：UI 态本地，不影响场景/相机
+  const mode = useStore(sceneStore, (s) => s.mode);
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
 
@@ -159,6 +174,9 @@ export default function App() {
         {leftOpen ? <LibraryPanel /> : <button className="side-restore" title="展开素材库（Tab 专注画布）" onClick={() => setLeftOpen(true)}>›</button>}
         <section className="canvas">
           <SceneCanvas />
+          <div className="canvas-badge">
+            {mode === 'diagram' ? '✏️ 2D 示意图' : '🧊 3D 混合'}
+          </div>
           {leftOpen && (
             <button
               className="side-fold left"
@@ -188,8 +206,11 @@ export default function App() {
         )}
       </main>
       <footer className="statusbar">
-        <span>左键旋转 · 右键平移 · 滚轮缩放 · 点击选中 · Alt+点击原子测键长/键角 · Delete 删除 · Esc 取消 · Ctrl+Z 撤销 / Ctrl+Shift+Z 重做</span>
-        {import.meta.env.DEV && <span>DEV · 记忆系统：AGENTS.md 会话协议已生效</span>}
+        <StatusHint />
+        <span className="status-right">
+          {import.meta.env.DEV && <span>DEV · AGENTS 协议生效</span>}
+          <span>Kaolin-Assets v0.2.0</span>
+        </span>
       </footer>
       {cheat && (
         <div className="cheatsheet" onClick={() => setCheat(false)}>
