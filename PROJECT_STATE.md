@@ -1,7 +1,7 @@
 # PROJECT_STATE — 项目当前状态
 
 > ⭐ **这是每次会话的第一份必读文件**。会话开头读它进入状态，结尾更新它。
-> 最后更新：2026-09-10（T-11 机理图图元层**全部完成** ✅：一期叠加形态 + 二期纯 2D 示意图模式/对齐吸附/模板库；269 tests）
+> 最后更新：2026-09-16（状态审计与文档一致性修复；367 tests）
 
 ---
 
@@ -10,43 +10,57 @@
 **面向高岭土/黏土矿物科研的模块化机理图绘制软件**：以 CIF 晶体学数据 + 参数化几何内核程序化生成"片层/纳米管/颗粒/分子/基底"素材，像搭积木一样组合成 SCI 论文与 PPT 汇报用的 2D/3D 机理图；**存参数不存网格**，模块永久可无损二次编辑。
 
 - **任务形态**：科研绘图工具（非结构查看器、非模拟软件）
-- **技术路线**：Web 端优先（TypeScript + React + Three.js/WebGL2），后期 Tauri 打包桌面端（D01）
-- **核心卖点**：模块库沉淀 —— 课题组半年积累 8–10 个成品模块，新学生一键复用
-- **当前形态**：技术验证 Demo 已跑通全链路；生产工程（src/）尚未启动
+- **技术路线**：Web 前端（TypeScript + React 19 + Three.js/WebGL2）+ Tauri v2 桌面端（macOS 已交付，D01/D10）
+- **核心卖点**：模块库沉淀 —— 官方种子模块 9 条 + 自存模块/模板持续积累，新学生一键复用
+- **当前形态**：**生产工程（`src/`）为主体并已发布 v0.2.0**（`demo/` 仅为历史技术验证基线）
 
 ---
 
-## 二、当前阶段
+## 二、当前版本与完成度
 
-| 阶段 | 内容 | 状态 |
-|---|---|---|
-| **阶段 0** | 技术验证：方案文档 + 几何内核（CIF/切片/卷曲）+ 三维 Demo 全链路实测 | ✅ **已完成**（2026-09-04） |
-| **阶段 0.5** | 工程治理：Git 仓库、TODO 清单（47 条）、Q1–Q4 决策闭环、记忆系统骨架（T-8.1） | ✅ **已完成**（2026-09-05） |
-| **阶段 1** | P0 工程基座：T-1.1 ~ T-1.7（Vite+TS+React 脚手架 → Schema → 内核 TS 移植 → 渲染服务 → 状态管理 → UI 迁移 → 回归验收） | ✅ **已完成**（2026-09-05，7/7，对峙验收全过） |
-| **阶段 2（当前）** | P1（T-2.1/2.2/2.3、T-3.1、T-5.1、T-9.1/9.2）+ P2 出版功能（T-3.2 检索收藏 / T-3.3 锁定分组 / T-4.1 双轨渲染 / T-4.2 色板 / T-5.3 分组 SVG / T-5.4 分层 PNG / T-7.1 拾取高亮 / T-2.8 SMILES 导入）| 🔶 **进行中**——P1 全收官 ✅、素材 9/8-10 达成 ✅、P2 已完成 8 条；**模块库现有 9 个模块** |
-| 阶段 3+ | P2–P3：双轨渲染 / 矢量导出 / 桌面端 / 素材积累至 8–10 个模块 | ⬜ 未开始 |
+**v0.2.0**（2026-09-13 发布，2026-09-16 审计）｜ 367 tests ｜ macOS（Apple Silicon）.app/.dmg ｜
+安装包：`src-tauri/target/release/bundle/`
+
+| 模块 | 状态 |
+| --- | --- |
+| 工程基座（Vite+TS+React+zod+zustand+Worker） | ✅ |
+| 参数化几何内核（CIF 五矿物/片层/管/颗粒/密排层/基底） | ✅ |
+| 分子导入（SMILES / 化学式 / MOL·SDF 文件） | ✅ |
+| 模块库（Dexie + 检索收藏 + 导入导出） | ✅ |
+| 出版导出（PNG/TIFF/SVG/PDF/GIF/分层 PNG） | ✅ |
+| 机理图图元层（五件套 + 纯 2D 模式 + 磁吸 + 模板库） | ✅ |
+| 键长/键角测量（随图导出） | ✅ |
+| 快照式复现（模板/场景含视角，用户五原则） | ✅ |
+| 自动保存 + 崩溃恢复 | ✅ |
+| macOS 桌面端（Tauri v2 + 文件关联 + 原生保存） | ✅ |
+| Windows 桌面端（待 CI，用户暂缓） | ⬜ |
+| EMF 导出（Office 矢量，依赖桌面端 Inkscape 方案 Q2） | ⬜ |
+| 工程文件夹/网盘同步（T-6.2） | ⬜ |
+
+> 阶段史：阶段 0/0.5/1 全部完成（2026-09-04~05）；阶段 2（P1+P2 主体）完成；
+> 原阶段 3 的桌面端 macOS、标注层、图元层均已交付——剩余为 Windows/EMF/云同步三项。
 
 ---
 
-## 三、下一步（按优先级）
+## 三、下一步（按优先级，2026-09-16 审计重建）
 
-1. **T-7.1 拾取高亮 / 悬停反馈**（依赖 T-1.6 ✅，约 1d）
-2. **T-4.3 SSAO / 接触阴影 + 构图预设**（P2，依赖 T-1.4 ✅）
-3. **T-3.2 收尾确认 / T-8.2 `check_library_state.py` 对账脚本**（P2，可并行）
-4. P2 完成后即具备半年路线图"第 3–4 月质量与矢量"阶段主体
-
-完整任务清单见 `TODO.md`（47 条，含依赖关系与验收标准）。
+1. **实战压测与缺陷修复**（无 Task ID，持续项）：用户以真实课题（煤矸石-Pd 等）在打包版画图，发现问题随到随修——近期滑块/滚轮/模板复现等修复均源于此，价值最高。
+2. **导出前出画检测**（约 0.5d）：内容超出视野时导出被静默裁切，加"仍然导出/返回调整"防呆；无依赖。
+3. **图元级对齐/分布工具**（1–2d）：多选图元对齐/等距（复用组件级批量对齐的既有算法）；图元多选能力已就绪。
+4. **T-6.1 Windows CI**（用户暂缓中）：GitHub Actions 双平台构建；环境依赖（Windows 签名/ runner）而非阻塞。
+5. **T-5.5 EMF 导出**（P3）：Office 原生矢量（Q2：内置 Inkscape）；建议与 Windows 端一起做。
+6. **T-6.2 模块库网盘同步 / T-8.3 日报模板**（P3，工程治理尾巴）。
 
 ---
 
 ## 四、阻塞点
 
-无。
+当前无阻塞性问题。环境依赖（非阻塞）：Windows CI runner、EMF 所需 Inkscape 分发。
 
 ## 五、待跟进事项
 
-- [ ] T-8.2 / T-8.3（记忆系统对账脚本与双轨日报常态化，P2，可并行）
-- [ ] 每次会话结束：更新本文件 + 双轨日报 + session_index（见 `.agents/AGENTS.md` 结尾清单）
+- [ ] 每次会话结束：更新本文件 + 日报 + session_index（见 `.agents/AGENTS.md` 结尾清单）
+- [ ] `python3 scripts/check_library_state.py` 已含版本/模块数/陈旧描述/下一步矛盾四组防漂移检查（2026-09-16 增强），提交前跑一遍
 
 ---
 
@@ -82,7 +96,7 @@
 | 晶学严格模式 | `src/core/crystal.ts` | T-2.7：sheetParams.strictCell 开关——真实三斜投影（全投影+层间沿 c 轴堆叠，层片倾斜）；Si–O 键长与 CIF 距离矩阵偏差 <0.5%；默认示意正交化（D03 后路落地） |
 | 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移 + 导入导出；T-3.2：filterModules 检索/类型筛选/收藏排序 + toggleFavorite（favorite 字段向后兼容） |
 | 撤销/重做 | `src/state/history.ts` + `commands.ts` | T-2.1：attachHistory 实例包装（UI 零改动）；全量快照命令 + 800ms 合并窗口；栈深可配（默认 100）；Ctrl/Cmd+Z、+Shift/Y（App.tsx）；sceneStore 单例已挂接（sceneHistory） |
-| 素材模块 | 模块库内 9 个条目 | M2 三层片层、M3 埃洛石管 7Å、M4 颗粒 S/M/L、M5 橡胶基底、M6 片层+颗粒组合、M7 多壁埃洛石 10Å、M8 埃洛石@CeO₂ 复合场景——**素材积累目标达成（9/8-10，M1 样图另计）** |
+| 素材模块 | 模块库内 9 个条目 | 官方种子模块 9 条（M2 片层、M3 管、M4 颗粒 S/M/L 三条独立、M5 基底、M6 组合、M7 多壁管、M8 复合场景）——M1 为历史样图不计入 seed-modules 条目 |
 | 种子模块库 | `data/seed-modules.json` | kaolin-modules/v1 全量备份（M2~M8 共 9 条含缩略图，33KB）；模块面板「导入」即可整套恢复/分发 |
 | 三维 Demo | `demo/index.html` | 双击可用；生产版功能对照基准 |
 | CIF 种子库 | `data/*.cif` | 高岭石/地开石/珍珠石/蒙脱石/伊利石 |
@@ -93,7 +107,13 @@
 | 机理图图元层 | `src/core/shapes/` + `src/ui/shapes/` + view/interaction/draw + templateLibrary + store/history/svg/RendererService | T-11 全部（2026-09-10）：一期叠加形态（五件套/锚定跟随/撤销/五格式导出）+ 二期：纯 2D 示意图模式（shapeViewStore pan/zoom 无限画布，数据不动视口变换）、磁吸对齐（六线 6px 最优吸附 + 10px 网格 + 洋红参考线）、机理图模板库（Dexie + 4 种子版式 + 自存模板 + 历史事务一条撤销）；269 tests |
 | 模板快照式复现 | `src/state/templateLibrary.ts` + TopBar | 2026-09-13（用户五原则）：模板保存相机/画布形态/2D 视图，载入原样恢复（禁止 frameAll/重排）；组件 transform 与图元坐标本就逐位透传；老模板无视角字段兼容跳过；端到端实测相机与坐标逐位复现 |
 | MOL/SDF 文件导入 + 层间开关 | `src/core/molecules/mol.ts` + minerals.interlayer + schema/builders | 2026-09-13（T-2.10/T-2.4）：V2000 解析（SDF 取首条）双入口导入构象精确；showInterlayer 注册表驱动（伊利石 K/蒙脱石 Ca·Na）；361 tests |
-| **v0.2.0 发布** | package.json / tauri.conf / Cargo.toml + README | 2026-09-13：键长/键角测量（Alt+点击，随图导出）+ 分子质心居中 + 黑屏修复（ErrorBoundary/crashTrace）；README 徽章/更新日志/能力清单刷新；351 tests |
+| **v0.2.0 发布** | package.json / tauri.conf / Cargo.toml + README | 2026-09-13：键长/键角测量（Alt+点击，随图导出）+ 分子质心居中 + 黑屏修复（ErrorBoundary/crashTrace）；README 徽章/更新日志/能力清单刷新（发布时 351 tests，历史值） |
+| 场景文件视角快照 | `src/core/schema.ts` + sceneStore | 2026-09-13（a66f1a5）：.kaolin-scene.json 保存/恢复相机、形态与 2D 视图；旧文件无字段回退 frameAll |
+| 自动保存 + 崩溃恢复 | `src/state/autosave.ts` + App | 2026-09-16（bcb0ee9→cc4d363）：编辑防抖 2s 快照 IndexedDB；异常退出后启动提示一键恢复（含视角）；正常退出 pagehide 清档；打包版实机闭环验证 |
+| 测量可见性一致性 | RendererService.measureAtomWorldPos | 2026-09-16（e41f1d6）：组件隐藏/纯 2D 模式时测量在屏幕叠加与 PNG/SVG 导出两侧一致隐藏 |
+| 矿物注册表 interlayer | `src/core/minerals.ts` | 2026-09-13（T-2.4 收尾）：层间元素集（伊利石 K、蒙脱石 Ca/Na）驱动 showInterlayer 开关 |
+| 滚轮缩放灵敏度 | interaction.ts + RendererService | 2026-09-13（24a3d9c）：3D zoomSpeed 0.5 + 2D 灵敏度减半，方向/中心/上下限不变 |
+| 防漂移对账增强 | `scripts/check_library_state.py` | 2026-09-16：新增版本一致性/种子模块数对账/陈旧描述/下一步已完成矛盾四组检查 |
 | 黑屏修复与诊断 | `src/ui/ParamPanel.tsx` + `src/ui/ErrorBoundary.tsx` + `src/crashTrace.ts` | 2026-09-12：用图元工具画图后整窗黑屏——ParamPanel 条件 Hook 违规（T-7.3 引入）致 React 卸载全树；snap useState 移至所有 early return 之前（A/B 实证修复）；全局 ErrorBoundary 错误面板替代黑屏；crashTrace 面包屑（关键节点 + JS 异常 + WebGL 丢失 → /tmp/kaolin-trace.log）；338 tests |
 | 导出保存对话框 | `src/ui/saveFile.ts` + `src-tauri`（save_file 命令 + tauri-plugin-dialog + capabilities） | 2026-09-09：桌面端 `<a download>` 无效的根治——原生保存对话框选路径后 Rust 写盘；分层 PNG 选目录批量写；取消静默；浏览器 showSaveFilePicker 优先 |
 

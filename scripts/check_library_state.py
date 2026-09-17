@@ -146,6 +146,10 @@ def main() -> int:
     check_seed_modules()
     check_git_state()
     check_kernel_baseline(with_tests)
+    check_version_consistency()
+    check_seed_module_count()
+    check_stale_descriptions()
+    check_next_actions_vs_todo()
 
     print(f"\n✅ 通过 {len(OKS)} 项：")
     for m in OKS:
@@ -158,6 +162,101 @@ def main() -> int:
         return 1
     print("\n结论：记忆系统与仓库状态一致")
     return 0
+
+
+
+# ---------- 防漂移检查（2026-09-16 状态审计新增） ----------
+
+def check_version_consistency() -> None:
+    """版本一致性：package.json / tauri.conf.json / Cargo.toml 三处应同版"""
+    import json as _json
+
+    def read_version(path: str, keys) -> str | None:
+        f = ROOT / path
+        if not f.exists():
+            return None
+        try:
+            data = _json.loads(f.read_text(encoding="utf-8"))
+            for k in keys:
+                data = data[k]
+            return str(data)
+        except Exception:
+            return None
+
+    pkg = read_version("package.json", ["version"])
+    tauri = read_version("src-tauri/tauri.conf.json", ["version"])
+    cargo = None
+    cargo_file = ROOT / "src-tauri" / "Cargo.toml"
+    if cargo_file.exists():
+        m = re.search(r'^version\s*=\s*"([^"]+)"', cargo_file.read_text(encoding="utf-8"), re.M)
+        cargo = m.group(1) if m else None
+    versions = {"package.json": pkg, "tauri.conf.json": tauri, "Cargo.toml": cargo}
+    known = {k: v for k, v in versions.items() if v}
+    if len(known) < 2:
+        warn(f"版本信息读取不全：{versions}")
+        return
+    if len(set(known.values())) == 1:
+        ok(f"三处版本一致：v{pkg}")
+    else:
+        warn(f"版本漂移：{known}（事实源 = 三者共同修改，见 AGENTS 发布约定）")
+
+
+def check_seed_module_count() -> None:
+    """种子模块数对账：seed-modules.json 实际条数 vs 文档声明（M2~M8 共 N 条 / 种子模块 N 条）"""
+    import json as _json
+
+    seed = ROOT / "data" / "seed-modules.json"
+    if not seed.exists():
+        return
+    try:
+        n = len(_json.loads(seed.read_text(encoding="utf-8")).get("modules", []))
+    except Exception:
+        return
+    for doc in ("PROJECT_STATE.md", "README.md"):
+        f = ROOT / doc
+        if not f.exists():
+            continue
+        text = f.read_text(encoding="utf-8")
+        for m in re.finditer(r"(?:M2~M8\s*共|种子模块[^0-9\n]{0,12})(\d+)\s*条", text):
+            claimed = int(m.group(1))
+            if claimed != n:
+                warn(f"{doc} 声明种子模块 {claimed} 条，实际 {n} 条（以 data/seed-modules.json 为准）")
+                break
+    ok(f"种子模块数对账：实际 {n} 条（文档未发现冲突声明）")
+
+
+def check_stale_descriptions() -> None:
+    """陈旧描述：src/ 已是生产工程时，PROJECT_STATE 不得再出现"尚未启动"等旧形态描述"""
+    ps = ROOT / "PROJECT_STATE.md"
+    if not ps.exists():
+        return
+    text = ps.read_text(encoding="utf-8")
+    has_src = any((ROOT / "src").glob("*.tsx")) or any((ROOT / "src").rglob("*.tsx"))
+    if has_src and "尚未启动" in text:
+        warn('PROJECT_STATE 仍含"尚未启动"——src/ 生产工程早已存在，描述严重过期')
+    if has_src and re.search(r"阶段\s*3\+[^|\n]*\|\s*⬜\s*未开始", text):
+        warn("PROJECT_STATE 仍写'阶段 3+ 未开始'——桌面端 macOS/标注层/图元层均已交付，阶段描述过期")
+
+
+def check_next_actions_vs_todo() -> None:
+    """下一步矛盾：PROJECT_STATE「三、下一步」引用的 T-x.x 若在 TODO 已标 ✅，则报警"""
+    ps = ROOT / "PROJECT_STATE.md"
+    todo = ROOT / "TODO.md"
+    if not (ps.exists() and todo.exists()):
+        return
+    text = ps.read_text(encoding="utf-8")
+    m = re.search(r"##\s*三、下一步[\s\S]*?(?=\n##\s)", text)
+    if not m:
+        return
+    section = m.group(0)
+    todo_text = todo.read_text(encoding="utf-8")
+    ids = set(re.findall(r"T-\d+\.\d+", section))
+    done = set(re.findall(r"###\s+(T-\d+\.\d+)\s*✅", todo_text))
+    overlap = sorted(ids & done)
+    if overlap:
+        warn(f"PROJECT_STATE「下一步」包含 TODO 已完成任务：{overlap}（应移除并重建下一步列表）")
+    else:
+        ok(f"「下一步」无已完成任务（引用 {len(ids)} 个 Task ID）")
 
 
 if __name__ == "__main__":

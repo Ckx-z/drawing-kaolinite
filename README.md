@@ -1,6 +1,6 @@
 # Kaolin-Assets · 高岭土机理图绘制软件
 
-![version](https://img.shields.io/badge/version-0.2.0-blue) ![tests](https://img.shields.io/badge/tests-351-green) ![platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-lightgrey)
+![version](https://img.shields.io/badge/version-0.2.0-blue) ![tests](https://img.shields.io/badge/tests-367-green) ![platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-lightgrey)
 
 > 模块化科研绘图工具：像搭积木一样组合"片层 / 纳米管 / 颗粒 / 分子 / 基底"，
 > 生成 SCI 论文与 PPT 汇报用的 2D/3D 机理图。所有素材由 **CIF 晶体学数据 + 参数** 程序化生成，
@@ -23,7 +23,7 @@
 ```bash
 npm install
 npm run dev        # 浏览器打开 http://localhost:5173/
-npm run test       # vitest 351 条（几何 / 矿物 / 分子 / 测量 / 状态 / 导出 / SMILES）
+npm run test       # vitest 367 条（几何 / 矿物 / 分子 / 测量 / 状态 / 导出 / SMILES）
 npx tauri build    # 桌面安装包（.app + .dmg，首次约 5 分钟）
 npm run build      # tsc + vite 产物
 node demo/core/test.js   # 几何内核历史基线回归（ALL OK）
@@ -68,7 +68,7 @@ node demo/core/test.js   # 几何内核历史基线回归（ALL OK）
 ## 🛠 技术栈
 
 React 19 · TypeScript 5.8（严格模式）· Vite 6 · Three.js r147（InstancedMesh + PMREM）· Zustand 5 ·
-zod 4（schema 单一事实源）· Dexie 4（IndexedDB）· Vitest（351 条）· Web Worker（几何生成）。
+zod 4（schema 单一事实源）· Dexie 4（IndexedDB）· Vitest（367 条）· Web Worker（几何生成）。
 桌面端：**Tauri v2 已交付**（.app/.dmg、原生保存对话框、场景文件双击打开、崩溃面包屑日志）。架构与算法详见 [docs/技术方案设计.md](docs/技术方案设计.md)。
 
 ## 📋 v0.2.0 更新日志（2026-09-13）
