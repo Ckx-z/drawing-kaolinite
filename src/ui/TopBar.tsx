@@ -14,6 +14,8 @@ import { sceneHistory, sceneStore } from '../state/sceneStore';
 import { shapeViewStore } from './shapes/view';
 import { loadPresetScene } from './preset';
 import { dataUrlToBlob, saveBlob, saveBlobs, saveText } from './saveFile';
+import { DropdownMenu, MenuItem, MenuSep, MenuBlock, SegmentedControl } from './primitives';
+import { resolveExportSize } from '../export/tiff';
 
 /** T-11.2 图元工具组（激活态随 store.tool；快捷键 V/R/O/A/L/T 同源） */
 const TOOL_LABELS: Record<ShapeTool, string> = {
@@ -42,25 +44,22 @@ function ShapeToolGroup() {
   );
 }
 
-/** T-11.6 画布形态切换（3D 混合 / 纯示意图）+ T-11.7 磁吸开关 + 视图缩放显示 */
+/** T-11.6 画布形态切换：segmented control（工作模式视觉权重高于普通工具）；
+ * 2D 段激活时相邻显示磁吸开关 + 缩放（T-11.7，逻辑原样） */
 function ModeGroup() {
   const mode = useStore(sceneStore, (s) => s.mode);
   const snap = useStore(shapeViewStore, (s) => s.snap);
   const zoom = useStore(shapeViewStore, (s) => s.zoom);
   return (
-    <div className="tb-group" title="示意图模式：无 3D 的无限画布（空格/中键拖拽平移，滚轮缩放）；图元数据两模式共享">
-      <button
-        className={`mini${mode === 'mixed' ? ' on' : ''}`}
-        onClick={() => sceneStore.getState().setMode('mixed')}
-      >
-        🧊 3D 混合
-      </button>
-      <button
-        className={`mini${mode === 'diagram' ? ' on' : ''}`}
-        onClick={() => sceneStore.getState().setMode('diagram')}
-      >
-        ✏️ 示意图
-      </button>
+    <div className="tb-group" title="工作模式——示意图模式：无 3D 的无限画布（空格/中键拖拽平移，滚轮缩放）；图元数据两模式共享">
+      <SegmentedControl
+        options={[
+          { value: 'mixed', label: '🧊 3D 混合', title: '3D 场景 + 图元叠加' },
+          { value: 'diagram', label: '✏️ 2D 示意', title: '纯 2D 无限画布' },
+        ]}
+        value={mode}
+        onChange={(v) => sceneStore.getState().setMode(v)}
+      />
       {mode === 'diagram' && (
         <>
           <label className="chk" title="拖拽图元时自动对齐网格与其他图元边缘/中心（洋红参考线提示）">
@@ -92,6 +91,32 @@ export default function TopBar() {
   const flash = (msg: string): void => {
     setToast(msg);
     setTimeout(() => setToast(''), 2600);
+  };
+
+  // 导出格式表（2026-09-16 顶栏收纳）：主按钮 = 最近使用格式（默认 PNG）
+  const [lastFmt, setLastFmt] = useState<'png' | 'tiff' | 'pdf' | 'svg' | 'layers' | 'gif'>('png');
+  const exportRunner: Record<typeof lastFmt, () => void> = {
+    png: () => void onExportPNG(),
+    tiff: () => void onExportTIFF(),
+    pdf: () => void onExportPDF(),
+    svg: () => void onExportSVG(),
+    layers: () => void onExportLayeredPNG(),
+    gif: () => void onExportAnimation(),
+  };
+  const FMT_LABEL: Record<typeof lastFmt, string> = {
+    png: 'PNG', tiff: 'TIFF', pdf: 'PDF', svg: 'SVG', layers: '分层 PNG', gif: '动画 GIF',
+  };
+  const runFmt = (f: typeof lastFmt): void => {
+    setLastFmt(f);
+    exportRunner[f]();
+  };
+  /** 导出设置区的实时像素尺寸（复用导出链路同一 resolveExportSize，不复制算法） */
+  const exportPx = (): string => {
+    const svc = rendererRef.current;
+    if (!svc) return '';
+    const cvs = svc.renderer.domElement;
+    const { w, h } = resolveExportSize(dpi, 16, cvs.clientWidth, cvs.clientHeight, svc.renderer.capabilities.maxTextureSize);
+    return `${w} × ${h} px`;
   };
 
   const onSaveScene = async (): Promise<void> => {
@@ -265,6 +290,37 @@ export default function TopBar() {
         <span className="logo">◈</span> Kaolin-Assets
         <em>高岭土机理图绘制软件 · v0.2.0</em>
       </div>
+      {/* ── 工程区：保存 / 打开（下拉含示例与清空，清空带确认） ── */}
+      <div className="tb-group" title="场景文件：保存为 .kaolin-scene.json（含视角快照），双击可直接打开">
+        <button onClick={onSaveScene}>保存场景</button>
+        <DropdownMenu
+          label="打开"
+          title="打开场景文件（.kaolin-scene.json）；下拉含示例场景与清空"
+          onMainClick={onOpenScene}
+        >
+          <MenuItem onClick={onOpenScene} title="打开 .kaolin-scene.json（含视角快照，原样恢复）">
+            打开场景…
+          </MenuItem>
+          <MenuItem onClick={loadPresetScene} title="一键组合：埃洛石@CeO₂ 复合材料场景">
+            示例场景
+          </MenuItem>
+          <MenuSep />
+          <MenuItem
+            danger
+            title="清空画布（不可撤销，建议先保存场景）"
+            onClick={() => {
+              if (window.confirm('确定清空画布？此操作不可撤销——建议先「保存场景」。')) {
+                sceneStore.getState().clear();
+                rendererRef.current?.frameAll();
+              }
+            }}
+          >
+            清空场景
+          </MenuItem>
+        </DropdownMenu>
+        <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={onFile} />
+      </div>
+      {/* ── 撤销 / 重做 ── */}
       <div className="tb-group" title="撤销/重做（快捷键 ⌘Z / ⇧⌘Z）——覆盖组件、参数、图元、标注、色板的全部编辑">
         <button
           disabled={!sceneHistory.canUndo()}
@@ -285,107 +341,12 @@ export default function TopBar() {
           ↷ 前进
         </button>
       </div>
-      <div className="tb-group">
-        <button onClick={loadPresetScene} title="一键组合：埃洛石@CeO₂ 复合材料场景">
-          示例场景
-        </button>
-      </div>
+      {/* ── 编辑工具 ── */}
       <ShapeToolGroup />
+      {/* ── 工作模式 ── */}
       <ModeGroup />
-      <div className="tb-group">
-        <button onClick={onSaveScene}>保存场景</button>
-        <button onClick={onOpenScene}>打开场景</button>
-        <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={onFile} />
-        <button
-          className="primary"
-          onClick={() => {
-            void onSaveModule();
-          }}
-          title="把选中的组件存入左侧「我的模块」，可反复复用"
-        >
-          ★ 存为模块
-        </button>
-        <button
-          onClick={() => {
-            void onSaveCombined();
-          }}
-          title="把整景存为一个组合模块（管+颗粒+分子…整体复用，实例化后各组件仍独立可调）"
-        >
-          ★ 存组合
-        </button>
-        <button
-          onClick={() => {
-            void onSaveTemplate();
-          }}
-          title="把当前场景（含图元/箭头/文字）存为机理图模板，左侧「机理图模板」分区一键复用（T-11.8）"
-        >
-          🧩 存为模板
-        </button>
-      </div>
-      <div className="tb-group">
-        <select
-          value={dpi}
-          onChange={(e) => setDpi(Number(e.target.value))}
-          title="导出分辨率（按 16cm 版面宽度折算像素）"
-        >
-          <option value={96}>96 dpi 预览</option>
-          <option value={300}>300 dpi 期刊</option>
-          <option value={600}>600 dpi 高清</option>
-        </select>
-        <label className="chk" title="透明底便于 PPT 叠放">
-          <input type="checkbox" checked={alpha} onChange={(e) => setAlpha(e.target.checked)} />
-          透明底
-        </label>
-        <button className="primary" onClick={onExportPNG}>
-          导出 PNG
-        </button>
-        <button onClick={onExportTIFF} title="期刊投稿格式（300dpi+ 硬要求，含物理分辨率元数据）">
-          导出 TIFF
-        </button>
-        <button onClick={onExportPDF} title="PDF：页面物理尺寸 = 设定 cm 数（位图满幅嵌入）">
-          导出 PDF
-        </button>
-        <button
-          onClick={() => {
-            void onExportAnimation();
-          }}
-          title={'卷曲动画 GIF：选中埃洛石管后导出「片→管」动画（20 帧）'}
-        >
-          导出动画 GIF
-        </button>
-        <button
-          onClick={onExportSVG}
-          title={'矢量图（线稿档画风）：PPT 插入后右键「转换为形状」可逐组件编辑'}
-        >
-          导出 SVG
-        </button>
-        <button onClick={onExportLayeredPNG} title="每可见组件一张透明底 PNG（远→近序号命名），PPT 中按序叠放即还原整图">
-          导出分层 PNG
-        </button>
-      </div>
-      <div className="tb-group">
-        <button
-          onClick={() => {
-            const next = mode === 'render' ? 'toon' : 'render';
-            setMode(next);
-            rendererRef.current?.setRenderMode(next);
-          }}
-          title="双轨渲染（T-4.1）：渲染档 = PBR 质感（宣讲/PPT）；线稿档 = 三阶色阶+描边（期刊示意/矢量导出用）"
-        >
-          {mode === 'render' ? '🎨 渲染档' : '✏️ 线稿档'}
-        </button>
-        <label className="chk" title="接触阴影（T-4.3）：方向光 shadow map + 接影地板，低成本立体感">
-          <input
-            type="checkbox"
-            checked={shadows}
-            onChange={(e) => {
-              setShadows(e.target.checked);
-              rendererRef.current?.setShadows(e.target.checked);
-            }}
-          />
-          接触阴影
-        </label>
-        <span style={{ opacity: 0.6, alignSelf: 'center', fontSize: 12 }}>视角</span>
+      {/* ── 视图区：高频视角常驻 + 视图选项下拉 ── */}
+      <div className="tb-group" title="构图预设（T-4.3）：保持视距只转方位">
         {(['iso', 'front', 'top'] as const).map((p) => (
           <button
             key={p}
@@ -395,17 +356,121 @@ export default function TopBar() {
             {p === 'iso' ? '等距' : p === 'front' ? '正视' : '俯视'}
           </button>
         ))}
-        <button onClick={() => rendererRef.current?.snapHorizon()} title="水平线吸附：视线降到水平（地平线水平）">
-          水平吸附
-        </button>
-        <button
-          onClick={() => {
-            sceneStore.getState().clear();
-            rendererRef.current?.frameAll();
-          }}
+        <DropdownMenu label="视图" title="视角与渲染选项">
+          <MenuItem onClick={() => rendererRef.current?.snapHorizon()} title="水平线吸附：视线降到水平（地平线水平）">
+            水平吸附
+          </MenuItem>
+          <MenuSep />
+          <MenuBlock>
+            <label className="chk" title="接触阴影（T-4.3）：方向光 shadow map + 接影地板，低成本立体感">
+              <input
+                type="checkbox"
+                checked={shadows}
+                onChange={(e) => {
+                  setShadows(e.target.checked);
+                  rendererRef.current?.setShadows(e.target.checked);
+                }}
+              />
+              接触阴影
+            </label>
+          </MenuBlock>
+          <MenuBlock>
+            <button
+              onClick={() => {
+                const next = mode === 'render' ? 'toon' : 'render';
+                setMode(next);
+                rendererRef.current?.setRenderMode(next);
+              }}
+              title="双轨渲染（T-4.1）：渲染档 = PBR 质感（宣讲/PPT）；线稿档 = 三阶色阶+描边（期刊示意/矢量导出用）"
+            >
+              {mode === 'render' ? '🎨 渲染档（点击切线稿）' : '✏️ 线稿档（点击切渲染）'}
+            </button>
+          </MenuBlock>
+        </DropdownMenu>
+      </div>
+      <div className="tb-spacer" />
+      {/* ── 保存为… ── */}
+      <div className="tb-group">
+        <DropdownMenu label="保存为…" title="把当前内容存为可复用资产">
+          <MenuItem
+            onClick={() => {
+              void onSaveModule();
+            }}
+            title="把选中的组件存入左侧「我的模块」，可反复复用"
+          >
+            ★ 存为模块（选中组件）
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              void onSaveCombined();
+            }}
+            title="把整景存为一个组合模块（管+颗粒+分子…整体复用，实例化后各组件仍独立可调）"
+          >
+            ★ 存组合模块（整景）
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              void onSaveTemplate();
+            }}
+            title="把当前场景（含图元/箭头/文字与视角）存为机理图模板，左侧模板区一键复用（T-11.8）"
+          >
+            🧩 存为模板（场景 + 视角）
+          </MenuItem>
+        </DropdownMenu>
+      </div>
+      {/* ── 导出区：主按钮 = 最近格式；下拉 = 全部格式 + 导出设置 ── */}
+      <div className="tb-group">
+        <DropdownMenu
+          label={`导出 ${FMT_LABEL[lastFmt]}`}
+          btnClass="primary"
+          title={`导出为 ${FMT_LABEL[lastFmt]}（点击 ▼ 换格式 / 调分辨率）`}
+          onMainClick={() => exportRunner[lastFmt]()}
+          width={250}
         >
-          清空
-        </button>
+          <MenuItem onClick={() => runFmt('png')} title="通用插图位图">
+            PNG 位图
+          </MenuItem>
+          <MenuItem onClick={() => runFmt('tiff')} title="期刊投稿格式（300dpi+ 硬要求，含物理分辨率元数据）">
+            TIFF（期刊）
+          </MenuItem>
+          <MenuItem onClick={() => runFmt('pdf')} title="PDF：页面物理尺寸 = 设定 cm 数（位图满幅嵌入）">
+            PDF
+          </MenuItem>
+          <MenuItem onClick={() => runFmt('svg')} title="矢量图（线稿档画风）：PPT 插入后右键「转换为形状」可逐组件编辑">
+            SVG 矢量
+          </MenuItem>
+          <MenuItem onClick={() => runFmt('layers')} title="每可见组件一张透明底 PNG（远→近序号命名），PPT 中按序叠放即还原整图">
+            分层 PNG
+          </MenuItem>
+          <MenuItem onClick={() => runFmt('gif')} title="卷曲动画 GIF：选中埃洛石管后导出「片→管」动画（20 帧）">
+            动画 GIF
+          </MenuItem>
+          <MenuSep />
+          <MenuBlock>
+            <div className="dd-row">
+              <span>分辨率</span>
+              <select
+                value={dpi}
+                onChange={(e) => setDpi(Number(e.target.value))}
+                title="导出分辨率（按 16cm 版面宽度折算像素）"
+              >
+                <option value={96}>96 dpi</option>
+                <option value={300}>300 dpi</option>
+                <option value={600}>600 dpi</option>
+              </select>
+            </div>
+            <div className="dd-row">
+              <span>背景</span>
+              <label className="chk" title="透明底便于 PPT 叠放">
+                <input type="checkbox" checked={alpha} onChange={(e) => setAlpha(e.target.checked)} />
+                透明底
+              </label>
+            </div>
+            <div className="dd-row dim">
+              16 cm @ {dpi} dpi → {exportPx()}
+            </div>
+          </MenuBlock>
+        </DropdownMenu>
       </div>
       {toast ? <div className="badge">{toast}</div> : null}
     </header>

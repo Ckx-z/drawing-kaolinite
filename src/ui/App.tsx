@@ -153,7 +153,7 @@ export default function App() {
       </main>
       <footer className="statusbar">
         <span>左键旋转 · 右键平移 · 滚轮缩放 · 点击选中 · Alt+点击原子测键长/键角 · Delete 删除 · Esc 取消 · Ctrl+Z 撤销 / Ctrl+Shift+Z 重做</span>
-        <span>记忆系统：AGENTS.md 会话协议已生效</span>
+        {import.meta.env.DEV && <span>DEV · 记忆系统：AGENTS.md 会话协议已生效</span>}
       </footer>
       {cheat && (
         <div className="cheatsheet" onClick={() => setCheat(false)}>
