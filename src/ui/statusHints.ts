@@ -7,8 +7,6 @@ import type { ShapeTool } from '../core/shapes/schema';
 export interface StatusInput {
   tool: ShapeTool;
   mode: 'mixed' | 'diagram';
-  /** 专注画布模式（2026-09-17）：附加 Esc 返回提示 */
-  focus?: boolean;
   /** 组件或图元是否有选中 */
   hasSelection: boolean;
   /** 组件多选数（≥2 时） */
@@ -31,6 +29,5 @@ export function statusHint(i: StatusInput): string {
   else if (i.hasSelection) parts.push('拖动移动 · Delete 删除 · H 显隐 · Ctrl+D 原地副本');
   else parts.push(TOOL_HINT[i.tool]);
   if (i.mode === 'diagram') parts.push('空格/中键拖拽平移 · 滚轮缩放');
-  if (i.focus) parts.push('Esc 返回工作区');
   return parts.join(' · ');
 }

@@ -4,7 +4,7 @@
  *       Ctrl/Cmd+Shift+Z 或 Ctrl/Cmd+Y 重做（T-2.1；输入框聚焦时跳过）。
  * 首次进入自动载入示例场景（对齐 demo 启动行为）。
  */
-import { useRef, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { trace } from '../crashTrace';
 import { rendererRef } from '../state/rendererRef';
@@ -17,14 +17,12 @@ import { clearAutosave, installAutosave, readAutosave } from '../state/autosave'
 import type { SceneDocument } from '../core/types';
 import { loadPresetScene } from './preset';
 import { statusHint } from './statusHints';
-import { enterFocus, exitFocus, type SidebarState } from './focusMode';
 import SceneCanvas from './SceneCanvas';
 import { SHORTCUTS, cheatsheetEntries, handleShortcut, type ShortcutHost } from './shortcuts';
 import TopBar from './TopBar';
 
-/** 上下文状态提示（2026-09-16）：订阅 tool/mode/选择态，复用 statusHint 纯函数；
- * focusProps = 专注态时由 App 注入 Esc 提示（2026-09-17） */
-function StatusHint(props: { focus?: boolean }) {
+/** 上下文状态提示（2026-09-16）：订阅 tool/mode/选择态，复用 statusHint 纯函数 */
+function StatusHint() {
   const tool = useStore(sceneStore, (s) => s.tool);
   const mode = useStore(sceneStore, (s) => s.mode);
   const hasSel = useStore(
@@ -32,32 +30,16 @@ function StatusHint(props: { focus?: boolean }) {
     (s) => Boolean(s.selectionId) || s.shapeSelectionIds.length > 0,
   );
   const multiN = useStore(sceneStore, (s) => s.componentSelectionIds.length);
-  return <span>{statusHint({ tool, mode, hasSelection: hasSel, multiCount: multiN, focus: props.focus })}</span>;
+  return <span>{statusHint({ tool, mode, hasSelection: hasSel, multiCount: multiN })}</span>;
 }
 
 export default function App() {
   const [cheat, setCheat] = useState(false);
   const [recover, setRecover] = useState<{ doc: SceneDocument; savedAt: number } | null>(null);
-  // 侧栏折叠 + 专注画布（2026-09-16）：UI 态本地，不影响场景/相机
+  // 右侧参数面板折叠（2026-09-16）：UI 态本地，不影响场景/相机
   const mode = useStore(sceneStore, (s) => s.mode);
-  const [leftOpen, setLeftOpen] = useState(true);
+  // 右侧参数面板折叠（2026-09-16，保留功能）；左侧素材库恒显（2026-09-17 按用户要求删除收起功能）
   const [rightOpen, setRightOpen] = useState(true);
-  // 专注画布快照（2026-09-17 修复被困 bug）：进入前侧栏开合，退出原样恢复；
-  // useRef 规避连续进出的 stale closure（enterFocus 幂等：重复进入不覆盖首次快照）
-  const focusSnap = useRef<SidebarState | null>(null);
-  const focus = !leftOpen && !rightOpen; // isFocus 派生态（含手动双折叠，同样给返回入口）
-  const enterFocusMode = (): void => {
-    const r = enterFocus(focusSnap.current, { left: leftOpen, right: rightOpen });
-    focusSnap.current = r.snapshot;
-    setLeftOpen(r.next.left);
-    setRightOpen(r.next.right);
-  };
-  const exitFocusMode = (): void => {
-    const r = exitFocus(focusSnap.current);
-    focusSnap.current = null;
-    setLeftOpen(r.left);
-    setRightOpen(r.right);
-  };
 
   useEffect(() => {
     trace('app-mount');
@@ -111,20 +93,6 @@ export default function App() {
     const onKey = (e: KeyboardEvent): void => {
       const tag = (document.activeElement?.tagName ?? '').toLowerCase();
       if (tag === 'input' || tag === 'select' || tag === 'textarea') return; // 输入框内方向键正常编辑
-      // 专注画布（2026-09-16）：Tab 进入/退出（输入框聚焦时不劫持）
-      if (e.key === 'Tab') {
-        e.preventDefault();
-        if (focus) exitFocusMode();
-        else enterFocusMode();
-        return;
-      }
-      // Esc 退出专注（2026-09-17）：优先级 = 输入框守卫之后、快捷键分发之前——
-      // 浮层（速查表/下拉菜单）开着时让位给浮层关闭，否则退出专注而非取消选中
-      if (e.key === 'Escape' && focus && !cheat && !document.querySelector('.dd-menu')) {
-        e.preventDefault();
-        exitFocusMode();
-        return;
-      }
       // T-11.2：图元选中时方向键 = 微调图元（Shift 大步 10px）；否则平移视角
       if (e.key.startsWith('Arrow')) {
         e.preventDefault(); // 阻止页面滚动，不进入快捷键分发
@@ -193,32 +161,13 @@ export default function App() {
       <TopBar />
       <main
         className="layout"
-        style={{ gridTemplateColumns: `${leftOpen ? '216px' : '0px'} 1fr ${rightOpen ? '300px' : '0px'}` }}
+        style={{ gridTemplateColumns: `216px 1fr ${rightOpen ? '300px' : '0px'}` }}
       >
-        {leftOpen ? <LibraryPanel /> : null}
+        <LibraryPanel />
         <section className="canvas">
           <SceneCanvas />
-          <div className="canvas-badge">
-            {focus
-              ? '专注画布 · Esc 或「返回工作区」退出'
-              : mode === 'diagram'
-                ? '✏️ 2D 示意图'
-                : '🧊 3D 混合'}
-          </div>
-          {/* 专注返回入口（2026-09-17）：左上角常驻可见，仅按钮自身接收点击 */}
-          {focus && (
-            <button className="focus-exit" title="恢复三栏工作区（Esc）" onClick={exitFocusMode}>
-              ← 返回工作区
-            </button>
-          )}
-          {/* 侧缘双向钮：开=折叠 ‹ / 关=展开 ›（替换原 0 宽列内不可见的恢复按钮） */}
-          <button
-            className={`side-fold left${leftOpen ? '' : ' closed'}`}
-            title={leftOpen ? '收起素材库' : '展开素材库'}
-            onClick={() => setLeftOpen((v) => !v)}
-          >
-            {leftOpen ? '‹' : '›'}
-          </button>
+          <div className="canvas-badge">{mode === 'diagram' ? '✏️ 2D 示意图' : '🧊 3D 混合'}</div>
+          {/* 右侧参数面板折叠/展开（保留功能） */}
           <button
             className={`side-fold right${rightOpen ? '' : ' closed'}`}
             title={rightOpen ? '收起参数面板' : '展开参数面板'}
@@ -235,7 +184,7 @@ export default function App() {
         ) : null}
       </main>
       <footer className="statusbar">
-        <StatusHint focus={focus} />
+        <StatusHint />
         <span className="status-right">
           {import.meta.env.DEV && <span>DEV · AGENTS 协议生效</span>}
           <span>Kaolin-Assets v0.2.0</span>
