@@ -299,6 +299,13 @@ body {
   display: inline-flex;
   gap: 14px;
 }
+
+/* 响应式（2026-09-16）：桌面为主，窄窗收 brand 副标题防顶栏拥挤 */
+@media (max-width: 1500px) {
+  .brand em {
+    display: none;
+  }
+}
 button.primary {
   background: var(--acc);
   border-color: var(--acc);
