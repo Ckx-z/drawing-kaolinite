@@ -209,13 +209,22 @@ export interface LibraryItem {
   icon: string;
   name: string;
   desc: string;
+  /** 英文副标题（卡片两行式：名称 + 短副标题；完整 desc 移入 title） */
+  en?: string;
+}
+
+/** 素材搜索（2026-09-16）：名称/副标题/说明的字符串包含匹配（不区分大小写） */
+export function filterLib(items: readonly LibraryItem[], q: string): LibraryItem[] {
+  const n = q.trim().toLowerCase();
+  if (!n) return [...items];
+  return items.filter((it) => `${it.name} ${it.en ?? ''} ${it.desc}`.toLowerCase().includes(n));
 }
 
 export const LIB: LibraryItem[] = [
-  { type: 'kaolinite_sheet', icon: '▬', name: '高岭土片层', desc: '1–3 层堆叠 · CIF 驱动 · 矩形/六角' },
-  { type: 'halloysite_tube', icon: '◯', name: '埃洛石纳米管', desc: '片层卷曲生成 · 卷曲进度可动画' },
-  { type: 'nanoparticle', icon: '⬤', name: '纳米颗粒 CeO₂', desc: '簇装小晶粒 / 光滑球 · 尺寸可调' },
-  { type: 'molecule', icon: '✦', name: '小分子 / 离子', desc: 'H₂O · O₂ · CO₂ · N₂ · 阳离子' },
-  { type: 'rubber_substrate', icon: '▭', name: '橡胶基底', desc: '圆角软质平板' },
-  { type: 'packed_layers', icon: '⬢', name: '密排原子层', desc: '六方/立方密排 · 逐原子堆叠开关 · 层数可调' },
+  { type: 'kaolinite_sheet', icon: '▬', name: '高岭土片层', desc: '1–3 层堆叠 · CIF 驱动 · 矩形/六角', en: 'Kaolinite Sheet' },
+  { type: 'halloysite_tube', icon: '◯', name: '埃洛石纳米管', desc: '片层卷曲生成 · 卷曲进度可动画', en: 'Halloysite Nanotube' },
+  { type: 'nanoparticle', icon: '⬤', name: '纳米颗粒 CeO₂', desc: '簇装小晶粒 / 光滑球 · 尺寸可调', en: 'Nanoparticle' },
+  { type: 'molecule', icon: '✦', name: '小分子 / 离子', desc: 'H₂O · O₂ · CO₂ · N₂ · 阳离子', en: 'Molecule / Ion' },
+  { type: 'rubber_substrate', icon: '▭', name: '橡胶基底', desc: '圆角软质平板', en: 'Rubber Substrate' },
+  { type: 'packed_layers', icon: '⬢', name: '密排原子层', desc: '六方/立方密排 · 逐原子堆叠开关 · 层数可调', en: 'Close-Packed Layers' },
 ];

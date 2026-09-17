@@ -99,7 +99,7 @@ export default function ModulePanel() {
 
   return (
     <>
-      <h3 style={{ marginTop: 16 }}>
+      <h3>
         我的模块
         <span className="tip">
           <button className="mini" onClick={onExport} title="导出 .kaolin-modules.json 批量备份">

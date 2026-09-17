@@ -13,13 +13,15 @@ import type { ComponentType } from '../core/types';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
 import { applyTemplate, ensureSeeded, listTemplates, type TemplateEntry } from '../state/templateLibrary';
+import { SidebarTabs } from './primitives';
 import ModulePanel from './ModulePanel';
-import { LIB } from './paramDefs';
+import { filterLib, LIB } from './paramDefs';
 
 /** T-11.8 机理图模板分区：种子 + 自存模板，点击追加载入（可 Ctrl+Z 撤销） */
 function TemplateSection() {
   const [templates, setTemplates] = useState<TemplateEntry[]>([]);
   const [msg, setMsg] = useState('');
+  const [q, setQ] = useState(''); // 模板搜索（2026-09-16，tab 内置）
   /** 存/删模板后 bump → 重新拉列表（新卡片立即出现） */
   const templateSeq = useStore(sceneStore, (s) => s.templateSeq);
 
@@ -29,12 +31,15 @@ function TemplateSection() {
     );
   }, [templateSeq]);
 
-  if (!templates.length) return null;
+  const shown = q.trim()
+    ? templates.filter((t) => `${t.name} ${t.desc ?? ''}`.toLowerCase().includes(q.trim().toLowerCase()))
+    : templates;
   return (
     <>
-      <h3 style={{ marginTop: 16 }}>机理图模板</h3>
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索模板…" style={{ width: '100%', marginBottom: 8 }} />
+      {!shown.length && <p className="hint">{templates.length ? '无匹配模板' : '暂无模板——顶栏「保存为… ▼」存一个试试'}</p>}
       <div>
-        {templates.map((t) => (
+        {shown.map((t) => (
           <div
             key={t.id}
             className="lib-card"
@@ -61,6 +66,10 @@ function TemplateSection() {
 export default function LibraryPanel() {
   useStore(sceneStore, () => null); // 订阅以随 store 更新（当前卡片为静态列表）
   const [smiles, setSmiles] = useState('');
+  // 左栏 Tabs + 素材搜索（2026-09-16）：UI 态本地，不进 store
+  const [tab, setTab] = useState<'assets' | 'modules' | 'templates'>('assets');
+  const [libQuery, setLibQuery] = useState('');
+
   const [smilesMsg, setSmilesMsg] = useState('');
 
   const add = (type: ComponentType): void => {
@@ -156,60 +165,84 @@ export default function LibraryPanel() {
 
   return (
     <aside className="panel left">
-      <h3>素材库</h3>
-      <div>
-        {LIB.map((item) => (
-          <div key={item.type} className="lib-card" onClick={() => add(item.type)}>
-            <div className="t">
-              <span className="ic">{item.icon}</span>
-              {item.name}
-            </div>
-            <div className="d">{item.desc}</div>
-          </div>
-        ))}
-      </div>
-      <div
-        style={{ marginTop: 10 }}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={onDropMol}
-        title="也可将 .mol / .sdf 分子文件拖到这里导入"
-      >
-        <div style={{ display: 'flex', gap: 6 }}>
+      <SidebarTabs
+        tabs={[
+          { value: 'assets', label: '素材' },
+          { value: 'modules', label: '模块' },
+          { value: 'templates', label: '模板' },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
+      {tab === 'assets' && (
+        <>
           <input
-            value={smiles}
-            onChange={(e) => {
-              setSmiles(e.target.value);
-              const m = findMineral(e.target.value);
-              setSmilesMsg(m ? `↳ ${m.zh[0]} · ${m.en} · ${m.formula} —— 回车导入 CIF 结构片层` : '');
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') addMolecule();
-            }}
-            placeholder="SMILES / 化学式 / 矿物名：CCO、CO、高岭石、蒙脱石"
-            style={{ flex: 1, minWidth: 0 }}
+            value={libQuery}
+            onChange={(e) => setLibQuery(e.target.value)}
+            placeholder="搜索素材（名称 / 说明）…"
+            style={{ width: '100%', marginBottom: 8 }}
           />
-          <button
-            className="mini"
-            onClick={addMolecule}
-            title="支持：SMILES（CCO）/ 化学式（CO、fe2o3）/ 矿物中英文名（高岭石、蒙脱石）—— 矿物走对应 CIF 晶体结构"
+          <div>
+            {filterLib(LIB, libQuery).map((item) => (
+              <div
+                key={item.type}
+                className="lib-card"
+                onClick={() => add(item.type)}
+                title={item.desc}
+              >
+                <div className="t">
+                  <span className="ic">{item.icon}</span>
+                  {item.name}
+                </div>
+                <div className="d">{item.en ?? item.desc}</div>
+              </div>
+            ))}
+            {!filterLib(LIB, libQuery).length && <p className="hint">无匹配素材</p>}
+          </div>
+          <div
+            style={{ marginTop: 10 }}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={onDropMol}
+            title="也可将 .mol / .sdf 分子文件拖到这里导入"
           >
-            导入
-          </button>
-          <button
-            className="mini"
-            onClick={() => fileRef.current?.click()}
-            title="导入 .mol / .sdf 分子文件（ChemDraw、Materials Studio 等导出，V2000）——使用文件内精确 3D 构象"
-          >
-            📁 文件
-          </button>
-          <input ref={fileRef} type="file" accept=".mol,.sdf,text/plain" onChange={onMolFile} style={{ display: 'none' }} />
-        </div>
-        {smilesMsg && <p className="hint">{smilesMsg}</p>}
-      </div>
-      <ModulePanel />
-      <TemplateSection />
-      <h3 style={{ marginTop: 16 }}>提示</h3>
-      <p className="hint">点击卡片添加组件；点击画布选中；Delete 删除、Esc 取消选中；SMILES / 化学式（如 Si、H2O）输入后回车导入。</p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                value={smiles}
+                onChange={(e) => {
+                  setSmiles(e.target.value);
+                  const m = findMineral(e.target.value);
+                  setSmilesMsg(m ? `↳ ${m.zh[0]} · ${m.en} · ${m.formula} —— 回车导入 CIF 结构片层` : '');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') addMolecule();
+                }}
+                placeholder="SMILES / 化学式 / 矿物名：CCO、CO、高岭石、蒙脱石"
+                style={{ flex: 1, minWidth: 0 }}
+              />
+              <button
+                className="mini"
+                onClick={addMolecule}
+                title="支持：SMILES（CCO）/ 化学式（CO、fe2o3）/ 矿物中英文名（高岭石、蒙脱石）—— 矿物走对应 CIF 晶体结构"
+              >
+                导入
+              </button>
+              <button
+                className="mini"
+                onClick={() => fileRef.current?.click()}
+                title="导入 .mol / .sdf 分子文件（ChemDraw、Materials Studio 等导出，V2000）——使用文件内精确 3D 构象"
+              >
+                📁 文件
+              </button>
+              <input ref={fileRef} type="file" accept=".mol,.sdf,text/plain" onChange={onMolFile} style={{ display: 'none' }} />
+            </div>
+            {smilesMsg && <p className="hint">{smilesMsg}</p>}
+          </div>
+          <h3 style={{ marginTop: 16 }}>提示</h3>
+          <p className="hint">点击卡片添加组件；点击画布选中；Delete 删除、Esc 取消选中；SMILES / 化学式（如 Si、H2O）输入后回车导入。</p>
+        </>
+      )}
+      {tab === 'modules' && <ModulePanel />}
+      {tab === 'templates' && <TemplateSection />}
     </aside>
   );
 }

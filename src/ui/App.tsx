@@ -22,6 +22,9 @@ import TopBar from './TopBar';
 export default function App() {
   const [cheat, setCheat] = useState(false);
   const [recover, setRecover] = useState<{ doc: SceneDocument; savedAt: number } | null>(null);
+  // 侧栏折叠 + 专注画布（2026-09-16）：UI 态本地，不影响场景/相机
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
 
   useEffect(() => {
     trace('app-mount');
@@ -74,7 +77,15 @@ export default function App() {
 
     const onKey = (e: KeyboardEvent): void => {
       const tag = (document.activeElement?.tagName ?? '').toLowerCase();
-      if (tag === 'input' || tag === 'select' || tag === 'textarea') return; // 输入框内方向键正常编辑文本
+      if (tag === 'input' || tag === 'select' || tag === 'textarea') return; // 输入框内方向键正常编辑
+      // 专注画布（2026-09-16）：Tab 隐藏/恢复两侧栏（输入框聚焦时不劫持）
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const anyOpen = leftOpen || rightOpen;
+        setLeftOpen(!anyOpen);
+        setRightOpen(!anyOpen);
+        return;
+      }
       // T-11.2：图元选中时方向键 = 微调图元（Shift 大步 10px）；否则平移视角
       if (e.key.startsWith('Arrow')) {
         e.preventDefault(); // 阻止页面滚动，不进入快捷键分发
@@ -141,15 +152,40 @@ export default function App() {
         </div>
       )}
       <TopBar />
-      <main className="layout">
-        <LibraryPanel />
+      <main
+        className="layout"
+        style={{ gridTemplateColumns: `${leftOpen ? '216px' : '0px'} 1fr ${rightOpen ? '300px' : '0px'}` }}
+      >
+        {leftOpen ? <LibraryPanel /> : <button className="side-restore" title="展开素材库（Tab 专注画布）" onClick={() => setLeftOpen(true)}>›</button>}
         <section className="canvas">
           <SceneCanvas />
+          {leftOpen && (
+            <button
+              className="side-fold left"
+              title="收起素材库（Tab = 专注画布，再按恢复）"
+              onClick={() => setLeftOpen(false)}
+            >
+              ‹
+            </button>
+          )}
+          {rightOpen && (
+            <button
+              className="side-fold right"
+              title="收起参数面板（Tab = 专注画布，再按恢复）"
+              onClick={() => setRightOpen(false)}
+            >
+              ›
+            </button>
+          )}
         </section>
-        <aside className="panel right">
-          <ParamPanel />
-          <LayerPanel />
-        </aside>
+        {rightOpen ? (
+          <aside className="panel right">
+            <ParamPanel />
+            <LayerPanel />
+          </aside>
+        ) : (
+          <button className="side-restore" title="展开参数面板（Tab 专注画布）" onClick={() => setRightOpen(true)}>‹</button>
+        )}
       </main>
       <footer className="statusbar">
         <span>左键旋转 · 右键平移 · 滚轮缩放 · 点击选中 · Alt+点击原子测键长/键角 · Delete 删除 · Esc 取消 · Ctrl+Z 撤销 / Ctrl+Shift+Z 重做</span>

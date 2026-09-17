@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GROUP_ORDER, groupParams, PARAM_DEFS, type ParamDef } from './paramDefs';
+import { filterLib, GROUP_ORDER, groupParams, LIB, PARAM_DEFS, type ParamDef } from './paramDefs';
 
 /** 参数分组（2026-09-16 渐进式展示）：字段无遗漏、组序正确、缺省归基础 */
 describe('groupParams', () => {
@@ -45,5 +45,17 @@ describe('groupParams', () => {
 
   it('GROUP_ORDER：基础恒在首位（渐进式默认展开组）', () => {
     expect(GROUP_ORDER[0]).toBe('基础');
+  });
+});
+
+describe('filterLib（素材搜索）', () => {
+  it('中文名/英文副标题/说明包含匹配，不区分大小写；空查询全量', () => {
+    expect(filterLib(LIB, '')).toHaveLength(LIB.length);
+    expect(filterLib(LIB, '埃洛石').map((i) => i.type)).toEqual(['halloysite_tube']);
+    expect(filterLib(LIB, 'halloysite').map((i) => i.type)).toEqual(['halloysite_tube']);
+    expect(filterLib(LIB, '密排').map((i) => i.type)).toEqual(['packed_layers']);
+    expect(filterLib(LIB, 'zzz')).toEqual([]);
+    // 返回副本（不改原数组引用语义）
+    expect(filterLib(LIB, '')).not.toBe(LIB);
   });
 });
