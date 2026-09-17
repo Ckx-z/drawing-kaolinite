@@ -26,4 +26,9 @@ describe('statusHint', () => {
     expect(statusHint({ tool: 'select', mode: 'diagram', hasSelection: false, multiCount: 0 })).toContain('平移');
     expect(statusHint({ tool: 'select', mode: 'mixed', hasSelection: false, multiCount: 0 })).not.toContain('空格');
   });
+
+  it('专注模式附加 Esc 返回提示', () => {
+    expect(statusHint({ tool: 'select', mode: 'mixed', hasSelection: false, multiCount: 0, focus: true })).toContain('Esc 返回工作区');
+    expect(statusHint({ tool: 'select', mode: 'mixed', hasSelection: false, multiCount: 0, focus: false })).not.toContain('返回工作区');
+  });
 });

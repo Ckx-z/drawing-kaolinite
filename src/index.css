@@ -282,6 +282,31 @@ body {
   border-color: var(--acc);
 }
 
+/* 专注模式返回按钮（2026-09-17）：画布左上角，仅按钮自身接收点击 */
+.focus-exit {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 25;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: rgba(28, 33, 40, 0.88);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--txt);
+  font-size: 12.5px;
+}
+.focus-exit:hover {
+  border-color: #4a5462;
+  color: #fff;
+}
+/* 侧缘钮关闭态：常显（不依赖画布 hover） */
+.side-fold.closed {
+  opacity: 0.55;
+}
+
 /* 画布左下角模式徽标 + 状态栏右侧 */
 .canvas-badge {
   position: absolute;
