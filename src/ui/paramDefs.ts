@@ -38,6 +38,29 @@ export interface ParamDef {
    * 看到"能点但无反应"）。未提供时显示通用文案。
    */
   stuckHint?: (params: Record<string, unknown>) => string;
+  /** 参数分组（缺省 = 基础）；分组渲染见 groupParams */
+  group?: ParamGroupName;
+}
+
+/** 参数分组名（2026-09-16 渐进式展示）：分组顺序见 GROUP_ORDER */
+export type ParamGroupName = '基础' | '晶体结构' | '形貌' | '显示' | '高级';
+
+/** 分组展示顺序（渐进式：基础默认展开，其后按需） */
+export const GROUP_ORDER: readonly ParamGroupName[] = ['基础', '晶体结构', '形貌', '显示', '高级'];
+
+/**
+ * 按分组聚合参数定义（渐进式展示，2026-09-16）：无 group 字段归"基础"；
+ * 返回按 GROUP_ORDER 排序的 { name, defs }，仅含有字段的组。
+ */
+export function groupParams(defs: readonly ParamDef[]): Array<{ name: ParamGroupName; defs: ParamDef[] }> {
+  const buckets = new Map<ParamGroupName, ParamDef[]>();
+  for (const d of defs) {
+    const g = d.group ?? '基础';
+    const b = buckets.get(g);
+    if (b) b.push(d);
+    else buckets.set(g, [d]);
+  }
+  return GROUP_ORDER.filter((g) => buckets.has(g)).map((g) => ({ name: g, defs: buckets.get(g)! }));
 }
 
 /** 矿物下拉选项（五种层状硅酸盐，显示"中文名 英文名"） */
@@ -46,6 +69,7 @@ const MINERAL_OPTIONS = MINERAL_KEYS.map((k) => ({ value: k, label: `${MINERALS[
 /** 矿物字段：切换时联动重置 d001 为该矿物 c 轴周期（堆叠平移语义） */
 const mineralField = (): ParamDef => ({
   key: 'mineral',
+  group: '晶体结构',
   label: '矿物（CIF 结构来源）',
   type: 'select',
   options: MINERAL_OPTIONS,
@@ -64,9 +88,10 @@ const SINGLE_EL_OPTIONS: ReadonlyArray<{ value: string; label: string }> = Objec
 
 /** 单原子模式基础字段（片层/管/颗粒共用；元素选择仅在开启时显示） */
 const ATOM_MODE_BASE: ParamDef[] = [
-  { key: 'atomMode', label: '单原子模式（单一原子堆叠示意）', type: 'toggle', on: 'single', off: 'full' },
+  { key: 'atomMode', group: '显示', label: '单原子模式（单一原子堆叠示意）', type: 'toggle', on: 'single', off: 'full' },
   {
     key: 'singleEl',
+    group: '显示',
     label: '单原子元素',
     type: 'select',
     options: SINGLE_EL_OPTIONS,
@@ -83,6 +108,7 @@ const ATOM_MODE_BASE: ParamDef[] = [
  */
 const singleLayersField = (layersKey: 'layers' | 'walls'): ParamDef => ({
   key: 'singleLayers',
+  group: '显示',
   label: '单原子层数',
   min: 1,
   max: 3,
@@ -95,6 +121,7 @@ const singleLayersField = (layersKey: 'layers' | 'walls'): ParamDef => ({
 /** 堆叠/壁层数字段：调低于当前单原子层数时联动下调（双向闭合，见 singleLayersField） */
 const layersCountField = (layersKey: 'layers' | 'walls', label: string): ParamDef => ({
   key: layersKey,
+  group: '基础',
   label,
   min: 1,
   max: 3,
@@ -107,43 +134,44 @@ const layersCountField = (layersKey: 'layers' | 'walls', label: string): ParamDe
 
 export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
   kaolinite_sheet: [
-    { key: 'Lx', label: '横向尺寸', unit: 'Å', min: 20, max: 150, step: 2 },
-    { key: 'Ly', label: '纵向尺寸', unit: 'Å', min: 20, max: 150, step: 2 },
+    { key: 'Lx', group: '基础', label: '横向尺寸', unit: 'Å', min: 20, max: 150, step: 2 },
+    { key: 'Ly', group: '基础', label: '纵向尺寸', unit: 'Å', min: 20, max: 150, step: 2 },
     layersCountField('layers', '堆叠层数'),
-    { key: 'd001', label: '堆叠周期 d₀₀₁', unit: 'Å', min: 7.2, max: 25, step: 0.1 },
+    { key: 'd001', group: '晶体结构', label: '堆叠周期 d₀₀₁', unit: 'Å', min: 7.2, max: 25, step: 0.1 },
     mineralField(),
-    { key: 'shape', label: '片层轮廓', type: 'select', options: ['矩形', '六角'] },
-    { key: 'style', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
-    { key: 'edgeH', label: '边缘羟基饱和（实验）', type: 'checkbox' },
-    { key: 'strictCell', label: '晶学严格模式（保留 β/γ 夹角）', type: 'checkbox' },
+    { key: 'shape', group: '基础', label: '片层轮廓', type: 'select', options: ['矩形', '六角'] },
+    { key: 'style', group: '基础', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
+    { key: 'edgeH', group: '高级', label: '边缘羟基饱和（实验）', type: 'checkbox' },
+    { key: 'strictCell', group: '高级', label: '晶学严格模式（保留 β/γ 夹角）', type: 'checkbox' },
     ...ATOM_MODE_BASE,
     singleLayersField('layers'),
     {
       key: 'showInterlayer',
+      group: '显示',
       label: '显示层间物种（K⁺/Ca²⁺ 等）',
       type: 'checkbox',
       when: (p) => (MINERALS[(p.mineral as MineralKey) ?? 'kaolinite']?.interlayer.length ?? 0) > 0,
     },
   ],
   halloysite_tube: [
-    { key: 'innerR', label: '内半径', unit: 'Å', min: 8, max: 40, step: 1 },
-    { key: 'length', label: '管长', unit: 'Å', min: 30, max: 200, step: 5 },
+    { key: 'innerR', group: '基础', label: '内半径', unit: 'Å', min: 8, max: 40, step: 1 },
+    { key: 'length', group: '基础', label: '管长', unit: 'Å', min: 30, max: 200, step: 5 },
     layersCountField('walls', '管壁层数'),
-    { key: 'd001', label: '壁间周期 d₀₀₁', unit: 'Å', min: 7.4, max: 25, step: 0.1 },
+    { key: 'd001', group: '晶体结构', label: '壁间周期 d₀₀₁', unit: 'Å', min: 7.4, max: 25, step: 0.1 },
     mineralField(),
-    { key: 'progress', label: '★ 卷曲进度（片→管）', min: 0.02, max: 1, step: 0.01, disp: (v) => `${Math.round(v * 100)}%` },
-    { key: 'taperDeg', label: '锥角', unit: '°', min: -20, max: 20, step: 1 },
-    { key: 'curlAxis', label: '卷曲方向', type: 'select', options: ['a', 'b'] },
-    { key: 'portNoise', label: '端口噪声', unit: 'Å', min: 0, max: 2, step: 0.1 },
-    { key: 'style', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
+    { key: 'progress', group: '形貌', label: '★ 卷曲进度（片→管）', min: 0.02, max: 1, step: 0.01, disp: (v) => `${Math.round(v * 100)}%` },
+    { key: 'taperDeg', group: '高级', label: '锥角', unit: '°', min: -20, max: 20, step: 1 },
+    { key: 'curlAxis', group: '高级', label: '卷曲方向', type: 'select', options: ['a', 'b'] },
+    { key: 'portNoise', group: '高级', label: '端口噪声', unit: 'Å', min: 0, max: 2, step: 0.1 },
+    { key: 'style', group: '基础', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
     ...ATOM_MODE_BASE,
     singleLayersField('walls'),
   ],
   nanoparticle: [
-    { key: 'radius', label: '颗粒半径', unit: 'Å', min: 4, max: 20, step: 0.5 },
-    { key: 'grains', label: '晶粒数量', min: 40, max: 400, step: 10 },
-    { key: 'seed', label: '随机种子', min: 1, max: 99, step: 1 },
-    { key: 'mode', label: '形态', type: 'select', options: ['簇装', '光滑'] },
+    { key: 'radius', group: '基础', label: '颗粒半径', unit: 'Å', min: 4, max: 20, step: 0.5 },
+    { key: 'grains', group: '高级', label: '晶粒数量', min: 40, max: 400, step: 10 },
+    { key: 'seed', group: '高级', label: '随机种子', min: 1, max: 99, step: 1 },
+    { key: 'mode', group: '基础', label: '形态', type: 'select', options: ['簇装', '光滑'] },
     ...ATOM_MODE_BASE,
   ],
   molecule: [
@@ -157,18 +185,19 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     },
   ],
   rubber_substrate: [
-    { key: 'Lx', label: '长', unit: 'Å', min: 40, max: 240, step: 10 },
-    { key: 'Ly', label: '宽', unit: 'Å', min: 30, max: 200, step: 10 },
-    { key: 'thickness', label: '厚度', unit: 'Å', min: 2, max: 20, step: 1 },
+    { key: 'Lx', group: '基础', label: '长', unit: 'Å', min: 40, max: 240, step: 10 },
+    { key: 'Ly', group: '基础', label: '宽', unit: 'Å', min: 30, max: 200, step: 10 },
+    { key: 'thickness', group: '基础', label: '厚度', unit: 'Å', min: 2, max: 20, step: 1 },
   ],
   packed_layers: [
-    { key: 'el', label: '原子元素', type: 'select', options: SINGLE_EL_OPTIONS, searchable: true },
-    { key: 'n', label: '每边原子数', min: 2, max: 12, step: 1 },
+    { key: 'el', group: '基础', label: '原子元素', type: 'select', options: SINGLE_EL_OPTIONS, searchable: true },
+    { key: 'n', group: '基础', label: '每边原子数', min: 2, max: 12, step: 1 },
     { key: 'layers', label: '堆叠层数', min: 1, max: 8, step: 1 },
-    { key: 'dist', label: '原子间距', unit: 'Å', min: 2, max: 8, step: 0.2 },
-    { key: 'stacking', label: '堆叠方式', type: 'select', options: ['AB', 'ABC'] },
+    { key: 'dist', group: '基础', label: '原子间距', unit: 'Å', min: 2, max: 8, step: 0.2 },
+    { key: 'stacking', group: '基础', label: '堆叠方式', type: 'select', options: ['AB', 'ABC'] },
     {
       key: 'mask',
+      group: '高级',
       label: '参与堆叠（第一层每个原子）',
       type: 'packedMask',
     },

@@ -2,14 +2,16 @@
  * 参数面板 —— T-1.6（对齐 demo：滑块/下拉/勾选 + 变换数字输入 + gizmo 模式）
  * 参数经 store.updateParams（schema 校验）；变换经 setTransform；重建节流由 bindRenderer 承担。
  */
-import { useState } from 'react';
+import {
+  type ReactNode, useState } from 'react';
 import { useStore } from 'zustand';
 import type { PaletteSetting, Transform } from '../core/types';
 import { PALETTES, resolveColor } from '../render/palette';
 import { rendererRef } from '../state/rendererRef';
 import { measureLabel } from '../core/measures';
 import { sceneStore } from '../state/sceneStore';
-import { PARAM_DEFS, type ParamDef } from './paramDefs';
+import { groupParams, PARAM_DEFS, type ParamDef } from './paramDefs';
+import { AccordionSection } from './primitives';
 
 /**
  * 全局色板 + 逐元素取色器（T-4.2）：对整个场景生效，随场景 JSON 持久化。
@@ -65,6 +67,9 @@ function PaletteSection() {
   );
 }
 
+/** 科学参数精确输入（2026-09-16）：Slider + Number Input 双向同步。
+ * 输入失焦/Enter 提交并按 min/max/step 钳制（沿用 updateParams 的 schema 校验
+ * 防线，非法输入不入 store）；单位独立呈现（[14.0] Å）。 */
 function RangeControl(props: { compId: string; def: ParamDef; value: number; params: Record<string, unknown> }) {
   const { compId, def, params } = props;
   // 边界可为常量或随其他参数动态（如"单原子层数"上限 = 当前堆叠层数）
@@ -76,11 +81,37 @@ function RangeControl(props: { compId: string; def: ParamDef; value: number; par
   // min===max 时拖不动且无禁用视觉——显式禁用 + 原因说明（2026-09-13）
   const stuck = min >= max;
   const stuckText = def.stuckHint ? def.stuckHint(params) : '可调范围为空（受关联参数限制）';
+  const [text, setText] = useState<string | null>(null); // 非空 = 编辑中（未提交）
+  const commit = (raw: string): void => {
+    setText(null);
+    const v = parseFloat(raw);
+    if (!Number.isFinite(v)) return; // 非法输入不入 store
+    const clamped = Math.min(Math.max(v, min), max);
+    const extra = def.sideEffect ? def.sideEffect(clamped, params) : {};
+    sceneStore.getState().updateParams(compId, { [def.key]: clamped, ...extra } as never);
+  };
+  const shown = text ?? (def.disp ? def.disp(value) : String(value));
   return (
     <div className="ctl">
       <div className="row">
         <label>{def.label}</label>
-        <span className="val">{def.disp ? def.disp(value) : `${value}${def.unit ?? ''}`}</span>
+        <span className="numwrap">
+          <input
+            type="number"
+            className="numin"
+            value={shown}
+            min={min}
+            max={max}
+            step={def.step}
+            disabled={stuck}
+            onChange={(e) => setText(e.target.value)}
+            onBlur={(e) => commit(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commit((e.target as HTMLInputElement).value);
+            }}
+          />
+          {def.unit && <span className="unit">{def.unit}</span>}
+        </span>
       </div>
       <input
         type="range"
@@ -92,6 +123,7 @@ function RangeControl(props: { compId: string; def: ParamDef; value: number; par
         title={stuck ? stuckText : undefined}
         onChange={(e) => {
           const v = parseFloat(e.target.value);
+          setText(null);
           // 滑块联动（2026-09-13：如单原子层数超过堆叠层数 → 同命令抬升堆叠层数）
           const extra = def.sideEffect ? def.sideEffect(v, params) : {};
           sceneStore.getState().updateParams(compId, { [def.key]: v, ...extra } as never);
@@ -650,6 +682,38 @@ const TYPE_LABEL: Record<string, string> = {
   text: '文本',
 };
 
+/** 参数分组渲染（2026-09-16 渐进式展示）：按 groupParams 聚类，AccordionSection 折叠；
+ * 默认仅第一组（基础）展开，折叠态为本地 useState（不写 store / 场景文档）。 */
+function ParamGroups(props: { type: string; params: Record<string, unknown>; compId: string }) {
+  const { type, params, compId } = props;
+  const defs = PARAM_DEFS[type as keyof typeof PARAM_DEFS] ?? [];
+  const groups = groupParams(defs);
+  const [open, setOpen] = useState<Record<string, boolean>>({ [groups[0]?.name ?? '基础']: true });
+  const renderDef = (def: ParamDef): ReactNode => {
+    if (def.when && !def.when(params)) return null; // 条件显隐
+    const v = params[def.key];
+    if (def.type === 'select') return <SelectControl key={def.key} compId={compId} def={def} value={String(v)} params={params} />;
+    if (def.type === 'toggle') return <ToggleControl key={def.key} compId={compId} def={def} value={String(v)} />;
+    if (def.type === 'checkbox') return <CheckControl key={def.key} compId={compId} def={def} checked={Boolean(v)} />;
+    if (def.type === 'packedMask') return <PackedMaskControl key={def.key} compId={compId} params={params} />;
+    return <RangeControl key={def.key} compId={compId} def={def} value={Number(v)} params={params} />;
+  };
+  return (
+    <>
+      {groups.map((g) => (
+        <AccordionSection
+          key={g.name}
+          title={g.name}
+          open={Boolean(open[g.name])}
+          onToggle={() => setOpen((o) => ({ ...o, [g.name]: !o[g.name] }))}
+        >
+          {g.defs.map(renderDef)}
+        </AccordionSection>
+      ))}
+    </>
+  );
+}
+
 export default function ParamPanel() {
   const selected = useStore(sceneStore, (s) => s.components.find((c) => c.id === s.selectionId) ?? null);
   const multiIds = useStore(sceneStore, (s) => s.componentSelectionIds);
@@ -713,34 +777,7 @@ export default function ParamPanel() {
       <h3>
         参数<span className="tip">（{selected.name}）</span>
       </h3>
-      {PARAM_DEFS[selected.type].map((def) => {
-        if (def.when && !def.when(selected.params as Record<string, unknown>)) return null; // 条件显隐
-        const v = (selected.params as Record<string, unknown>)[def.key];
-        if (def.type === 'select')
-          return (
-            <SelectControl
-              key={def.key}
-              compId={selected.id}
-              def={def}
-              value={String(v)}
-              params={selected.params as Record<string, unknown>}
-            />
-          );
-        if (def.type === 'toggle') return <ToggleControl key={def.key} compId={selected.id} def={def} value={String(v)} />;
-        if (def.type === 'checkbox')
-          return <CheckControl key={def.key} compId={selected.id} def={def} checked={Boolean(v)} />;
-        if (def.type === 'packedMask')
-          return <PackedMaskControl key={def.key} compId={selected.id} params={selected.params as Record<string, unknown>} />;
-        return (
-          <RangeControl
-            key={def.key}
-            compId={selected.id}
-            def={def}
-            value={Number(v)}
-            params={selected.params as Record<string, unknown>}
-          />
-        );
-      })}
+      <ParamGroups type={selected.type} params={selected.params as Record<string, unknown>} compId={selected.id} />
 
       <div className="subhead">吸 附</div>
       <SnapControls snap={snap} onChange={applySnap} />
