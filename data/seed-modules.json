@@ -429,6 +429,68 @@
         "埃洛石",
         "CeO₂"
       ]
+    },
+    {
+      "type": "kaolinite_sheet",
+      "params": {
+        "Lx": 32,
+        "Ly": 32,
+        "layers": 1,
+        "d001": 2.89,
+        "shape": "矩形",
+        "style": "球棍",
+        "edgeH": false,
+        "mineral": "mullite"
+      },
+      "id": "m1788759000001",
+      "name": "M9 莫来石单层薄片（球棍）",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": 1
+      },
+      "thumb": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2796%27%20height%3D%2772%27%3E%3Crect%20width%3D%2796%27%20height%3D%2772%27%20fill%3D%27%23F4F5F7%27%2F%3E%3Cg%20stroke%3D%27%23889999%27%20stroke-width%3D%272%27%3E%3Cline%20x1%3D%2724%27%20y1%3D%2746%27%20x2%3D%2746%27%20y2%3D%2726%27%2F%3E%3Cline%20x1%3D%2746%27%20y1%3D%2726%27%20x2%3D%2772%27%20y2%3D%2740%27%2F%3E%3Cline%20x1%3D%2772%27%20y1%3D%2740%27%20x2%3D%2752%27%20y2%3D%2758%27%2F%3E%3Cline%20x1%3D%2752%27%20y1%3D%2758%27%20x2%3D%2724%27%20y2%3D%2746%27%2F%3E%3Cline%20x1%3D%2746%27%20y1%3D%2726%27%20x2%3D%2752%27%20y2%3D%2758%27%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2724%27%20cy%3D%2746%27%20r%3D%277%27%20fill%3D%27%23C9A2A2%27%2F%3E%3Ccircle%20cx%3D%2772%27%20cy%3D%2740%27%20r%3D%277%27%20fill%3D%27%23C9A2A2%27%2F%3E%3Ccircle%20cx%3D%2746%27%20cy%3D%2726%27%20r%3D%276%27%20fill%3D%27%23E2C47E%27%2F%3E%3Ccircle%20cx%3D%2752%27%20cy%3D%2758%27%20r%3D%276%27%20fill%3D%27%23e05548%27%2F%3E%3C%2Fsvg%3E",
+      "createdAt": "2026-09-17T07:30:00.000Z",
+      "moduleVersion": 1
+    },
+    {
+      "type": "kaolinite_sheet",
+      "params": {
+        "Lx": 64,
+        "Ly": 64,
+        "layers": 3,
+        "d001": 2.89,
+        "shape": "六角",
+        "style": "球棍",
+        "edgeH": false,
+        "mineral": "mullite"
+      },
+      "id": "m1788759000002",
+      "name": "M10 莫来石堆叠块（3×c）",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": 1
+      },
+      "thumb": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2796%27%20height%3D%2772%27%3E%3Crect%20width%3D%2796%27%20height%3D%2772%27%20fill%3D%27%23F4F5F7%27%2F%3E%3Cg%20stroke%3D%27%23889999%27%20stroke-width%3D%272%27%3E%3Cline%20x1%3D%2724%27%20y1%3D%2746%27%20x2%3D%2746%27%20y2%3D%2726%27%2F%3E%3Cline%20x1%3D%2746%27%20y1%3D%2726%27%20x2%3D%2772%27%20y2%3D%2740%27%2F%3E%3Cline%20x1%3D%2772%27%20y1%3D%2740%27%20x2%3D%2752%27%20y2%3D%2758%27%2F%3E%3Cline%20x1%3D%2752%27%20y1%3D%2758%27%20x2%3D%2724%27%20y2%3D%2746%27%2F%3E%3Cline%20x1%3D%2746%27%20y1%3D%2726%27%20x2%3D%2752%27%20y2%3D%2758%27%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2724%27%20cy%3D%2746%27%20r%3D%277%27%20fill%3D%27%23C9A2A2%27%2F%3E%3Ccircle%20cx%3D%2772%27%20cy%3D%2740%27%20r%3D%277%27%20fill%3D%27%23C9A2A2%27%2F%3E%3Ccircle%20cx%3D%2746%27%20cy%3D%2726%27%20r%3D%276%27%20fill%3D%27%23E2C47E%27%2F%3E%3Ccircle%20cx%3D%2752%27%20cy%3D%2758%27%20r%3D%276%27%20fill%3D%27%23e05548%27%2F%3E%3C%2Fsvg%3E",
+      "createdAt": "2026-09-17T07:30:00.000Z",
+      "moduleVersion": 1
     }
   ],
   "note": "种子模块库全量备份：M2~M8 共 9 条（浏览器实测入库后导出；模块面板「导入」即可整套恢复/分发）"

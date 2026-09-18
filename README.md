@@ -13,7 +13,7 @@
 | **生产工程（主力）** | `src/` + `npm run dev` | React 19 + TypeScript + Vite 6；P0/P1 全部完成，P2 进行中 |
 | **桌面安装包 v0.2.0** | `src-tauri/target/release/bundle/` | Tauri v2：.app / .dmg（Apple Silicon）；文件关联 .kaolin-scene.json |
 | 三维 Demo（历史基线） | [demo/index.html](demo/index.html) | 技术验证基线，双击即用；`node demo/core/test.js` 回归 |
-| 种子模块库 | `data/seed-modules.json` | M2~M8 共 9 个成品模块（含缩略图），模块面板「导入」一键恢复 |
+| 种子模块库 | `data/seed-modules.json` | M2~M10 共 11 个成品模块（含缩略图，含莫来石 M9/M10），模块面板「导入」一键恢复 |
 | CIF 种子库 | `data/*.cif` | 高岭石 / 地开石 / 珍珠石 / 蒙脱石 / 伊利石（AMCSD/COD 开放数据） |
 | 技术方案设计文档 | [docs/技术方案设计.md](docs/技术方案设计.md) | 架构 / 模块划分 / 核心算法推导 / 半年路线图 |
 | 记忆系统 | `PROJECT_STATE.md` · `TODO.md` · `DECISIONS.md` · `DATA_DICT.md` · `DAILY_LOG/` · `.agents/` | 跨会话/跨人员上下文零丢失 |
@@ -23,7 +23,7 @@
 ```bash
 npm install
 npm run dev        # 浏览器打开 http://localhost:5173/
-npm run test       # vitest 367 条（几何 / 矿物 / 分子 / 测量 / 状态 / 导出 / SMILES）
+npm run test       # vitest 414 条（几何 / 矿物 / 分子 / 测量 / 状态 / 导出 / SMILES）
 npx tauri build    # 桌面安装包（.app + .dmg，首次约 5 分钟）
 npm run build      # tsc + vite 产物
 node demo/core/test.js   # 几何内核历史基线回归（ALL OK）
@@ -40,7 +40,7 @@ node demo/core/test.js   # 几何内核历史基线回归（ALL OK）
 - CeO₂ 风格簇装颗粒（确定性种子）/ 光滑颗粒；H₂O/O₂/CO₂/N₂/阳离子内置库
 - **SMILES 分子导入**：粘贴字符串 → 3D 构象（内置解析器 + 规则式构象生成，零依赖离线）；化学式（Fe2O3/PtCl4/CO）大小写不敏感导入；**分子几何质心居中**（拖拽对齐不偏心）
 - **MOL/SDF 文件导入**：ChemDraw / Materials Studio 等导出的 .mol/.sdf（V2000）双入口（选择器/拖拽），文件内精确 3D 构象直接使用
-- **五种矿物 CIF 直驱**：高岭石 / 地开石 / 珍珠石 / 蒙脱石 / 伊利石——中文名搜索直达，d001 随矿物自动联动，原子数与晶胞化学计量严格一致
+- **六种矿物 CIF 直驱**：高岭石 / 地开石 / 珍珠石 / 蒙脱石 / 伊利石 / 莫来石——中文名搜索直达，d001 随矿物自动联动，原子数与晶胞化学计量严格一致（莫来石为 Pbam 骨架结构 COD 2310785，堆叠周期 = c 轴）
 - **密排原子层**：任意元素 × n×n 格点 × 1–8 层 ABAB/ABCABC 堆叠；逐原子开关「参与堆叠」（台阶/缺陷示意）
 - **单原子模式**：片层/管/颗粒原子统一替换为任意元素（118 种全周期表），支持「仅前 N 层」
 

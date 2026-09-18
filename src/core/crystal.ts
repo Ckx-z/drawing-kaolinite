@@ -30,6 +30,8 @@ export interface CifSite {
   fx: number;
   fy: number;
   fz: number;
+  /** 位点占据率（CIF 无该列时 = 1 全占位）；>0 的部分占位按位点全显示（蒙脱石 Ca0.5 先例） */
+  occ: number;
 }
 
 export interface ParsedCIF {
@@ -105,14 +107,20 @@ export function parseCIF(text: string): ParsedCIF {
         const ixX = tags.indexOf('_atom_site_fract_x');
         const ixY = tags.indexOf('_atom_site_fract_y');
         const ixZ = tags.indexOf('_atom_site_fract_z');
+        // 占据率列（2026-09-17 莫来石）：occ ≤ 0 的位点精修给出零占据——
+        // 不是原子，不渲染（VESTA 同例）；列缺失/值不可解析按全占位 1 处理
+        const ixOcc = tags.indexOf('_atom_site_occupancy');
         for (const r of rows) {
           if (r.length < tags.length) continue;
+          const occ = ixOcc >= 0 ? parseFloat(r[ixOcc]) : 1;
+          if (!Number.isNaN(occ) && occ <= 0) continue;
           atoms.push({
             label: r[ix],
             el: elementOf(r[ix]),
             fx: parseFloat(r[ixX]),
             fy: parseFloat(r[ixY]),
             fz: parseFloat(r[ixZ]),
+            occ: Number.isNaN(occ) ? 1 : occ,
           });
         }
       } else if (tags.includes('_space_group_symop_operation_xyz')) {
@@ -186,7 +194,7 @@ export function expandSymmetry(atoms: CifSite[], symops?: string[]): CifSite[] {
     const f = compileSymop(op);
     for (const a of atoms) {
       const p = f(a.fx, a.fy, a.fz);
-      out.push({ label: a.label, el: a.el, fx: wrap01(p[0]), fy: wrap01(p[1]), fz: wrap01(p[2]) });
+      out.push({ label: a.label, el: a.el, fx: wrap01(p[0]), fy: wrap01(p[1]), fz: wrap01(p[2]), occ: a.occ });
     }
   }
   const dedup: CifSite[] = [];
@@ -419,6 +427,7 @@ export function computeBonds(atoms: Atom[], tol?: number): Bond[] {
             const ddy = a.y - b.y;
             const ddz = a.z - b.z;
             const d2 = ddx * ddx + ddy * ddy + ddz * ddz;
+            if (d2 < 1e-4) continue; // 同点原子对（莫来石 Al2/Si2 分裂位）不是化学键，避免零长键圆柱
             const cut = ea.cov + eb.cov + TOL;
             if (d2 < cut * cut) bonds.push([i, j]);
           }

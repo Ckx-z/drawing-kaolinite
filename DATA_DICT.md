@@ -31,8 +31,11 @@
 | 珍珠石（珍珠陶土） | Nacrite | Al2Si2O5(OH)4 | Al2Si2O9H4-Nacrite.cif（AMCSD 0012394） | 14.59 Å（双层晶胞） | 68 原子 | Al8Si8O36H16（含显式 H 位点） |
 | 蒙脱石 | Montmorillonite | Ca0.5Al2Si4O12 | Al2Si4O12Ca0.5-Montmorillonite.cif（COD 9002779，Viani 2002） | 15.0 Å | 38 原子 | Al4Si8O24Ca2（P1 已全展开；Ca0.5 占位按位点全显示） |
 | 伊利石 | Illite | KAl4Si2O12 | Al4KSi2O12-Illite.cif | 20.14 Å（双层晶胞） | 76 原子 | K4Al16Si8O48 |
+| 莫来石 | Mullite | Al4.8Si1.2O9.6 | mullite.cif（COD 2310785，Birkenstock 2015） | 2.89 Å（= c 轴；**非层状骨架矿物，此值为沿 c 堆叠周期**，schema 下限 2.5） | 28 原子（Pbam 8 操作展开） | Al10Si4O14（渲染位点集；声明化学式见左列） |
 
-几何生成严格走 parseCIF → expandSymmetry → buildSlab（无硬编码坐标）；基线由 `src/core/minerals.test.ts` 锁定。羟基：高岭石/地开石按 O-H 位点标签补 H；珍珠石用 CIF 显式 H；蒙脱石/伊利石 CIF 无 H 位点（模型即无 H，原样遵循）。矿物组件存为模块时自动写中文/英文/化学式 tags（模块库中文搜索可检索）。
+几何生成严格走 parseCIF → expandSymmetry → buildSlab（无硬编码坐标）；基线由 `src/core/minerals.test.ts` + `src/core/mullite.test.ts` 锁定。羟基：高岭石/地开石按 O-H 位点标签补 H；珍珠石用 CIF 显式 H；蒙脱石/伊利石/莫来石 CIF 无 H 位点（模型即无 H，原样遵循）。矿物组件存为模块时自动写中文/英文/化学式 tags（模块库中文搜索可检索）。
+
+**莫来石占位策略（2026-09-17，详见 DECISIONS D-2026-09-17）**：平均结构含分裂位（Al2/Si2 同坐标，各占 0.50/0.296）与部分占位（Al3 0.204 / O3 0.389 / O4 0.204）及零占位（Si3 = 0）。渲染 = 全部占位 >0 位点（零占位剔除）；分裂位双组分同坐标共存（Al 球棍半径略大于 Si，空间填充反转，均无 z-fighting）；真实化学计量 Al4.8Si1.2O9.6 以注册表 formula 字段声明——部分占位本质上无法用整数原子精确表示（任何晶体软件同此，VESTA 亦然）。管组件矿物下拉不含莫来石（layered=false，骨架结构不可卷管）。
 
 ## 二、kaolinite_sheet 高岭土片层
 

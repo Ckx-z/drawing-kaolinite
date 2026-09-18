@@ -63,16 +63,25 @@ export function groupParams(defs: readonly ParamDef[]): Array<{ name: ParamGroup
   return GROUP_ORDER.filter((g) => buckets.has(g)).map((g) => ({ name: g, defs: buckets.get(g)! }));
 }
 
-/** 矿物下拉选项（五种层状硅酸盐，显示"中文名 英文名"） */
+/** 矿物下拉选项（显示"中文名 英文名"；2026-09-17 +莫来石 = 六矿物） */
 const MINERAL_OPTIONS = MINERAL_KEYS.map((k) => ({ value: k, label: `${MINERALS[k].zh[0]} ${MINERALS[k].en}` }));
 
-/** 矿物字段：切换时联动重置 d001 为该矿物 c 轴周期（堆叠平移语义） */
-const mineralField = (): ParamDef => ({
+/** 管组件用：仅层状矿物（莫来石 layered=false 骨架结构不可卷管，2026-09-17） */
+const LAYERED_MINERAL_OPTIONS = MINERAL_KEYS.filter((k) => MINERALS[k].layered !== false).map((k) => ({
+  value: k,
+  label: `${MINERALS[k].zh[0]} ${MINERALS[k].en}`,
+}));
+
+/**
+ * 矿物字段：切换时联动重置 d001 为该矿物 c 轴周期（堆叠平移语义）。
+ * layeredOnly=true 时仅列层状矿物（管组件卷曲需层状结构）。
+ */
+const mineralField = (layeredOnly = false): ParamDef => ({
   key: 'mineral',
   group: '晶体结构',
   label: '矿物（CIF 结构来源）',
   type: 'select',
-  options: MINERAL_OPTIONS,
+  options: layeredOnly ? LAYERED_MINERAL_OPTIONS : MINERAL_OPTIONS,
   searchable: true,
   sideEffect: (v) => ({ d001: MINERALS[v as keyof typeof MINERALS]?.d001Default ?? 7.4 }),
 });
@@ -137,7 +146,8 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     { key: 'Lx', group: '基础', label: '横向尺寸', unit: 'Å', min: 20, max: 150, step: 2 },
     { key: 'Ly', group: '基础', label: '纵向尺寸', unit: 'Å', min: 20, max: 150, step: 2 },
     layersCountField('layers', '堆叠层数'),
-    { key: 'd001', group: '晶体结构', label: '堆叠周期 d₀₀₁', unit: 'Å', min: 7.2, max: 25, step: 0.1 },
+    // min 2.5（2026-09-17）：与 schema 同步放宽——莫来石 c≈2.89（d001 = 沿 c 堆叠周期）
+    { key: 'd001', group: '晶体结构', label: '堆叠周期 d₀₀₁', unit: 'Å', min: 2.5, max: 25, step: 0.1 },
     mineralField(),
     { key: 'shape', group: '基础', label: '片层轮廓', type: 'select', options: ['矩形', '六角'] },
     { key: 'style', group: '基础', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
@@ -158,7 +168,7 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     { key: 'length', group: '基础', label: '管长', unit: 'Å', min: 30, max: 200, step: 5 },
     layersCountField('walls', '管壁层数'),
     { key: 'd001', group: '晶体结构', label: '壁间周期 d₀₀₁', unit: 'Å', min: 7.4, max: 25, step: 0.1 },
-    mineralField(),
+    mineralField(true), // 仅层状矿物：卷管需层状结构（莫来石骨架排除）
     { key: 'progress', group: '形貌', label: '★ 卷曲进度（片→管）', min: 0.02, max: 1, step: 0.01, disp: (v) => `${Math.round(v * 100)}%` },
     { key: 'taperDeg', group: '高级', label: '锥角', unit: '°', min: -20, max: 20, step: 1 },
     { key: 'curlAxis', group: '高级', label: '卷曲方向', type: 'select', options: ['a', 'b'] },
@@ -229,7 +239,7 @@ const SUBSCRIPT: Record<string, string> = {
 };
 
 export const LIB: LibraryItem[] = [
-  { type: 'kaolinite_sheet', icon: '▬', name: '高岭土片层', desc: '1–3 层堆叠 · CIF 驱动 · 矩形/六角', en: 'Kaolinite Sheet' },
+  { type: 'kaolinite_sheet', icon: '▬', name: '高岭土片层', desc: '1–3 层堆叠 · CIF 驱动 · 六矿物（含莫来石）· 矩形/六角', en: 'Kaolinite Sheet' },
   { type: 'halloysite_tube', icon: '◯', name: '埃洛石纳米管', desc: '片层卷曲生成 · 卷曲进度可动画', en: 'Halloysite Nanotube' },
   { type: 'nanoparticle', icon: '⬤', name: '纳米颗粒 CeO₂', desc: '簇装小晶粒 / 光滑球 · 尺寸可调', en: 'Nanoparticle' },
   { type: 'molecule', icon: '✦', name: '小分子 / 离子', desc: '水分子 H₂O · 氧气 O₂ · 二氧化碳 CO₂ · 氮气 N₂ · 阳离子（可输 water/水 搜索）', en: 'Molecule / Ion' },

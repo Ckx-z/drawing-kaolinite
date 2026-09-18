@@ -1,24 +1,31 @@
 /**
  * 矿物注册表 —— 2026-09-12（中文矿物名搜索识别 + 多矿物 CIF 接线）
  *
- * data/ 下的五种层状硅酸盐 CIF 统一注册：中文名/别名、英文名、化学式、
- * CIF 文本（?raw 打包内联）、层间平移默认值（= c 轴周期——双层晶胞矿物
- * 如地开石/珍珠石 c≈14.7、伊利石 c≈20.1，一个堆叠周期 = 完整晶胞平移，
- * 多型堆叠顺序在 c 周期内严格保留；高岭石 c=7.40 与原默认一致零回归）。
+ * data/ 下的 CIF 统一注册：中文名/别名、英文名、化学式、CIF 文本（?raw 打包
+ * 内联）、层间平移默认值（= c 轴周期——双层晶胞矿物如地开石/珍珠石 c≈14.7、
+ * 伊利石 c≈20.1，一个堆叠周期 = 完整晶胞平移，多型堆叠顺序在 c 周期内严格
+ * 保留；高岭石 c=7.40 与原默认一致零回归）。
+ *
+ * 2026-09-17 新增莫来石（第六种）：骨架硅酸盐（Pbam 正交，非层状），
+ * d001 语义 = 沿 c 的堆叠周期（= 晶胞 c≈2.89，schema 下限随之放宽到 2.5）；
+ * layered=false 标记用于管组件排除（骨架结构不可卷管）。CIF 为 COD 2310785
+ * 平均结构（分裂位 Al2/Si2 同坐标双组分保留、零占位 Si3 由解析层丢弃）。
  *
  * 几何生成严格走 parseCIF → expandSymmetry → buildSlab 既有管线（存参数
  * 不存网格 D02）；不硬编码任何原子坐标。计量基线由 minerals.test.ts 锁定：
  * 高岭石 26/Al4Si4O18、地开石 52/Al8Si8O36、珍珠石 68/Al8Si8O36H16、
  * 蒙脱石 38/Al4Si8O24Ca2（P1 已全展开；Ca0.5 占位按位点全显示）、
- * 伊利石 76/K4Al16Si8O48。
+ * 伊利石 76/K4Al16Si8O48、莫来石 28/Al10Si4O14（渲染位点集；
+ * 声明化学式 Al4.8Si1.2O9.6 见 formula 字段）。
  */
 import dickiteCif from '../../data/Al2Si2O9H4-Dickite.cif?raw';
 import illiteCif from '../../data/Al4KSi2O12-Illite.cif?raw';
 import montmorilloniteCif from '../../data/Al2Si4O12Ca0.5-Montmorillonite.cif?raw';
 import nacriteCif from '../../data/Al2Si2O9H4-Nacrite.cif?raw';
 import kaoliniteCif from '../../data/kaolinite.cif?raw';
+import mulliteCif from '../../data/mullite.cif?raw';
 
-export type MineralKey = 'kaolinite' | 'dickite' | 'nacrite' | 'montmorillonite' | 'illite';
+export type MineralKey = 'kaolinite' | 'dickite' | 'nacrite' | 'montmorillonite' | 'illite' | 'mullite';
 
 export interface MineralDef {
   key: MineralKey;
@@ -34,6 +41,12 @@ export interface MineralDef {
   d001Default: number;
   /** 层间物种元素（T-2.4：showInterlayer=false 时隐藏；空 = 无层间物） */
   interlayer: readonly string[];
+  /**
+   * 是否层状矿物（默认 true）。false = 骨架/架状结构（莫来石）：
+   * d001 语义为"沿 c 的堆叠周期"而非层间距，且不出现在管组件的矿物下拉
+   * （骨架结构卷管无晶体学意义）。
+   */
+  layered?: boolean;
 }
 
 export const MINERALS: Record<MineralKey, MineralDef> = {
@@ -81,6 +94,18 @@ export const MINERALS: Record<MineralKey, MineralDef> = {
     cifText: illiteCif,
     d001Default: 20.14,
     interlayer: ['K'],
+  },
+  mullite: {
+    key: 'mullite',
+    zh: ['莫来石'],
+    en: 'Mullite',
+    // COD 2310785 声明化学式（3:2 区固溶体实际计量）；渲染位点集为
+    // Al10Si4O14（分裂位双组分 + 部分占位全显示，见 crystal.ts/DECISIONS）
+    formula: 'Al4.8Si1.2O9.6',
+    cifText: mulliteCif,
+    d001Default: 2.89,
+    interlayer: [],
+    layered: false,
   },
 };
 

@@ -141,7 +141,8 @@ describe('非法输入拒绝并报出字段路径（T-1.2 核心验收）', () =
   it.each([
     ['Lx 超上限', (s: typeof DEMO_SCENE) => void (s.components[0].params.Lx = 999), 'components.0.params.Lx'],
     ['layers 非法', (s: typeof DEMO_SCENE) => void (s.components[0].params.layers = 5), 'components.0.params.layers'],
-    ['d001 低于片层下限', (s: typeof DEMO_SCENE) => void (s.components[0].params.d001 = 7.0), 'components.0.params.d001'],
+    // 下限 2026-09-17 放宽到 2.5（莫来石 c≈2.89），越界值随之调整
+    ['d001 低于片层下限', (s: typeof DEMO_SCENE) => void (s.components[0].params.d001 = 2.0), 'components.0.params.d001'],
     ['progress 超上限', (s: typeof DEMO_SCENE) => void ((s.components[1].params as { progress: number }).progress = 1.5), 'components.1.params.progress'],
     ['未知分子种类', (s: typeof DEMO_SCENE) => void ((s.components[3].params as { kind: string }).kind = 'H₂SO₄'), 'components.3.params.kind'],
     ['scale 低于下限', (s: typeof DEMO_SCENE) => void (s.components[2].transform.scale = 0.001), 'components.2.transform.scale'],

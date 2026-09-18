@@ -67,15 +67,18 @@ export const sheetParamsSchema = z.strictObject({
   Lx: z.number().min(20).max(150),
   Ly: z.number().min(20).max(150),
   layers: z.number().int().min(1).max(3),
-  /** 层间平移 = c 轴周期（高岭石 7.4；双层晶胞矿物 14.7~20.1，2026-09-12 上限放宽） */
-  d001: z.number().min(7.2).max(25),
+  /**
+   * 层间平移 = c 轴周期（高岭石 7.4；双层晶胞矿物 14.7~20.1，2026-09-12 上限放宽；
+   * 2026-09-17 下限放宽到 2.5：莫来石 c≈2.89——非层状骨架矿物，此值 = 沿 c 堆叠周期）
+   */
+  d001: z.number().min(2.5).max(25),
   shape: z.enum(['矩形', '六角']),
   style: renderStyle,
   edgeH: z.boolean(),
   // T-2.7：晶学严格模式（保留 β/γ 夹角的真实三斜投影）；默认示意正交化（D03）
   strictCell: z.boolean().default(false),
-  /** 矿物种类（2026-09-12）：五选一，几何 CIF 来源与 d001 默认随其切换；缺省高岭石（旧场景兼容） */
-  mineral: z.enum(['kaolinite', 'dickite', 'nacrite', 'montmorillonite', 'illite']).default('kaolinite'),
+  /** 矿物种类（2026-09-12 五选一；2026-09-17 +莫来石 = 六选一）；缺省高岭石（旧场景兼容） */
+  mineral: z.enum(['kaolinite', 'dickite', 'nacrite', 'montmorillonite', 'illite', 'mullite']).default('kaolinite'),
   // 单原子模式（2026-09-08）：全部原子统一为 singleEl（简化示意）；
   // singleLayers（2026-09-10）：single 下只显示前 N 层（builder clamp 到 layers）
   atomMode,

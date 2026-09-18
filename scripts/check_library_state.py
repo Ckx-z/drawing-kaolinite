@@ -202,7 +202,7 @@ def check_version_consistency() -> None:
 
 
 def check_seed_module_count() -> None:
-    """种子模块数对账：seed-modules.json 实际条数 vs 文档声明（M2~M8 共 N 条 / 种子模块 N 条）"""
+    """种子模块数对账：seed-modules.json 实际条数 vs 文档声明（M2~M10 共 N 条 / 种子模块 N 条）"""
     import json as _json
 
     seed = ROOT / "data" / "seed-modules.json"
@@ -217,7 +217,7 @@ def check_seed_module_count() -> None:
         if not f.exists():
             continue
         text = f.read_text(encoding="utf-8")
-        for m in re.finditer(r"(?:M2~M8\s*共|种子模块[^0-9\n]{0,12})(\d+)\s*条", text):
+        for m in re.finditer(r"(?:M\d+~M\d+\s*共|种子模块[^0-9\n]{0,12})(\d+)\s*条", text):
             claimed = int(m.group(1))
             if claimed != n:
                 warn(f"{doc} 声明种子模块 {claimed} 条，实际 {n} 条（以 data/seed-modules.json 为准）")

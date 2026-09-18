@@ -11,7 +11,7 @@
 
 - **任务形态**：科研绘图工具（非结构查看器、非模拟软件）
 - **技术路线**：Web 前端（TypeScript + React 19 + Three.js/WebGL2）+ Tauri v2 桌面端（macOS 已交付，D01/D10）
-- **核心卖点**：模块库沉淀 —— 官方种子模块 9 条 + 自存模块/模板持续积累，新学生一键复用
+- **核心卖点**：模块库沉淀 —— 官方种子模块 11 条 + 自存模块/模板持续积累，新学生一键复用
 - **当前形态**：**生产工程（`src/`）为主体并已发布 v0.2.0**（`demo/` 仅为历史技术验证基线）
 
 ---
@@ -24,7 +24,7 @@
 | 模块 | 状态 |
 | --- | --- |
 | 工程基座（Vite+TS+React+zod+zustand+Worker） | ✅ |
-| 参数化几何内核（CIF 五矿物/片层/管/颗粒/密排层/基底） | ✅ |
+| 参数化几何内核（CIF 六矿物含莫来石/片层/管/颗粒/密排层/基底） | ✅ |
 | 分子导入（SMILES / 化学式 / MOL·SDF 文件） | ✅ |
 | 模块库（Dexie + 检索收藏 + 导入导出） | ✅ |
 | 出版导出（PNG/TIFF/SVG/PDF/GIF/分层 PNG） | ✅ |
@@ -96,10 +96,10 @@
 | 晶学严格模式 | `src/core/crystal.ts` | T-2.7：sheetParams.strictCell 开关——真实三斜投影（全投影+层间沿 c 轴堆叠，层片倾斜）；Si–O 键长与 CIF 距离矩阵偏差 <0.5%；默认示意正交化（D03 后路落地） |
 | 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移 + 导入导出；T-3.2：filterModules 检索/类型筛选/收藏排序 + toggleFavorite（favorite 字段向后兼容） |
 | 撤销/重做 | `src/state/history.ts` + `commands.ts` | T-2.1：attachHistory 实例包装（UI 零改动）；全量快照命令 + 800ms 合并窗口；栈深可配（默认 100）；Ctrl/Cmd+Z、+Shift/Y（App.tsx）；sceneStore 单例已挂接（sceneHistory） |
-| 素材模块 | 模块库内 9 个条目 | 官方种子模块 9 条（M2 片层、M3 管、M4 颗粒 S/M/L 三条独立、M5 基底、M6 组合、M7 多壁管、M8 复合场景）——M1 为历史样图不计入 seed-modules 条目 |
-| 种子模块库 | `data/seed-modules.json` | kaolin-modules/v1 全量备份（M2~M8 共 9 条含缩略图，33KB）；模块面板「导入」即可整套恢复/分发 |
+| 素材模块 | 模块库内 11 个条目 | 官方种子模块 11 条（M2 片层、M3 管、M4 颗粒 S/M/L 三条独立、M5 基底、M6 组合、M7 多壁管、M8 复合场景、M9 莫来石单层薄片、M10 莫来石堆叠块）——M1 为历史样图不计入 seed-modules 条目 |
+| 种子模块库 | `data/seed-modules.json` | kaolin-modules/v1 全量备份（M2~M10 共 11 条含缩略图）；模块面板「导入」即可整套恢复/分发 |
 | 三维 Demo | `demo/index.html` | 双击可用；生产版功能对照基准 |
-| CIF 种子库 | `data/*.cif` | 高岭石/地开石/珍珠石/蒙脱石/伊利石 |
+| CIF 种子库 | `data/*.cif` | 高岭石/地开石/珍珠石/蒙脱石/伊利石/莫来石（COD 2310785） |
 | 决策日志 | `DECISIONS.md` | D01–D10（D10：桌面端 Worker 内联 + 异步挂起必须可回退） |
 | 参数字典 | `DATA_DICT.md` | 五类组件参数 + 场景 JSON schema |
 | 桌面端稳定性 | `src/core/worker.ts` + `cache.ts` + `index.css` | 2026-09-08 修复：Worker `?worker&inline`（data URL，零运行时 fetch）+ 4s 握手超时回退主线程 + IndexedDB 4s 门直通 + canvas CSS 100% 钉死/body overflow:hidden/顶栏 wrap；233 tests |
@@ -112,6 +112,7 @@
 | 自动保存 + 崩溃恢复 | `src/state/autosave.ts` + App | 2026-09-16（bcb0ee9→cc4d363）：编辑防抖 2s 快照 IndexedDB；异常退出后启动提示一键恢复（含视角）；正常退出 pagehide 清档；打包版实机闭环验证 |
 | 测量可见性一致性 | RendererService.measureAtomWorldPos | 2026-09-16（e41f1d6）：组件隐藏/纯 2D 模式时测量在屏幕叠加与 PNG/SVG 导出两侧一致隐藏 |
 | 矿物注册表 interlayer | `src/core/minerals.ts` | 2026-09-13（T-2.4 收尾）：层间元素集（伊利石 K、蒙脱石 Ca/Na）驱动 showInterlayer 开关 |
+| 莫来石（第六矿物） | `minerals.ts`/`crystal.ts`/`schema.ts`/`mullite.test.ts` + `data/mullite.cif` | 2026-09-17：COD 2310785 平均结构（Pbam 骨架硅酸盐）；parseCIF 读 occupancy 剔零占位；分裂位双组分渲染 + 退化键守卫；d001 下限放宽 2.5（= 沿 c 堆叠周期）；layered=false 排除管组件；414 tests |
 | 滚轮缩放灵敏度 | interaction.ts + RendererService | 2026-09-13（24a3d9c）：3D zoomSpeed 0.5 + 2D 灵敏度减半，方向/中心/上下限不变 |
 | 防漂移对账增强 | `scripts/check_library_state.py` | 2026-09-16：新增版本一致性/种子模块数对账/陈旧描述/下一步已完成矛盾四组检查 |
 | 黑屏修复与诊断 | `src/ui/ParamPanel.tsx` + `src/ui/ErrorBoundary.tsx` + `src/crashTrace.ts` | 2026-09-12：用图元工具画图后整窗黑屏——ParamPanel 条件 Hook 违规（T-7.3 引入）致 React 卸载全树；snap useState 移至所有 early return 之前（A/B 实证修复）；全局 ErrorBoundary 错误面板替代黑屏；crashTrace 面包屑（关键节点 + JS 异常 + WebGL 丢失 → /tmp/kaolin-trace.log）；338 tests |
