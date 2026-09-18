@@ -120,6 +120,13 @@ body {
 .dd-item.danger:hover {
   background: rgba(229, 115, 95, 0.12);
 }
+/* 顶栏常驻「清空场景」按钮（2026-09-17 自「打开」下拉移出）：danger 色文字 + hover 轻 danger 底，复用既有工具栏按钮基类 */
+.tb-clear {
+  color: #e5735f;
+}
+.tb-clear:hover {
+  background: rgba(229, 115, 95, 0.12);
+}
 .dd-sep {
   height: 1px;
   background: var(--line);

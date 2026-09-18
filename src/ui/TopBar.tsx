@@ -259,18 +259,29 @@ export default function TopBar() {
     flash(`已存为模板「${name}」，左侧「模板」Tab 可一键复用`);
   };
 
+  /**
+   * 清空画布（2026-09-17 自「打开」下拉移为顶栏常驻按钮，逻辑原样）：
+   * 二次确认 → store.clear() → frameAll 取景复位。不可撤销（不进 undo）。
+   */
+  const onClearScene = (): void => {
+    if (window.confirm('确定清空画布？此操作不可撤销——建议先「保存场景」。')) {
+      sceneStore.getState().clear();
+      rendererRef.current?.frameAll();
+    }
+  };
+
   return (
     <header className="topbar">
       <div className="brand">
         <span className="logo">◈</span> Kaolin-Assets
         <em>高岭土机理图绘制软件 · v0.2.0</em>
       </div>
-      {/* ── 工程区：保存 / 打开（下拉含示例与清空，清空带确认） ── */}
+      {/* ── 工程区：保存 / 打开（下拉含示例场景）/ 清空场景（危险操作常驻入口） ── */}
       <div className="tb-group" title="场景文件：保存为 .kaolin-scene.json（含视角快照），双击可直接打开">
         <button onClick={onSaveScene}>保存场景</button>
         <DropdownMenu
           label="打开"
-          title="打开场景文件（.kaolin-scene.json）；下拉含示例场景与清空"
+          title="打开场景文件（.kaolin-scene.json）；下拉含示例场景"
           onMainClick={onOpenScene}
         >
           <MenuItem onClick={onOpenScene} title="打开 .kaolin-scene.json（含视角快照，原样恢复）">
@@ -279,20 +290,10 @@ export default function TopBar() {
           <MenuItem onClick={loadPresetScene} title="一键组合：埃洛石@CeO₂ 复合材料场景">
             示例场景
           </MenuItem>
-          <MenuSep />
-          <MenuItem
-            danger
-            title="清空画布（不可撤销，建议先保存场景）"
-            onClick={() => {
-              if (window.confirm('确定清空画布？此操作不可撤销——建议先「保存场景」。')) {
-                sceneStore.getState().clear();
-                rendererRef.current?.frameAll();
-              }
-            }}
-          >
-            清空场景
-          </MenuItem>
         </DropdownMenu>
+        <button className="tb-clear" onClick={onClearScene} title="清空当前画布（不可撤销，建议先保存场景）">
+          清空场景
+        </button>
         <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={onFile} />
       </div>
       {/* ── 撤销 / 重做 ── */}

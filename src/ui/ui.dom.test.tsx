@@ -59,11 +59,12 @@ describe('TopBar 信息架构（Phase1）', () => {
     expect(texts('.seg-btn')).toHaveLength(2);
     // 高频视角常驻
     expect(texts('.topbar .tb-group button')).toEqual(expect.arrayContaining(['等距', '正视', '俯视']));
-    // 统一保存入口（2026-09-17）：一级「保存为模板」按钮存在
+    // 统一保存入口（2026-09-17）：一级「保存为模板」按钮存在；「清空场景」常驻一级（2026-09-17b 自打开下拉移出）
     const flat = texts('.topbar > .tb-group > button, .topbar .seg-btn').join('|');
     expect(flat).toContain('保存为模板');
-    // 收纳验证：一级按钮不再有 6 导出/旧存为两入口/保存为…下拉/dpi select/透明底/渲染档/接触阴影/水平吸附/示例场景/清空
-    for (const gone of ['导出 TIFF', '导出 PDF', '导出 SVG', '导出分层 PNG', '导出动画 GIF', '存为模块', '存组合', '保存为…', '水平吸附', '示例场景', '清空']) {
+    expect(flat).toContain('清空场景');
+    // 收纳验证：一级按钮不再有 6 导出/旧存为两入口/保存为…下拉/dpi select/透明底/渲染档/接触阴影/水平吸附/示例场景（仍在打开下拉内）
+    for (const gone of ['导出 TIFF', '导出 PDF', '导出 SVG', '导出分层 PNG', '导出动画 GIF', '存为模块', '存组合', '保存为…', '水平吸附', '示例场景']) {
       expect(flat).not.toContain(gone);
     }
     // 下拉容器在（打开/视图/导出——保存为…下拉已随统一入口移除）
