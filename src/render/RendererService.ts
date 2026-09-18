@@ -38,6 +38,7 @@ import { encodeTIFF, resolveExportSize } from '../export/tiff';
 import { smilesTo3D } from '../core/molecules/smiles';
 import { formulaTo3D } from '../core/molecules/formula';
 import { parseSdfOrMol } from '../core/molecules/mol';
+import { resolveCanonicalFormula } from '../core/molecules/registry';
 import type { SceneShape } from '../core/shapes/schema';
 import { drawShapes } from '../ui/shapes/draw';
 import { shapeViewStore } from '../ui/shapes/view';
@@ -1225,6 +1226,9 @@ export class RendererService {
           return { atoms: mol.atoms, bonds: mol.bonds.map(([i, j]) => [i, j]) };
         }
         if (mp.formula) {
+          // canonical 升级（2026-09-18）：有权威 preset 优先参考几何（与 Worker 共用 helper）
+          const canonical = resolveCanonicalFormula(mp.formula);
+          if (canonical) return buildMolecule(canonical);
           const mol = formulaTo3D(mp.formula); // 2026-09-08：化学式团簇（与 Worker 路径同源）
           return { atoms: mol.atoms, bonds: mol.bonds };
         }

@@ -8,6 +8,7 @@ import seedTemplates from '../../data/seed-templates.json';
 import { formulaTo3D, resolveImportPath } from '../core/molecules/formula';
 import { parseSdfOrMol } from '../core/molecules/mol';
 import { findMineral } from '../core/minerals';
+import { resolveCanonicalFormula, resolveMoleculeQuery } from '../core/molecules/registry';
 import { smilesTo3D } from '../core/molecules/smiles';
 import type { ComponentType } from '../core/types';
 import { rendererRef } from '../state/rendererRef';
@@ -130,6 +131,20 @@ export default function LibraryPanel() {
       setSmilesMsg(`已导入 ${mineral.zh[0]}（${mineral.en} · ${mineral.formula} · CIF 晶体结构）`);
       return;
     }
+    // canonical 分子别名（2026-09-18）：水/水分子/H2O/H₂O/water 等 → 内置参考几何。
+    // 搜索词只解析身份，几何由 buildMolecule(kind) 唯一供给（修复误走团簇生成器）
+    const canonical = resolveMoleculeQuery(s);
+    if (canonical) {
+      const id = sceneStore.getState().addComponent('molecule', {
+        name: s,
+        params: { kind: canonical },
+      });
+      sceneStore.getState().select(id);
+      rendererRef.current?.frameComponent(id);
+      setSmiles('');
+      setSmilesMsg(`已导入内置分子 ${canonical}（参考几何）`);
+      return;
+    }
     const formulaFirst = resolveImportPath(s) === 'formula-first';
     if (!formulaFirst) {
       try {
@@ -148,6 +163,19 @@ export default function LibraryPanel() {
       }
     }
     try {
+      // 化学式 → canonical 升级（2026-09-18）：有权威 preset（H2O/CO2…）优先 preset
+      const upgraded = resolveCanonicalFormula(s);
+      if (upgraded) {
+        const id = sceneStore.getState().addComponent('molecule', {
+          name: s,
+          params: { kind: upgraded },
+        });
+        sceneStore.getState().select(id);
+        rendererRef.current?.frameComponent(id);
+        setSmiles('');
+        setSmilesMsg(`已导入内置分子 ${upgraded}（参考几何）`);
+        return;
+      }
       const { canonical } = formulaTo3D(s); // 预校验（非法即抛错，不入库）
       const id = sceneStore.getState().addComponent('molecule', {
         name: canonical,

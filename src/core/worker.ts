@@ -22,6 +22,7 @@ import GeometryWorker from './geometryWorker?worker&inline';
 import type { GeometryData } from './geometry';
 import { formulaTo3D } from './molecules/formula';
 import { parseSdfOrMol } from './molecules/mol';
+import { resolveCanonicalFormula } from './molecules/registry';
 import { smilesTo3D } from './molecules/smiles';
 import type { MoleculeParams, PackedLayerParams, ParticleParams, SheetParams, TubeParams } from './types';
 
@@ -84,6 +85,10 @@ export function computeGeometry(req: GeometryRequest): GeometryResult {
         return { atoms: mol.atoms, bonds: mol.bonds.map(([i, j]) => [i, j]) };
       }
       if (mp.formula) {
+        // canonical 升级（2026-09-18）：有权威 preset（H2O/CO2…）优先参考几何；
+        // 未命中继续团簇——与主线程回退共用同一 helper，两路天然一致
+        const canonical = resolveCanonicalFormula(mp.formula);
+        if (canonical) return buildMolecule(canonical);
         const mol = formulaTo3D(mp.formula); // 2026-09-08：化学式团簇（大小写不敏感输入的规范串）
         return { atoms: mol.atoms, bonds: mol.bonds };
       }

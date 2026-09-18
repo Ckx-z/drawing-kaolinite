@@ -215,16 +215,24 @@ export interface LibraryItem {
 
 /** 素材搜索（2026-09-16）：名称/副标题/说明的字符串包含匹配（不区分大小写） */
 export function filterLib(items: readonly LibraryItem[], q: string): LibraryItem[] {
-  const n = q.trim().toLowerCase();
+  // 下标归一（₂→2）：让 H2O 与 H₂O 互相命中（2026-09-18）
+  const norm = (t: string): string => t.toLowerCase().replace(/[₀-₉]/g, (c) => SUBSCRIPT[c] ?? c);
+  const n = norm(q.trim());
   if (!n) return [...items];
-  return items.filter((it) => `${it.name} ${it.en ?? ''} ${it.desc}`.toLowerCase().includes(n));
+  return items.filter((it) => norm(`${it.name} ${it.en ?? ''} ${it.desc}`).includes(n));
 }
+
+/** Unicode 下标 → ASCII（filterLib 匹配归一；与 molecules/registry 同规则） */
+const SUBSCRIPT: Record<string, string> = {
+  '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4',
+  '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9',
+};
 
 export const LIB: LibraryItem[] = [
   { type: 'kaolinite_sheet', icon: '▬', name: '高岭土片层', desc: '1–3 层堆叠 · CIF 驱动 · 矩形/六角', en: 'Kaolinite Sheet' },
   { type: 'halloysite_tube', icon: '◯', name: '埃洛石纳米管', desc: '片层卷曲生成 · 卷曲进度可动画', en: 'Halloysite Nanotube' },
   { type: 'nanoparticle', icon: '⬤', name: '纳米颗粒 CeO₂', desc: '簇装小晶粒 / 光滑球 · 尺寸可调', en: 'Nanoparticle' },
-  { type: 'molecule', icon: '✦', name: '小分子 / 离子', desc: 'H₂O · O₂ · CO₂ · N₂ · 阳离子', en: 'Molecule / Ion' },
+  { type: 'molecule', icon: '✦', name: '小分子 / 离子', desc: '水分子 H₂O · 氧气 O₂ · 二氧化碳 CO₂ · 氮气 N₂ · 阳离子（可输 water/水 搜索）', en: 'Molecule / Ion' },
   { type: 'rubber_substrate', icon: '▭', name: '橡胶基底', desc: '圆角软质平板', en: 'Rubber Substrate' },
   { type: 'packed_layers', icon: '⬢', name: '密排原子层', desc: '六方/立方密排 · 逐原子堆叠开关 · 层数可调', en: 'Close-Packed Layers' },
 ];
