@@ -18,6 +18,7 @@ import {
   clearModuleLibrary,
   ensureSeededTemplates,
   exportModules,
+  filterModules,
   generateMissingThumbnails,
   importModules,
   isPlaceholderThumb,
@@ -25,6 +26,7 @@ import {
   migrateTemplatesToModules,
   moduleToSceneDocument,
   placeholderTemplateThumb,
+  renameModule,
   saveModule,
   shapeSceneThumb,
   templateEntryFromScene,
@@ -476,6 +478,87 @@ describe('真实缩略图（2026-09-17b：卡片必须是真实场景预览，�
     expect(isPlaceholderThumb(still3d.thumb)).toBe(true); // 3D 模板离屏渲染复杂 → fallback
     // 幂等：再跑零回填
     expect(await generateMissingThumbnails()).toBe(0);
+  });
+});
+
+describe('模板重命名（2026-09-17：纯 metadata UPDATE，绝不删除+重建）', () => {
+  beforeEach(async () => {
+    await clearModuleLibrary();
+  });
+
+  it('rename 只改 name：id/thumb/favorite/createdAt/场景内容逐位保留', async () => {
+    const store = buildRichScene();
+    const entry = templateEntryFromScene(
+      { components: store.getState().components, shapes: store.getState().shapes, mode: 'mixed' },
+      THUMB,
+      'Old',
+    );
+    await saveModule({ ...entry, favorite: true, createdAt: '2026-01-01T00:00:00.000Z' } as ModuleEntry);
+    const updated = await renameModule(entry.id, '  煤矸石-Pd催化氧化甲苯  ');
+    expect(updated.name).toBe('煤矸石-Pd催化氧化甲苯'); // trim 生效
+    const back = (await listModules()).find((m) => m.id === entry.id)!;
+    expect(back.id).toBe(entry.id); // ID 永久稳定
+    expect(back.name).toBe('煤矸石-Pd催化氧化甲苯');
+    expect(back.thumb).toBe(THUMB); // 缩略图逐值保持
+    expect(back.favorite).toBe(true);
+    expect(back.createdAt).toBe('2026-01-01T00:00:00.000Z');
+    expect(back.type).toBe('template');
+    if (back.type === 'template') {
+      expect(back.components).toHaveLength(2); // 场景内容不变
+      expect(back.shapes).toHaveLength(2);
+    }
+  });
+
+  it('空白名拒绝；旧名称保持', async () => {
+    const entry = templateEntryFromScene({ components: [], shapes: [], mode: 'mixed' }, THUMB, 'Old');
+    await saveModule(entry);
+    await expect(renameModule(entry.id, '   ')).rejects.toThrow();
+    expect((await listModules()).find((m) => m.id === entry.id)!.name).toBe('Old');
+  });
+
+  it('持久化 + 搜索新名命中 + 导出含新名（roundtrip）', async () => {
+    const entry = templateEntryFromScene({ components: [], shapes: [], mode: 'mixed' }, THUMB, '实验一');
+    await saveModule(entry);
+    await renameModule(entry.id, '埃洛石-CeO₂催化反应模板');
+    // 重新从 Dexie 读取（缓存已失效）
+    const reread = (await listModules()).find((m) => m.id === entry.id)!;
+    expect(reread.name).toBe('埃洛石-CeO₂催化反应模板');
+    // 搜索新名命中
+    expect(filterModules(await listModules(), { query: '催化反应' }).map((m) => m.id)).toContain(entry.id);
+    // 导出 JSON 含新名
+    const exported = await exportModules();
+    expect(exported).toContain('埃洛石-CeO₂催化反应模板');
+  });
+
+  it('旧单组件 / 组合模块同样可重命名（只改 name）', async () => {
+    const m2 = SEED_MODULES.modules.find((m) => m.name.startsWith('M2'))!;
+    const m6 = SEED_MODULES.modules.find((m) => m.name.startsWith('M6'))!;
+    await saveModule(m2);
+    await saveModule(m6);
+    await renameModule(m2.id, '我的三层片层');
+    await renameModule(m6.id, '我的组合');
+    const all = await listModules();
+    expect(all.find((m) => m.id === m2.id)!.name).toBe('我的三层片层');
+    expect(all.find((m) => m.id === m2.id)!.thumb).toBe(m2.thumb);
+    expect(all.find((m) => m.id === m6.id)!.name).toBe('我的组合');
+    if (all.find((m) => m.id === m6.id)!.type === 'combined') {
+      expect((all.find((m) => m.id === m6.id)! as { components: unknown[] }).components).toHaveLength(m6.type === 'combined' ? m6.components.length : 0);
+    }
+  });
+
+  it('种子模板（Dexie 普通条目）重命名后不触发重新注入/缩略图回填', async () => {
+    await ensureSeededTemplates(SEED_TEMPLATES);
+    const seed = (await listModules()).find((m) => m.id === 'tpl-interfacial')!;
+    const thumbBefore = seed.thumb;
+    await renameModule('tpl-interfacial', '我的界面反应版式');
+    // 再跑注入与回填：稳定 id 已存在 → 不重复注入；真实缩略图 → 不回填
+    await ensureSeededTemplates(SEED_TEMPLATES);
+    await generateMissingThumbnails();
+    const all = await listModules();
+    expect(all.filter((m) => m.id === 'tpl-interfacial')).toHaveLength(1); // 无重复条目
+    const renamed = all.find((m) => m.id === 'tpl-interfacial')!;
+    expect(renamed.name).toBe('我的界面反应版式');
+    expect(renamed.thumb).toBe(thumbBefore); // 缩略图未被触碰
   });
 });
 

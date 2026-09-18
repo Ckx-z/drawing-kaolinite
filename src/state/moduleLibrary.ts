@@ -501,3 +501,21 @@ export async function toggleFavorite(id: string): Promise<boolean> {
   notifyModulesChanged();
   return favorite;
 }
+
+/**
+ * 模板重命名（2026-09-17）：纯 metadata UPDATE——直接 put 原 entry 换 name 字段，
+ * id/thumb/favorite/createdAt/tags/场景内容逐位保留（绝无删除+重建）。
+ * 空白名拒绝（schema name min(1) 同一事实源）。种子模板已是 Dexie 普通条目
+ * （稳定 id），同样直接改名，不触发重新注入/缩略图回填。
+ */
+export async function renameModule(id: string, newName: string): Promise<ModuleEntry> {
+  const name = newName.trim();
+  if (!name) throw new Error('模板名称不能为空');
+  const entry = (await listModules()).find((m) => m.id === id);
+  if (!entry) throw new Error(`模板不存在：${id}`);
+  const updated = moduleSchema.parse({ ...entry, name }) as ModuleEntry;
+  await getDB().modules.put(updated);
+  cache = null;
+  notifyModulesChanged();
+  return updated;
+}

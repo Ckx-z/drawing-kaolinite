@@ -651,6 +651,25 @@ input[type='checkbox'] {
 .mod-card:hover .x {
   display: block;
 }
+/* 重命名按钮（2026-09-17）：hover 显示，与删除 X 同风格并排 */
+.mod-card .ren {
+  position: absolute;
+  top: 3px;
+  right: 26px;
+  width: 18px;
+  height: 18px;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  display: none;
+}
+.mod-card:hover .ren {
+  display: block;
+}
 /* 收藏星标（T-3.2）：常显，收藏态金色 */
 .mod-card .fav {
   position: absolute;

@@ -53,14 +53,17 @@ interface ComponentClip {
 
 interface ShapeClip {
   kind: 'shape';
-  shapes: Array<Record<string, unknown>>; // 同组多选拷贝（组标记清除）
+  shapes: Array<Record<string, unknown>>; // 同组多选拷贝（组标记与锚定清除）
 }
 
 let clip: ComponentClip | ShapeClip | null = null;
+/** 粘贴计数（2026-09-17）：连续粘贴逐次错开 offset×n；每次 Copy 重置 */
+let pasteCount = 0;
 
-/** 测试辅助：清空剪贴板 */
+/** 测试辅助：清空剪贴板与粘贴计数 */
 export function clearShortcutClipboard(): void {
   clip = null;
+  pasteCount = 0;
 }
 
 function copySelected(host: ShortcutHost): void {
@@ -75,9 +78,13 @@ function copySelected(host: ShortcutHost): void {
         const copy: Record<string, unknown> = structuredClone({ ...sh });
         delete copy.id;
         delete copy.group; // 副本脱离原组
+        // 副本成自由图元：外部锚定（component/shape 引用）清除——副本 id 全新生成，
+        // 旧引用本就悬空，且保留会下一帧吸回原位置；内部几何（x/y/w/h/bow）不受影响
+        if (sh.type === 'arrow' || sh.type === 'line') delete copy.anchors;
         return copy;
       }),
     };
+    pasteCount = 0; // 新一轮粘贴从第一档偏移开始
     return;
   }
   const sel = s.components.find((c) => c.id === s.selectionId);
@@ -89,16 +96,18 @@ function copySelected(host: ShortcutHost): void {
     params: structuredClone(sel.params),
     transform: structuredClone(sel.transform as ComponentClip['transform']),
   };
+  pasteCount = 0;
 }
 
 function pasteClipboard(host: ShortcutHost, offset: boolean): void {
   if (!clip) return;
   const s = host.getState();
+  pasteCount += 1;
+  const step = offset ? 12 * pasteCount : 0; // 第 1/2/3 次粘贴 → +12/+24/+36，逐次错开不叠死
   if (clip.kind === 'shape') {
     const ids: string[] = [];
     for (const sh of clip.shapes) {
-      const d = offset ? 12 : 0;
-      const id = s.addShape({ ...sh, x: (sh.x as number) + d, y: (sh.y as number) + d } as never);
+      const id = s.addShape({ ...sh, x: (sh.x as number) + step, y: (sh.y as number) + step } as never);
       ids.push(id);
     }
     s.selectShapes(ids);
@@ -106,7 +115,7 @@ function pasteClipboard(host: ShortcutHost, offset: boolean): void {
   }
   const t = clip.transform;
   const pos: [number, number, number] = offset
-    ? [t.position[0] + 12, t.position[1] + 12, t.position[2]]
+    ? [t.position[0] + 12 * pasteCount, t.position[1] + 12 * pasteCount, t.position[2]]
     : [...t.position];
   const newId = s.addComponent(clip.type as Parameters<SceneState['addComponent']>[0], {
     name: `${clip.name} 副本`,
@@ -132,15 +141,15 @@ export const SHORTCUTS: ShortcutDef[] = [
     run: ({ host }) => host.history.redo(),
   },
   {
-    key: 'c', mod: 'mod', needsSelection: true, label: '复制选中组件',
+    key: 'c', mod: 'mod', needsSelection: true, label: '复制选中组件 / 图元',
     run: (ctx) => copySelected(ctx.host),
   },
   {
-    key: 'v', mod: 'mod', label: '粘贴副本（偏移 +12Å）',
+    key: 'v', mod: 'mod', label: '粘贴副本（逐次错开 +12px）',
     run: (ctx) => pasteClipboard(ctx.host, true),
   },
   {
-    key: 'd', mod: 'mod', needsSelection: true, label: '原地创建副本',
+    key: 'd', mod: 'mod', needsSelection: true, label: '原地创建副本（组件 / 图元）',
     run: (ctx) => {
       copySelected(ctx.host);
       pasteClipboard(ctx.host, false);
@@ -217,7 +226,9 @@ export function handleShortcut(e: KeyboardEvent, host: ShortcutHost): boolean {
     const modOk = def.mod === 'mod' ? mod : !mod;
     const shiftOk = def.shift ? e.shiftKey : !e.shiftKey; // 未声明 shift 的键不允许 Shift 按下（防 Shift+Z 错触 undo）
     if (def.key !== k || !modOk || !shiftOk) continue;
-    if (def.needsSelection && !host.getState().selectionId) continue;
+    // 2026-09-17：图元选中（shapeSelectionIds）同样满足 needsSelection——
+    // 此前只认组件 selectionId，导致图元选中时 Cmd+C/D 被静默跳过（复制失效根因）
+    if (def.needsSelection && !host.getState().selectionId && !host.getState().shapeSelectionIds.length) continue;
     e.preventDefault();
     def.run({ host, selectionId: host.getState().selectionId, toggleCheatSheet: host.toggleCheatSheet });
     return true;

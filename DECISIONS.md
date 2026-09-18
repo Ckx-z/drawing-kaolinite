@@ -168,3 +168,16 @@
 8. applyTemplate 函数保留（templateLibrary 导出 + 其测试），UI 层不再调用。
 
 **验证**：unifiedTemplate.test 重写为 loadScene 路径并新增"不叠加"系列 9 条（A→B 组件/图元/标注全量替换、连续打开不累计、legacy 单/组独立打开、selection+测量清理、3D↔2D 互切不残留、非法原子性、一条完整事务可整体回退）；vitest 440 → 449 全绿。
+
+
+## D-2026-09-17f：图元复制粘贴修复 + 模板重命名
+
+**A. 图元 Copy/Paste**：双槽剪贴板（ComponentClip|ShapeClip）在 shortcuts.ts 已存在，但三缺陷致图元复制实际不可用：
+1. **needsSelection 只认组件 selectionId** → 图元选中（shapeSelectionIds）时 Cmd+C/D 被 continue 跳过——修复为两者任一满足；
+2. **连续粘贴同位置**（固定 +12）→ pasteCount 计数，第 n 次 = 12×n 逐次错开；每次 Copy / clearShortcutClipboard 重置；
+3. **锚定未清** → copy 时 arrow/line 删 anchors，副本成自由图元（几何 x/y/w/h/bow 保留；旧 id 引用本就悬空且保留会吸回原位）。
+组件粘贴同步享受逐次错开。Delete 图元（App 级优先 deleteSelectedShapes）与输入框守卫（input/select/textarea 聚焦不分发）为既有行为，零改动。
+
+**B. 模板重命名**：`renameModule(id, name)` = toggleFavorite 同款 UPDATE 模式（listModules 取 entry → put({...entry, name}) → cache 失效 + 通知），绝不删除+重建；空白名拒绝（schema name min(1) 单一事实源）；种子模板已是 Dexie 普通条目（稳定 id tpl-*）直接改名，不触发重复注入/缩略图回填。UI = 卡片 hover 显 ✎（与 ✕ 同风格），stopPropagation 隔离打开；window.prompt 原生交互零新依赖。
+
+**验证**：shapeClipboard.test 12 条（五类图元 ID/属性/独立性、连续错开、计数重置、锚定清理、逐次 Undo、多选整体粘贴）+ rename 5 条（只改 name/空白拒绝/持久化+搜索+导出/legacy 两类/种子不重复注入）；vitest 449 → 466 全绿。

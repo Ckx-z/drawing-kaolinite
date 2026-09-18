@@ -55,8 +55,8 @@ describe('注册表完整性', () => {
     const labels = entries.map((e) => e.label);
     expect(labels).toContain('撤销');
     expect(labels).toContain('重做');
-    expect(labels).toContain('复制选中组件');
-    expect(labels).toContain('粘贴副本（偏移 +12Å）');
+    expect(labels).toContain('复制选中组件 / 图元'); // 2026-09-17：图元复制纳入
+    expect(labels).toContain('粘贴副本（逐次错开 +12px）');
     // 重做有 shift+z 与 y 两种键位，各占一行（速查表如实展示注册表）
     expect(labels.filter((l) => l === '重做')).toHaveLength(2);
   });

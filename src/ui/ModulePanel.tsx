@@ -17,6 +17,7 @@ import {
   listModules,
   moduleToSceneDocument,
   placeholderTemplateThumb,
+  renameModule,
   toggleFavorite,
   type ModuleFilterType,
 } from '../state/moduleLibrary';
@@ -76,6 +77,17 @@ export default function ModulePanel() {
     } catch (err) {
       alert(`模板数据无效，当前场景未改动：${(err as Error).message}`);
     }
+  };
+
+  /** 重命名（纯 metadata 更新：不触发打开/缩略图/收藏变化；原生 prompt 零新依赖） */
+  const onRename = (m: ModuleEntry): void => {
+    const input = window.prompt('重命名模板', m.name);
+    if (input === null) return; // 取消
+    const name = input.trim();
+    if (!name || name === m.name) return;
+    renameModule(m.id, name)
+      .then(() => setModules((prev) => prev.map((x) => (x.id === m.id ? { ...x, name } : x))))
+      .catch((err: Error) => alert(`重命名失败：${err.message}`));
   };
 
   const onExport = async (): Promise<void> => {
@@ -162,6 +174,16 @@ export default function ModulePanel() {
                 }}
               >
                 {m.favorite ? '★' : '☆'}
+              </div>
+              <div
+                className="ren"
+                title="重命名模板（只改名称，其余不变）"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRename(m);
+                }}
+              >
+                ✎
               </div>
               <div
                 className="x"
