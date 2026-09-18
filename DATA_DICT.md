@@ -103,7 +103,7 @@
 | `camera` | `{position:[x,y,z], target:[x,y,z]}` | – | 保存时相机（缺省不恢复视角） |
 | `mode` | `'mixed'\|'diagram'` | – | 画布形态 |
 | `view` | `{zoom, panX, panY}` | – | 纯示意图 2D 视图 |
-| `thumb` | dataURL | ✓ | 整景缩略图（snapshotScene；旧模板迁移条目 = 占位 SVG） |
+| `thumb` | dataURL | ✓ | 真实整景缩略图：新保存 = snapshotTemplate（snapshotWithOverlay 管线，150×110 jpeg 0.8，保存视角构图）；纯 2D 模板 = shapeSceneThumb 矢量 SVG；占位（data-ph 标记）仅含 3D 旧模板/服务不可用/解析失败 fallback |
 | `id/name/tags/createdAt/moduleVersion/favorite` | — | — | 与旧模块元数据同构 |
 
 导入导出外壳继续 `kaolin-modules/v1`（新字段向后兼容：旧文件零新增字段即可通过）。快照字段单一事实源 = `core/schema.ts templateSnapshotFields`（templateLibrary 反向复用）。

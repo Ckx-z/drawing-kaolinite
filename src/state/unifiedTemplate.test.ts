@@ -11,16 +11,22 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { moduleSchema } from '../core/schema';
 import type { ModuleEntry } from '../core/types';
+import type { SceneShape } from '../core/shapes/schema';
 import { createSceneStore } from './sceneStore';
 import { applyTemplate, saveTemplate, type TemplateEntry } from './templateLibrary';
 import {
   clearModuleLibrary,
+  ensureSeededTemplates,
   exportModules,
+  generateMissingThumbnails,
   importModules,
+  isPlaceholderThumb,
   listModules,
   migrateTemplatesToModules,
   moduleToTemplate,
+  placeholderTemplateThumb,
   saveModule,
+  shapeSceneThumb,
   templateEntryFromScene,
   MODULES_FORMAT,
 } from './moduleLibrary';
@@ -260,6 +266,72 @@ describe('导入导出兼容（Test 12/13）', () => {
     expect(tpl.thumb).toBe(THUMB);
     expect(tpl.favorite).toBe(true);
     expect(tpl.mode).toBe('diagram');
+  });
+});
+
+describe('真实缩略图（2026-09-17b：卡片必须是真实场景预览，占位仅 fallback）', () => {
+  beforeEach(async () => {
+    await clearModuleLibrary();
+  });
+
+  it('纯 2D 模板缩略图 = 真实矢量渲染（rect/text/箭头头可见，非 emoji 占位，确定性）', () => {
+    const seed = SEED_TEMPLATES.find((t) => t.id === 'tpl-interfacial')!;
+    const thumb = shapeSceneThumb(seed.shapes as SceneShape[]);
+    expect(thumb).toMatch(/^data:image\/svg\+xml/);
+    const svg = decodeURIComponent(thumb);
+    expect(svg).toContain('<rect');
+    expect(svg).toContain('<text');
+    expect(svg.toLowerCase()).toContain('polygon'); // 箭头三角头
+    expect(isPlaceholderThumb(thumb)).toBe(false);
+    expect(svg).not.toContain('🧩');
+    expect(svg).not.toContain('⭐');
+    expect(shapeSceneThumb(seed.shapes as SceneShape[])).toBe(thumb); // 确定性
+  });
+
+  it('种子注入统一库：纯 2D 种子模板自带真实缩略图（非占位）', async () => {
+    await ensureSeededTemplates(SEED_TEMPLATES);
+    const seed = (await listModules()).find((m) => m.id === 'tpl-interfacial')!;
+    expect(seed.type).toBe('template');
+    expect(isPlaceholderThumb(seed.thumb)).toBe(false);
+    expect(seed.thumb).toMatch(/^data:image\/svg\+xml/);
+  });
+
+  it('历史占位缩略图回填：纯 2D 模板换真实图且幂等；含 3D 组件的模板保留 fallback', async () => {
+    // 模拟上一版迁移入库的占位种子（纯 2D）
+    const seed = SEED_TEMPLATES[0]!;
+    await saveModule(
+      moduleSchema.parse({
+        id: seed.id,
+        name: seed.name,
+        type: 'template',
+        components: [],
+        shapes: seed.shapes as never,
+        thumb: placeholderTemplateThumb(true),
+        createdAt: '2026-09-16T00:00:00Z',
+        moduleVersion: 1,
+      }) as ModuleEntry,
+    );
+    // 含 3D 组件的占位条目（无法离屏渲染 → 保留占位）
+    const store = createSceneStore();
+    store.getState().addComponent('nanoparticle');
+    const with3d = templateEntryFromScene(
+      { components: store.getState().components, shapes: [{ id: 's1', type: 'rect', x: 0, y: 0, w: 10, h: 10 } as never], mode: 'mixed' },
+      placeholderTemplateThumb(),
+      'T-3D',
+    );
+    await saveModule(with3d);
+
+    const n = await generateMissingThumbnails();
+    expect(n).toBe(1);
+    const all = await listModules();
+    const pure2d = all.find((m) => m.id === seed.id)!;
+    expect(isPlaceholderThumb(pure2d.thumb)).toBe(false);
+    expect(pure2d.thumb).toMatch(/^data:image\/svg\+xml/);
+    expect(pure2d.name).toBe(seed.name); // 其余字段不动（只换 thumb）
+    const still3d = all.find((m) => m.name === 'T-3D')!;
+    expect(isPlaceholderThumb(still3d.thumb)).toBe(true); // 3D 模板离屏渲染复杂 → fallback
+    // 幂等：再跑零回填
+    expect(await generateMissingThumbnails()).toBe(0);
   });
 });
 

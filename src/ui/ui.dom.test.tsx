@@ -117,7 +117,45 @@ describe('LibraryPanel Tabs 与搜索（Phase3；2026-09-17 统一模板库）',
       await new Promise((r) => setTimeout(r, 300));
     });
     expect(host.textContent).toContain('我的模板');
-    expect(host.textContent).toContain('界面反应三步版式'); // 种子模板卡片（占位缩略图 + 名称）
+    expect(host.textContent).toContain('界面反应三步版式'); // 种子模板卡片（真实矢量缩略图 + 名称）
+  });
+
+  it('保存为模板：缩略图走真实整景管线（snapshotTemplate，非占位）', async () => {
+    // 场景：片层组件 + 文本图元 + 自定义相机
+    const id = sceneStore.getState().addComponent('kaolinite_sheet');
+    const shapeId = sceneStore.getState().addShape({ type: 'text', x: 10, y: 10, w: 60, h: 24, text: 'A' } as never);
+    const { rendererRef } = await import('../state/rendererRef');
+    const prev = rendererRef.current;
+    rendererRef.current = {
+      camera: { position: { toArray: () => [11, 22, 33] } },
+      orbit: { target: { toArray: () => [1, 2, 3] } },
+      snapshotTemplate: () => 'data:image/jpeg;base64,/9j/4AAQSkZJRg==',
+      renderer: { domElement: { clientWidth: 800, clientHeight: 600 }, capabilities: { maxTextureSize: 8192 } },
+    } as never;
+    try {
+      render(<TopBar />);
+      const btn = qa('button').find((b) => b.textContent?.includes('保存为模板'))!;
+      expect(btn).toBeTruthy();
+      click(btn);
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 80));
+      });
+      const { listModules } = await import('../state/moduleLibrary');
+      const saved = (await listModules()).find((m) => m.type === 'template' && m.name.startsWith('我的模板'));
+      expect(saved).toBeTruthy();
+      // 缩略图 = 渲染服务真实管线输出透传（组合模块同款 jpeg dataURL），非占位
+      expect(saved!.thumb).toBe('data:image/jpeg;base64,/9j/4AAQSkZJRg==');
+      expect(saved!.thumb).not.toContain('data-ph');
+      // 快照完整性：图元 + 相机 + 形态
+      const tpl = saved as { shapes?: unknown[]; camera?: unknown; mode?: string };
+      expect(tpl.shapes).toHaveLength(1);
+      expect(tpl.camera).toEqual({ position: [11, 22, 33], target: [1, 2, 3] });
+      expect(tpl.mode).toBe('mixed');
+    } finally {
+      rendererRef.current = prev;
+      sceneStore.getState().removeComponent(id);
+      sceneStore.getState().removeShape(shapeId);
+    }
   });
 });
 

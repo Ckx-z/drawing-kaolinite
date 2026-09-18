@@ -589,6 +589,15 @@ export class RendererService {
   }
 
   /**
+   * 统一模板整景缩略图（2026-09-17）：复用 snapshotWithOverlay 合成管线
+   * （3D 当前帧 + 图元 + 标注叠加），模块卡片同规格（150×110 / jpeg 0.8）。
+   * 直接取当前已渲染帧 → 缩略图视角 ≡ 保存视角 ≡ 恢复视角（禁止 frameAll 类取景）。
+   */
+  snapshotTemplate(width = 150, height = 110, shapes?: SceneShape[], annotations?: Annotation[]): string {
+    return this.snapshotWithOverlay(width, height, annotations ?? [], shapes).toDataURL('image/jpeg', 0.8);
+  }
+
+  /**
    * 世界坐标 → 屏幕像素（当前渲染尺寸），含视锥外/相机后方剔除。
    * 交互叠加与导出合成共用（导出时以离屏 W/H 调用 → 位置一致，T-4.4）。
    */

@@ -13,6 +13,8 @@ import Dexie, { type Table } from 'dexie';
 import { moduleSchema } from '../core/schema';
 import type { ModuleEntry } from '../core/types';
 import { mineralOf } from '../core/minerals';
+import type { SceneShape } from '../core/shapes/schema';
+import { shapesToSVG, viewTransformedShape } from '../export/svg';
 import type { SceneEntry } from './sceneStore';
 import type { TemplateEntry } from './templateLibrary';
 
@@ -175,11 +177,97 @@ export function moduleToTemplate(m: Extract<ModuleEntry, { type: 'template' }>):
 }
 type SceneShapeLike = TemplateEntry['shapes'][number];
 
-/** 占位缩略图（旧 templateLibrary 条目无 thumb / 渲染服务不可用兜底）：SVG dataURL——不建第二套缩略图管线 */
+/**
+ * 占位缩略图（仅 fallback：渲染服务不可用 / 含 3D 组件的旧模板无法离屏渲染 /
+ * 图片解析失败）。SVG 内嵌 data-ph 标记供 isPlaceholderThumb 识别——
+ * 正常新保存模板永不走此路径（任务书 2026-09-17b：卡片必须是真实场景预览）。
+ */
 export function placeholderTemplateThumb(builtin = false): string {
   const icon = builtin ? '🧩' : '⭐';
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='150' height='110'><rect width='150' height='110' fill='#EEF1F5'/><text x='75' y='66' font-size='40' text-anchor='middle'>${icon}</text></svg>`;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='150' height='110' data-ph='1'><rect width='150' height='110' fill='#EEF1F5'/><text x='75' y='66' font-size='40' text-anchor='middle'>${icon}</text></svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+/** 是否占位缩略图（data-ph 标记；encodeURIComponent 后 data-ph%3D%221%22） */
+export function isPlaceholderThumb(thumb: string): boolean {
+  return thumb.includes('data-ph');
+}
+
+/**
+ * 纯 2D 模板真实缩略图（无 3D 组件：种子版式 / 纯图元模板）：
+ * 图元包围盒自适应缩放到卡片尺寸（150×110，与组合模块卡片同规格）→
+ * shapesToSVG 矢量序列化（复用导出管线，非第二套截图系统）→ SVG dataURL。
+ * 确定性：同 shapes 输入恒得同输出（viewTransformedShape 做缩放平移）。
+ */
+export function shapeSceneThumb(shapes: SceneShape[], width = 150, height = 110): string {
+  if (!shapes.length) return placeholderTemplateThumb();
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const s of shapes) {
+    x0 = Math.min(x0, Math.min(s.x, s.x + s.w));
+    y0 = Math.min(y0, Math.min(s.y, s.y + s.h));
+    x1 = Math.max(x1, Math.max(s.x, s.x + s.w));
+    y1 = Math.max(y1, Math.max(s.y, s.y + s.h));
+  }
+  const pad = 8;
+  const availW = width - pad * 2;
+  const availH = height - pad * 2;
+  const bw = Math.max(x1 - x0, 1);
+  const bh = Math.max(y1 - y0, 1);
+  const z = Math.min(availW / bw, availH / bh);
+  const px = pad + (availW - bw * z) / 2 - x0 * z;
+  const py = pad + (availH - bh * z) / 2 - y0 * z;
+  // 种子/历史 JSON 的箭头连线可能缺 anchors（store 内由 schema 默认值补齐，
+  // 裸数据没有）——补 free 端点按几何 (x,y)→(x+w,y+h) 解析，与 store 语义一致
+  const normalized = shapes.map((s) =>
+    (s.type === 'arrow' || s.type === 'line') && !s.anchors
+      ? ({ ...s, anchors: { start: { kind: 'free' }, end: { kind: 'free' } } } as SceneShape)
+      : s,
+  );
+  const fitted = normalized.map((s) => viewTransformedShape(s, z, px, py));
+  // project 仅 component 锚定用到；纯 2D 无组件（components: []）恒走 free 几何端点
+  const body = shapesToSVG({
+    width,
+    height,
+    scale: 1,
+    shapes: fitted,
+    components: [],
+    project: () => ({ x: 0, y: 0, visible: false }),
+  });
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="#F4F5F7"/>${body}</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+/** 模板条目的真实缩略图：纯 2D → 矢量渲染；含 3D 组件 → 占位（无法离屏渲染 3D，仅此场景 fallback） */
+function templateThumbFor(t: { components?: unknown[]; shapes: SceneShape[]; builtin?: boolean }): string {
+  return t.components?.length ? placeholderTemplateThumb(t.builtin ?? false) : shapeSceneThumb(t.shapes);
+}
+
+/**
+ * 历史模板缩略图回填（任务书第九节）：统一库中"占位缩略图的纯 2D 模板"
+ * 重新生成真实矢量缩略图并写回（只换 thumb，其余字段逐位保留）。
+ * 含 3D 组件的模板跳过（离屏 3D 渲染成本高，不阻塞——保留 fallback）。
+ * 幂等：非占位缩略图即跳过，重复执行无副作用。
+ */
+export async function generateMissingThumbnails(): Promise<number> {
+  const all = await listModules();
+  let n = 0;
+  for (const m of all) {
+    if (m.type !== 'template') continue;
+    if (m.components.length) continue; // 含 3D 组件：无法离屏渲染
+    if (!m.shapes?.length) continue;
+    if (!isPlaceholderThumb(m.thumb)) continue;
+    const thumb = shapeSceneThumb(m.shapes as SceneShape[]);
+    await getDB().modules.put({ ...m, thumb });
+    n++;
+  }
+  if (n) {
+    cache = null;
+    notifyModulesChanged();
+  }
+  return n;
 }
 
 /**
@@ -205,7 +293,7 @@ export async function migrateTemplatesToModules(): Promise<number> {
         camera: t.camera,
         mode: t.mode,
         view: t.view,
-        thumb: placeholderTemplateThumb(t.builtin ?? false),
+        thumb: templateThumbFor(t as { components?: unknown[]; shapes: SceneShape[]; builtin?: boolean }),
         createdAt: t.createdAt,
         tags: ['模板'],
         moduleVersion: 1,
@@ -245,7 +333,7 @@ export async function ensureSeededTemplates(seed: TemplateEntry[]): Promise<void
         camera: t.camera,
         mode: t.mode,
         view: t.view,
-        thumb: placeholderTemplateThumb(t.builtin ?? false),
+        thumb: templateThumbFor(t as { components?: unknown[]; shapes: SceneShape[]; builtin?: boolean }),
         createdAt: t.createdAt,
         tags: ['模板'],
         moduleVersion: 1,

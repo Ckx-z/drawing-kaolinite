@@ -137,3 +137,17 @@
 6. **导入导出**：外层继续 kaolin-modules/v1（不造 kaolin-templates/v2）；importer 经扩展后 moduleSchema 天然接受旧单组件/旧组合/新模板三类；项目从未有模板导出格式，无需兼容第四类。
 
 **验证**：unifiedTemplate.test.ts 9 条（任务书 Test 3-14 全覆盖）+ ui.dom.test 两 Tab/唯一保存入口断言 + templateLibrary.test 6 条原样通过；vitest 427 → 436 全绿；fake-indexeddb 真库 roundtrip/幂等验证。
+
+
+## D-2026-09-17d：统一模板真实缩略图——占位仅 fallback
+
+**背景**：用户任务书（18 节）：模板卡片必须显示保存时真实画布渲染缩略图（参考组合模块卡片）；⭐/🧩 仅限历史数据无 thumb 或数据损坏时 fallback。
+
+**决策**：
+1. **新保存模板**：`RendererService.snapshotTemplate(150,110,shapes,annotations)` = 复用既有 `snapshotWithOverlay` 合成管线（PNG/TIFF/PDF 共用的"3D 帧 + 图元 + 标注叠加"），输出与组合模块卡片同规格（150×110 / jpeg 质量 0.8）。直接取当前已渲染帧——缩略图视角 ≡ 保存视角 ≡ 恢复视角，无 frameAll 类取景，不污染用户相机/选中/可见性。
+2. **纯 2D 模板**（种子版式/无 3D 组件）：`shapeSceneThumb` = 图元包围盒自适应缩放（复用 `viewTransformedShape`）→ `shapesToSVG` 矢量序列化（复用导出管线）→ SVG dataURL。确定性：同 shapes 恒同输出；裸 JSON 缺 anchors 的箭头补 free 端点（与 store schema 默认值同语义）。
+3. **占位图收窄为纯 fallback**（三路径）：①含 3D 组件的旧模板（离屏 3D 渲染复杂，不阻塞本轮）②保存时渲染服务不可用 ③卡片 img 解析失败（onError 换占位，防死循环标记）。占位 SVG 内嵌 data-ph 标记供程序识别。
+4. **历史回填**：`generateMissingThumbnails()`（ModulePanel refresh 链，幂等）——统一库中"占位 thumb 的纯 2D 模板"重生成真实矢量缩略图写回（只换 thumb，其余字段逐位保留）；含 3D 组件跳过。种子注入（ensureSeededTemplates）与旧库迁移（migrateTemplatesToModules）直接生成真实 2D 缩略图。
+5. 卡片渲染规则：`entry.thumb` 存在即显示（<img src>）；不按 type 分配图标。
+
+**验证**：unifiedTemplate.test +3（矢量缩略图内容/种子自带真实图/回填幂等与 3D 跳过）、ui.dom.test +1（TopBar 保存→thumb=渲染管线输出透传，非占位）；vitest 436 → 440 全绿。

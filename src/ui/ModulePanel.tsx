@@ -12,9 +12,11 @@ import {
   ensureSeededTemplates,
   exportModules,
   filterModules,
+  generateMissingThumbnails,
   importModules,
   listModules,
   moduleToTemplate,
+  placeholderTemplateThumb,
   toggleFavorite,
   type ModuleFilterType,
 } from '../state/moduleLibrary';
@@ -43,8 +45,10 @@ export default function ModulePanel() {
 
   useEffect(() => {
     const refresh = (): void => {
-      // 种子模板注入统一库（稳定 id 幂等）→ 列表刷新
+      // 种子模板注入统一库（稳定 id 幂等）→ 历史占位缩略图回填（纯 2D 模板，
+      // 幂等）→ 列表刷新
       void ensureSeededTemplates(seedTemplates as TemplateEntry[])
+        .then(() => generateMissingThumbnails())
         .then(() => listModules())
         .then(setModules)
         .catch(() => setModules([])); // 存储不可用时空列表降级
@@ -148,7 +152,18 @@ export default function ModulePanel() {
         <div className="mod-grid">
           {shown.map((m) => (
             <div key={m.id} className="mod-card" onClick={() => instantiate(m)}>
-              <img src={m.thumb} alt="" />
+              {/* thumb 存在即显示真实缩略图；仅解析失败（损坏数据）才换占位图标 */}
+              <img
+                src={m.thumb}
+                alt=""
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (!img.dataset.fallback) {
+                    img.dataset.fallback = '1';
+                    img.src = placeholderTemplateThumb();
+                  }
+                }}
+              />
               <div className="n">{m.name}</div>
               <div
                 className="fav"

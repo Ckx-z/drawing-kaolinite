@@ -249,7 +249,10 @@ export default function TopBar() {
             : undefined,
           view: { zoom: shapeViewStore.getState().zoom, panX: shapeViewStore.getState().panX, panY: shapeViewStore.getState().panY },
         },
-        svc ? svc.snapshotScene() : placeholderTemplateThumb(),
+        // 真实整景缩略图：snapshotTemplate = snapshotWithOverlay 管线（3D 当前帧
+        // + 图元 + 标注），150×110 jpeg 0.8 与组合模块卡片同规格；用保存时相机
+        // 当前帧（不取景不重排）→ 缩略图 ≡ 保存画面 ≡ 恢复画面。渲染服务不可用才占位
+        svc ? svc.snapshotTemplate(150, 110, s.shapes, s.annotations) : placeholderTemplateThumb(),
         name,
       ),
     );
