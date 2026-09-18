@@ -48,7 +48,7 @@ describe('分子构建出口质心 = 原点', () => {
   });
 
   it('预设分子表：全部 kind', () => {
-    for (const kind of ['H₂O', 'CO₂', 'O₂', 'N₂', '·OH (羟基自由基)'] as const) {
+    for (const kind of ['H₂O', 'CO₂', 'O₂', 'N₂', '·OH (羟基自由基)', 'C₇H₈'] as const) {
       const c = centroidOf(buildMolecule(kind).atoms);
       expect(Math.abs(c.x) + Math.abs(c.y) + Math.abs(c.z)).toBeLessThan(1e-9);
     }

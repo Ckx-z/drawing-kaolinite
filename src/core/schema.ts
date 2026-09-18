@@ -127,6 +127,8 @@ export const MOLECULE_KINDS = [
   'Ca²⁺',
   'Ce³⁺',
   '·OH (羟基自由基)',
+  // 2026-09-17：甲苯 preset（PubChem CID 1140 构象，几何见 builders.MOLECULES）
+  'C₇H₈',
 ] as const;
 
 export const moleculeParamsSchema = z.strictObject({

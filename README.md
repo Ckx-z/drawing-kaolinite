@@ -13,7 +13,7 @@
 | **生产工程（主力）** | `src/` + `npm run dev` | React 19 + TypeScript + Vite 6；P0/P1 全部完成，P2 进行中 |
 | **桌面安装包 v0.2.0** | `src-tauri/target/release/bundle/` | Tauri v2：.app / .dmg（Apple Silicon）；文件关联 .kaolin-scene.json |
 | 三维 Demo（历史基线） | [demo/index.html](demo/index.html) | 技术验证基线，双击即用；`node demo/core/test.js` 回归 |
-| 种子模块库 | `data/seed-modules.json` | M2~M10 共 11 个成品模块（含缩略图，含莫来石 M9/M10），模块面板「导入」一键恢复 |
+| 种子模块库 | `data/seed-modules.json` | M2~M11 共 12 个成品模块（含缩略图，含莫来石 M9/M10、甲苯 M11），模块面板「导入」一键恢复 |
 | CIF 种子库 | `data/*.cif` | 高岭石 / 地开石 / 珍珠石 / 蒙脱石 / 伊利石（AMCSD/COD 开放数据） |
 | 技术方案设计文档 | [docs/技术方案设计.md](docs/技术方案设计.md) | 架构 / 模块划分 / 核心算法推导 / 半年路线图 |
 | 记忆系统 | `PROJECT_STATE.md` · `TODO.md` · `DECISIONS.md` · `DATA_DICT.md` · `DAILY_LOG/` · `.agents/` | 跨会话/跨人员上下文零丢失 |
@@ -23,7 +23,7 @@
 ```bash
 npm install
 npm run dev        # 浏览器打开 http://localhost:5173/
-npm run test       # vitest 414 条（几何 / 矿物 / 分子 / 测量 / 状态 / 导出 / SMILES）
+npm run test       # vitest 427 条（几何 / 矿物 / 分子 / 测量 / 状态 / 导出 / SMILES）
 npx tauri build    # 桌面安装包（.app + .dmg，首次约 5 分钟）
 npm run build      # tsc + vite 产物
 node demo/core/test.js   # 几何内核历史基线回归（ALL OK）

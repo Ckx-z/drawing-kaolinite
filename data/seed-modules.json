@@ -491,6 +491,30 @@
       "thumb": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2796%27%20height%3D%2772%27%3E%3Crect%20width%3D%2796%27%20height%3D%2772%27%20fill%3D%27%23F4F5F7%27%2F%3E%3Cg%20stroke%3D%27%23889999%27%20stroke-width%3D%272%27%3E%3Cline%20x1%3D%2724%27%20y1%3D%2746%27%20x2%3D%2746%27%20y2%3D%2726%27%2F%3E%3Cline%20x1%3D%2746%27%20y1%3D%2726%27%20x2%3D%2772%27%20y2%3D%2740%27%2F%3E%3Cline%20x1%3D%2772%27%20y1%3D%2740%27%20x2%3D%2752%27%20y2%3D%2758%27%2F%3E%3Cline%20x1%3D%2752%27%20y1%3D%2758%27%20x2%3D%2724%27%20y2%3D%2746%27%2F%3E%3Cline%20x1%3D%2746%27%20y1%3D%2726%27%20x2%3D%2752%27%20y2%3D%2758%27%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2724%27%20cy%3D%2746%27%20r%3D%277%27%20fill%3D%27%23C9A2A2%27%2F%3E%3Ccircle%20cx%3D%2772%27%20cy%3D%2740%27%20r%3D%277%27%20fill%3D%27%23C9A2A2%27%2F%3E%3Ccircle%20cx%3D%2746%27%20cy%3D%2726%27%20r%3D%276%27%20fill%3D%27%23E2C47E%27%2F%3E%3Ccircle%20cx%3D%2752%27%20cy%3D%2758%27%20r%3D%276%27%20fill%3D%27%23e05548%27%2F%3E%3C%2Fsvg%3E",
       "createdAt": "2026-09-17T07:30:00.000Z",
       "moduleVersion": 1
+    },
+    {
+      "type": "molecule",
+      "params": {
+        "kind": "C₇H₈"
+      },
+      "id": "m1788762000003",
+      "name": "M11 甲苯分子 C₇H₈（PubChem 构象）",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": 4
+      },
+      "thumb": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2796%27%20height%3D%2772%27%3E%3Crect%20width%3D%2796%27%20height%3D%2772%27%20fill%3D%27%23F4F5F7%27%2F%3E%3Cg%20stroke%3D%27%23555%27%20stroke-width%3D%272%27%3E%3Cpath%20d%3D%27M40%2022%20L58%2022%20L67%2037%20L58%2052%20L40%2052%20L31%2037%20Z%27%20fill%3D%27none%27%2F%3E%3Cline%20x1%3D%2749%27%20y1%3D%2752%27%20x2%3D%2749%27%20y2%3D%2764%27%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2740%27%20cy%3D%2722%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3Ccircle%20cx%3D%2758%27%20cy%3D%2722%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3Ccircle%20cx%3D%2767%27%20cy%3D%2737%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3Ccircle%20cx%3D%2758%27%20cy%3D%2752%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3Ccircle%20cx%3D%2740%27%20cy%3D%2752%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3Ccircle%20cx%3D%2731%27%20cy%3D%2737%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3Ccircle%20cx%3D%2749%27%20cy%3D%2764%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3C%2Fsvg%3E",
+      "createdAt": "2026-09-17T08:30:00.000Z",
+      "moduleVersion": 1
     }
   ],
   "note": "种子模块库全量备份：M2~M8 共 9 条（浏览器实测入库后导出；模块面板「导入」即可整套恢复/分发）"

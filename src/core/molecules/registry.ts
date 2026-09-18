@@ -34,6 +34,9 @@ export function normalizeSubscript(s: string): string {
 const QUERY_ALIASES: Record<string, MoleculeKind> = {
   H2O: 'H₂O', h2o: 'H₂O', 水: 'H₂O', 水分子: 'H₂O', water: 'H₂O',
   O2: 'O₂', 氧气: 'O₂', N2: 'N₂', 氮气: 'N₂', CO2: 'CO₂', 二氧化碳: 'CO₂',
+  // 甲苯（2026-09-17）：tol 为溶剂瓶常用缩写（纯字母 → 小写化后精确匹配，无误吞路径）
+  甲苯: 'C₇H₈', 甲基苯: 'C₇H₈', toluene: 'C₇H₈', methylbenzene: 'C₇H₈', tol: 'C₇H₈',
+  C7H8: 'C₇H₈', // 化学式直查（含数字串不做小写折叠；c7h8 小写形态走化学式升级分支）
 };
 
 /** 查询归一：下标归一；纯字母词归小写；含数字混合大小写保持原样（Co2 ≠ CO₂） */
@@ -57,6 +60,7 @@ export function resolveMoleculeQuery(s: string): MoleculeKind | null {
  */
 const FORMULA_PRESETS: Record<string, MoleculeKind> = {
   H2O: 'H₂O', h2o: 'H₂O', CO2: 'CO₂', co2: 'CO₂', O2: 'O₂', o2: 'O₂', N2: 'N₂', n2: 'N₂',
+  C7H8: 'C₇H₈', c7h8: 'C₇H₈', // 甲苯（含数字混合串不做小写折叠，normalizeSubscript('C₇H₈') → 'C7H8'）
 };
 
 export function resolveCanonicalFormula(f: string): MoleculeKind | null {
