@@ -13,7 +13,7 @@ import { moduleSchema } from '../core/schema';
 import type { ModuleEntry } from '../core/types';
 import type { SceneShape } from '../core/shapes/schema';
 import { createSceneStore } from './sceneStore';
-import { applyTemplate, saveTemplate, type TemplateEntry } from './templateLibrary';
+import { saveTemplate, type TemplateEntry } from './templateLibrary';
 import {
   clearModuleLibrary,
   ensureSeededTemplates,
@@ -23,7 +23,7 @@ import {
   isPlaceholderThumb,
   listModules,
   migrateTemplatesToModules,
-  moduleToTemplate,
+  moduleToSceneDocument,
   placeholderTemplateThumb,
   saveModule,
   shapeSceneThumb,
@@ -94,8 +94,8 @@ describe('统一模板：保存完整画面（Test 3）', () => {
   });
 });
 
-describe('统一模板：清空后逐位恢复（Test 4/5/6）', () => {
-  it('组件/图元/相机/2D 视图/形态全部一致（复用 applyTemplate，禁 frameAll）', async () => {
+describe('统一模板：作为独立场景打开（Test 4/5/6，loadScene 替换链路）', () => {
+  it('组件/图元/相机/2D 视图/形态全部一致（复用 loadScene，禁 frameAll）', async () => {
     const src = buildRichScene();
     const s0 = src.getState();
     const entry = templateEntryFromScene(
@@ -112,13 +112,12 @@ describe('统一模板：清空后逐位恢复（Test 4/5/6）', () => {
     );
     if (entry.type !== 'template') throw new Error('unreachable');
 
-    // 清空后载入（ModulePanel instantiate 的 template 分支路径）
+    // 打开（ModulePanel openTemplate 的核心路径：normalize → loadScene 一次性替换）
     const dst = createSceneStore();
     const { rendererRef } = await import('./rendererRef');
     const { shapeViewStore } = await import('../ui/shapes/view');
     const posArgs: number[][] = [];
     const tgtArgs: number[][] = [];
-    const camCalls: string[] = [];
     const camPos = { set: (...a: number[]) => { posArgs.push(a); } };
     const tgt = { set: (...a: number[]) => { tgtArgs.push(a); } };
     const prev = rendererRef.current;
@@ -131,13 +130,14 @@ describe('统一模板：清空后逐位恢复（Test 4/5/6）', () => {
       },
     });
     rendererRef.current = {
-      camera: { position: camPos, lookAt: () => camCalls.push('lookAt'), updateProjectionMatrix: () => {} },
+      camera: { position: camPos, lookAt: () => {}, updateProjectionMatrix: () => {} },
       orbit: { target: tgt, update: () => {} },
     } as never;
     try {
-      applyTemplate(dst, moduleToTemplate(entry));
+      const restored = dst.getState().loadScene(moduleToSceneDocument(entry));
+      expect(restored).toBe(true); // 有视角快照 → 不需要 frameAll fallback
       const st = dst.getState();
-      // Test 4：组件全部一致（类型/参数/变换）
+      // Test 4：组件全部一致（类型/参数/变换；id 原样 → 锚定天然成立）
       expect(st.components).toHaveLength(2);
       expect(st.components.map((c) => c.type)).toEqual(s0.components.map((c) => c.type));
       for (const [i, c] of st.components.entries()) {
@@ -161,6 +161,147 @@ describe('统一模板：清空后逐位恢复（Test 4/5/6）', () => {
       rendererRef.current = prev;
       (shapeViewStore as unknown as { setState: (p: unknown) => void }).setState({ setView: origSetView });
     }
+  });
+});
+
+describe('统一打开 = REPLACE 不叠加（2026-09-17 模板独立场景）', () => {
+  it('A(2组件+2图元) → B(1组件+0图元)：全量替换而非追加', () => {
+    const a = templateEntryFromScene(
+      { components: buildRichScene().getState().components, shapes: buildRichScene().getState().shapes, mode: 'mixed' },
+      THUMB,
+      'A',
+    );
+    const bSrc = createSceneStore();
+    bSrc.getState().addComponent('molecule', { name: 'CO₂', params: { kind: 'CO₂' } });
+    const b = templateEntryFromScene({ components: bSrc.getState().components, shapes: [], annotations: [], mode: 'mixed' }, THUMB, 'B');
+
+    const store = createSceneStore();
+    store.getState().loadScene(moduleToSceneDocument(a));
+    expect(store.getState().components).toHaveLength(2);
+    expect(store.getState().shapes).toHaveLength(2);
+    store.getState().loadScene(moduleToSceneDocument(b));
+    expect(store.getState().components).toHaveLength(1); // 不是 3
+    expect(store.getState().shapes).toHaveLength(0); // 不是 2
+    expect(store.getState().components[0]!.type).toBe('molecule');
+  });
+
+  it('连续打开：对象数不累计（9 → 6 → 2）', () => {
+    const mk = (n: number, tag: string): ModuleEntry => {
+      const s = createSceneStore();
+      for (let i = 0; i < n; i++) s.getState().addComponent('nanoparticle');
+      return templateEntryFromScene({ components: s.getState().components, shapes: [], mode: 'mixed' }, THUMB, tag);
+    };
+    const store = createSceneStore();
+    store.getState().loadScene(moduleToSceneDocument(mk(9, 'T9')));
+    expect(store.getState().components).toHaveLength(9);
+    store.getState().loadScene(moduleToSceneDocument(mk(6, 'T6')));
+    expect(store.getState().components).toHaveLength(6); // 不是 15
+    store.getState().loadScene(moduleToSceneDocument(mk(2, 'T2')));
+    expect(store.getState().components).toHaveLength(2);
+  });
+
+  it('Annotations 全量替换：A 有标注 → B 无 → 空', () => {
+    const aSrc = createSceneStore();
+    aSrc.getState().addComponent('nanoparticle');
+    const a = templateEntryFromScene(
+      { components: aSrc.getState().components, shapes: [], annotations: [{ type: 'scalebar', worldLen: 10 } as never], mode: 'mixed' },
+      THUMB,
+      'A',
+    );
+    const bSrc = createSceneStore();
+    bSrc.getState().addComponent('molecule', { params: { kind: 'H₂O' } });
+    const b = templateEntryFromScene({ components: bSrc.getState().components, shapes: [], annotations: [], mode: 'mixed' }, THUMB, 'B');
+    const store = createSceneStore();
+    store.getState().loadScene(moduleToSceneDocument(a));
+    store.getState().loadScene(moduleToSceneDocument(b));
+    expect(store.getState().annotations).toHaveLength(0);
+  });
+
+  it('旧单组件模块：当前 2 组件 → 打开后只剩 1（独立场景）', () => {
+    const m2 = SEED_MODULES.modules.find((m) => m.name.startsWith('M2'))!;
+    if (m2.type === 'kaolinite_sheet') {
+      const store = buildRichScene();
+      store.getState().loadScene(moduleToSceneDocument(m2));
+      expect(store.getState().components).toHaveLength(1);
+      expect(store.getState().shapes).toHaveLength(0); // 字段缺失 = 模板没有图元（非保留旧图元）
+    }
+  });
+
+  it('旧组合模块：当前 2 组件 → 打开后 = 组合自身组件数', () => {
+    const m6 = SEED_MODULES.modules.find((m) => m.name.startsWith('M6'))!;
+    if (m6.type === 'combined') {
+      const store = buildRichScene();
+      store.getState().loadScene(moduleToSceneDocument(m6));
+      expect(store.getState().components).toHaveLength(m6.components.length); // 不是 2+N
+    }
+  });
+
+  it('Selection / 测量拾取清理：旧场景的会话态不残留', () => {
+    const store = buildRichScene();
+    const first = store.getState().components[0]!;
+    store.getState().select(first.id);
+    store.setState({ measurements: [{ id: 'mm1' } as never], measurePick: [{ compId: first.id, index: 0 } as never] });
+    const bSrc = createSceneStore();
+    bSrc.getState().addComponent('molecule');
+    const b = templateEntryFromScene({ components: bSrc.getState().components, shapes: [], mode: 'mixed' }, THUMB, 'B');
+    store.getState().loadScene(moduleToSceneDocument(b));
+    expect(store.getState().selectionId).toBeNull();
+    expect(store.getState().shapeSelectionIds).toHaveLength(0);
+    expect(store.getState().measurements).toHaveLength(0);
+    expect(store.getState().measurePick).toHaveLength(0);
+  });
+
+  it('3D → 纯 2D 模板：组件清空、图元就位、形态切换；再回 3D：图元不残留', () => {
+    const t3d = templateEntryFromScene({ components: buildRichScene().getState().components, shapes: [], mode: 'mixed' }, THUMB, '3D');
+    const d2 = createSceneStore();
+    d2.getState().addShape({ type: 'ellipse', x: 0, y: 0, w: 40, h: 30 } as never); // addShape 补默认 → shapeSchema 合法
+    const t2d = templateEntryFromScene({ components: [], shapes: d2.getState().shapes, mode: 'diagram' }, THUMB, '2D');
+    const store = createSceneStore();
+    store.getState().loadScene(moduleToSceneDocument(t3d));
+    store.getState().loadScene(moduleToSceneDocument(t2d));
+    expect(store.getState().components).toHaveLength(0); // 3D 内容不残留
+    expect(store.getState().shapes).toHaveLength(1);
+    expect(store.getState().shapes[0]!.type).toBe('ellipse');
+    expect(store.getState().mode).toBe('diagram');
+    const t3dAgain = templateEntryFromScene({ components: buildRichScene().getState().components, shapes: [], mode: 'mixed' }, THUMB, '3D-2');
+    store.getState().loadScene(moduleToSceneDocument(t3dAgain));
+    expect(store.getState().shapes).toHaveLength(0); // 2D 图元不残留
+    expect(store.getState().components).toHaveLength(2);
+    expect(store.getState().mode).toBe('mixed');
+  });
+
+  it('非法模板：校验失败在替换前抛错，当前场景原样保留（原子性）', () => {
+    const store = buildRichScene();
+    expect(store.getState().components).toHaveLength(2);
+    const bad = {
+      type: 'template',
+      id: 'bad',
+      name: 'bad',
+      components: [{ id: 'x', type: 'kaolinite_sheet', params: { Lx: 99999 }, transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: 1 } }],
+      thumb: THUMB,
+    } as unknown as ModuleEntry;
+    expect(() => store.getState().loadScene(moduleToSceneDocument(bad))).toThrow();
+    expect(store.getState().components).toHaveLength(2); // 没有被清空
+    expect(store.getState().shapes).toHaveLength(2);
+  });
+
+  it('打开模板 = 一条完整事务：无碎片化，Ctrl+Z 整体回退到上一个模板', async () => {
+    const { attachHistory } = await import('./history');
+    const store = createSceneStore();
+    const history = attachHistory(store, { mergeWindowMs: 0 });
+    const one = createSceneStore();
+    one.getState().addComponent('nanoparticle');
+    const a = templateEntryFromScene({ components: one.getState().components, shapes: [], mode: 'mixed' }, THUMB, 'A');
+    const b = templateEntryFromScene({ components: buildRichScene().getState().components, shapes: buildRichScene().getState().shapes, mode: 'mixed' }, THUMB, 'B');
+    store.getState().loadScene(moduleToSceneDocument(a));
+    store.getState().loadScene(moduleToSceneDocument(b));
+    expect(store.getState().components).toHaveLength(2);
+    expect(history.depths().undo).toBe(2); // 空场景→A→B = 两条完整事务（非逐组件碎片）
+    history.undo();
+    expect(store.getState().components).toHaveLength(1); // 整体回退到 A（不是只删 B 最后一个组件）
+    history.redo();
+    expect(store.getState().components).toHaveLength(2);
+    expect(store.getState().shapes).toHaveLength(2);
   });
 });
 
@@ -208,10 +349,13 @@ describe('旧数据兼容（Test 7/8/9/10/11）', () => {
     expect(moved).toBeTruthy();
     expect(moved!.type).toBe('template');
     expect(moved!.thumb).toMatch(/^data:image\//); // 占位缩略图
-    // 迁移条目可加载（applyTemplate 管线）
+    if (!moved || moved.type !== 'template') throw new Error('迁移条目缺失或类型异常');
+    // 迁移条目作为独立场景打开（loadScene 替换管线）
     const store = createSceneStore();
-    applyTemplate(store, moduleToTemplate(moved as Extract<ModuleEntry, { type: 'template' }>));
+    store.getState().addComponent('nanoparticle'); // 预置旧内容，验证被替换
+    store.getState().loadScene(moduleToSceneDocument(moved));
     expect(store.getState().shapes).toHaveLength(SEED_TEMPLATES[0]!.shapes.length);
+    expect(store.getState().components).toHaveLength(0); // 预置组件被替换掉（模板无组件）
   });
 
   it('Test 10/11：favorite 与 thumb 保持（保存 → 读取一致）', async () => {

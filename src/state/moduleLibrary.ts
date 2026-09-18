@@ -10,7 +10,7 @@
  *  - 变更通知：window 'kaolin-modules-changed' 事件，UI 面板监听刷新。
  */
 import Dexie, { type Table } from 'dexie';
-import { moduleSchema } from '../core/schema';
+import { moduleSchema, SCENE_FORMAT } from '../core/schema';
 import type { ModuleEntry } from '../core/types';
 import { mineralOf } from '../core/minerals';
 import type { SceneShape } from '../core/shapes/schema';
@@ -162,20 +162,46 @@ export function templateEntryFromScene(snap: TemplateSnapshotInput, thumb: strin
   }) as ModuleEntry;
 }
 
-/** 统一模板条目 → templateLibrary 载入视图（复用 applyTemplate：追加合并 + 快照恢复 + 禁 frameAll） */
-export function moduleToTemplate(m: Extract<ModuleEntry, { type: 'template' }>): TemplateEntry {
+/**
+ * 统一打开归一化（2026-09-17 模板=独立场景）：四类条目 → SceneDocument 形状，
+ * 交给 sceneStore.loadScene 一次性替换当前场景（OPEN/REPLACE，非追加）。
+ * 归一化输出"完整替换语义"：模板没有的 scene-owned 内容显式为空（shapes=[]
+ * 而非 undefined），杜绝旧场景残留。saved 由 deserializeScene 前的 schema 要求提供。
+ */
+export function moduleToSceneDocument(m: ModuleEntry): {
+  format: typeof SCENE_FORMAT;
+  saved: string;
+  components: unknown[];
+  shapes?: unknown[];
+  annotations?: unknown[];
+  mode?: 'mixed' | 'diagram';
+  camera?: { position: [number, number, number]; target: [number, number, number] };
+  view?: { zoom: number; panX: number; panY: number };
+} {
+  const base = { format: SCENE_FORMAT, saved: new Date().toISOString() };
+  if (m.type === 'template') {
+    // 新 Full Template / 旧模板迁移条目：完整快照原样（不重排、不重取景）
+    return {
+      ...base,
+      components: m.components,
+      shapes: (m.shapes ?? []).length ? (m.shapes as unknown[]) : [],
+      ...(m.annotations?.length ? { annotations: m.annotations as unknown[] } : {}),
+      ...(m.mode ? { mode: m.mode } : {}),
+      ...(m.camera ? { camera: m.camera } : {}),
+      ...(m.view ? { view: m.view } : {}),
+    };
+  }
+  if (m.type === 'combined') {
+    // 旧组合模块：components 完整替换；无图元/视角（loadScene 回空 + frameAll fallback）
+    return { ...base, components: m.components, shapes: [] };
+  }
+  // 旧单组件模块 → 单组件独立场景
   return {
-    id: m.id,
-    name: m.name,
-    components: m.components as TemplateEntry['components'],
-    shapes: (m.shapes ?? []) as SceneShapeLike[],
-    annotations: m.annotations as TemplateEntry['annotations'],
-    camera: m.camera,
-    mode: m.mode,
-    view: m.view,
+    ...base,
+    components: [{ id: m.id, name: m.name, type: m.type, params: m.params, transform: m.transform, visible: true }],
+    shapes: [],
   };
 }
-type SceneShapeLike = TemplateEntry['shapes'][number];
 
 /**
  * 占位缩略图（仅 fallback：渲染服务不可用 / 含 3D 组件的旧模板无法离屏渲染 /

@@ -23,7 +23,7 @@
 ```bash
 npm install
 npm run dev        # 浏览器打开 http://localhost:5173/
-npm run test       # vitest 440 条（几何 / 矿物 / 分子 / 测量 / 状态 / 导出 / SMILES / 统一模板库）
+npm run test       # vitest 449 条（几何 / 矿物 / 分子 / 测量 / 状态 / 导出 / SMILES / 统一模板库）
 npx tauri build    # 桌面安装包（.app + .dmg，首次约 5 分钟）
 npm run build      # tsc + vite 产物
 node demo/core/test.js   # 几何内核历史基线回归（ALL OK）
@@ -55,7 +55,7 @@ node demo/core/test.js   # 几何内核历史基线回归（ALL OK）
 - **键长/键角测量**：Alt+点击原子——两点键长（Å）、第三点键角（°），随 PNG/SVG 导出
 - **无限连续旋转**（多圈无跳变）+ gizmo 吸附（1/2/5Å、5°/15°/45°）
 
-**统一模板库**（2026-09-17）：moduleLibrary 底座吸收模板快照能力——单组件模块/组合模块/完整画面模板（组件+图元+相机+2D 视图+**真实整景缩略图**——保存视角构图，图元叠加可见）同处「我的模板」；IndexedDB 持久化（200 条 <100ms）、关键词/类型检索、收藏置顶、`.kaolin-modules.json` 导入导出、旧模板库自动无损迁移
+**统一模板库**（2026-09-17）：moduleLibrary 底座吸收模板快照能力——单组件模块/组合模块/完整画面模板（组件+图元+相机+2D 视图+**真实整景缩略图**）同处「我的模板」，**点击 = 作为独立场景打开**（一次性全量替换，不叠加）；IndexedDB 持久化（200 条 <100ms）、关键词/类型检索、收藏置顶、`.kaolin-modules.json` 导入导出、旧模板库自动无损迁移
 
 **导出**（期刊 + PPT 双场景）
 - PNG：300/600 dpi、透明底（`px = cm×dpi/2.54`）

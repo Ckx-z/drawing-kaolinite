@@ -1,9 +1,9 @@
 /**
  * 模板库面板 —— T-2.3 / T-3.2 / 2026-09-17 统一模板库
- * 「我的模板」：搜索（名称/标签）+ 类型筛选 + 收藏排序 + 卡片网格（缩略图/载入/删除）
+ * 「我的模板」：搜索（名称/标签）+ 类型筛选 + 收藏排序 + 卡片网格（缩略图/打开/删除）
  * + 导入/导出批量备份。数据源 moduleLibrary（IndexedDB，统一底座）；
- * 三类条目：旧单组件模块 / 旧组合模块（插入当前场景，历史行为）/ 统一模板
- * （type:'template' 完整画面快照——复用 applyTemplate 追加合并 + 视角原样恢复）。
+ * 点击卡片 = 作为独立场景打开（moduleToSceneDocument → sceneStore.loadScene
+ * 一次性替换：组件/图元/标注/相机/形态/2D 视图，不叠加）。
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import seedTemplates from '../../data/seed-templates.json';
@@ -15,14 +15,14 @@ import {
   generateMissingThumbnails,
   importModules,
   listModules,
-  moduleToTemplate,
+  moduleToSceneDocument,
   placeholderTemplateThumb,
   toggleFavorite,
   type ModuleFilterType,
 } from '../state/moduleLibrary';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
-import { applyTemplate, type TemplateEntry } from '../state/templateLibrary';
+import type { TemplateEntry } from '../state/templateLibrary';
 import type { ModuleEntry } from '../core/types';
 
 const TYPE_LABELS: Array<[ModuleFilterType, string]> = [
@@ -61,34 +61,21 @@ export default function ModulePanel() {
   // T-3.2：关键词 + 类型筛选 + 收藏优先排序（内存过滤）
   const shown = useMemo(() => filterModules(modules, { query, type }), [modules, query, type]);
 
-  const instantiate = (m: ModuleEntry): void => {
-    const s = sceneStore.getState();
-    if (m.type === 'template') {
-      // 统一模板（完整画面快照）：追加合并 + 相机/形态/2D 视图原样恢复，
-      // 单命令可撤销——禁止 frameAll/重排类取景（2026-09-13 五原则）
-      applyTemplate(sceneStore, moduleToTemplate(m));
-      return;
+  /**
+   * 统一打开模板（2026-09-17：模板 = 独立场景，OPEN/REPLACE）：
+   * normalize（moduleToSceneDocument，完整替换语义）→ sceneStore.loadScene
+   * 一次性替换（与场景文件打开共用链路：原子 set、清 selection/测量拾取、
+   * 恢复相机/形态/2D 视图、锚定按原 id 天然成立）→ 无视角快照的 legacy
+   * 条目才 frameAll fallback。校验失败在 set 之前抛错 → 当前场景原样保留。
+   * 不调用「清空场景」UI handler，无确认弹窗（点击即表达打开意图）。
+   */
+  const openTemplate = (m: ModuleEntry): void => {
+    try {
+      const restored = sceneStore.getState().loadScene(moduleToSceneDocument(m));
+      if (!restored) rendererRef.current?.frameAll();
+    } catch (err) {
+      alert(`模板数据无效，当前场景未改动：${(err as Error).message}`);
     }
-    if (m.type === 'combined') {
-      // T-3.1 组合模块：逐组件 addComponent（变换原样还原 → 相对位置一致），
-      // 实例化后各组件仍独立可选中/调参/删除
-      for (const c of m.components) {
-        s.addComponent(c.type, {
-          name: c.name,
-          params: c.params,
-          transform: c.transform,
-          visible: c.visible,
-        });
-      }
-      rendererRef.current?.frameAll();
-      return;
-    }
-    const id = s.addComponent(m.type, {
-      name: `${m.name} 副本`,
-      params: m.params,
-      transform: m.transform,
-    });
-    rendererRef.current?.frameComponent(id);
   };
 
   const onExport = async (): Promise<void> => {
@@ -151,7 +138,7 @@ export default function ModulePanel() {
       {shown.length ? (
         <div className="mod-grid">
           {shown.map((m) => (
-            <div key={m.id} className="mod-card" onClick={() => instantiate(m)}>
+            <div key={m.id} className="mod-card" onClick={() => openTemplate(m)} title="作为独立场景打开（完整替换当前画布，含图元与视角）">
               {/* thumb 存在即显示真实缩略图；仅解析失败（损坏数据）才换占位图标 */}
               <img
                 src={m.thumb}

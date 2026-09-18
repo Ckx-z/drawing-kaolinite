@@ -151,3 +151,20 @@
 5. 卡片渲染规则：`entry.thumb` 存在即显示（<img src>）；不按 type 分配图标。
 
 **验证**：unifiedTemplate.test +3（矢量缩略图内容/种子自带真实图/回填幂等与 3D 跳过）、ui.dom.test +1（TopBar 保存→thumb=渲染管线输出透传，非占位）；vitest 436 → 440 全绿。
+
+
+## D-2026-09-17e：模板点击 = 独立场景打开（OPEN/REPLACE），修复叠加 Bug
+
+**背景**：用户报告"打开模板 A 后再打开模板 B，B 叠加到 A 上"。根因：templateLibrary.applyTemplate 是追加式合并（逐 addComponent/addShape）；ModulePanel 旧三分支（template→applyTemplate、combined→addComponent 循环、单组件→addComponent）全部是 INSERT 语义。
+
+**决策**：
+1. **复用场景文件替换链路**：`sceneStore.loadScene`（deserializeScene schema 校验 → 一次性 set 替换 components/palette/annotations/shapes + 清 selection/工具 → 恢复相机/形态/2D 视图，返回是否已恢复视角）。与"打开场景文件"同一底层 API——文件打开与模板打开共用一套替换机制，零复制。
+2. **归一化层**：`moduleToSceneDocument(entry)` 四类条目 → SceneDocument 形状：template 全量快照原样；combined → components + shapes=[]；单组件 → [该组件] + shapes=[]。"字段缺失 = 模板没有该内容"（完整替换语义），杜绝 undefined→保留旧状态的叠加路径。components 保留原 id → 箭头/连线锚定无需重映射（loadScene 原样入库）。
+3. **不调用 UI「清空场景」handler**、无确认弹窗（点击即打开意图）；非法模板在 deserializeScene 抛错 → set 未执行 → 当前场景原子保留。
+4. **会话态清理**：loadScene 补清 measurements/measurePick（旧原子引用指向已删组件）——场景文件打开同步受益。
+5. **视角**：有 camera snapshot 原样恢复（禁 frameAll）；legacy 无快照返回 false → frameAll fallback。
+6. **History**：attachHistory 全量快照订阅下，一次 loadScene = 一条完整事务（A→B→Ctrl+Z 整体回 A）；无逐组件碎片。
+7. **Worker stale**：rendererBinding 按下一状态组件 id 集合 diff（`!next.has(id)` 即移除），A 的 stale 几何结果无 record 可挂——现有 id 校验足够，不加 generation token。
+8. applyTemplate 函数保留（templateLibrary 导出 + 其测试），UI 层不再调用。
+
+**验证**：unifiedTemplate.test 重写为 loadScene 路径并新增"不叠加"系列 9 条（A→B 组件/图元/标注全量替换、连续打开不累计、legacy 单/组独立打开、selection+测量清理、3D↔2D 互切不残留、非法原子性、一条完整事务可整体回退）；vitest 440 → 449 全绿。

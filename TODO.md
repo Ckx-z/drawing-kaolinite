@@ -167,6 +167,7 @@
 - 加载分流：template → 复用 applyTemplate（追加合并+快照恢复+单命令撤销+禁 frameAll）；旧单组件/combined 历史行为不变
 - 旧 templateLibrary 惰性无损迁移（稳定 id=tpl-* 幂等双保险 + 占位 SVG 缩略图；旧表保留不删）；种子模板注入统一库
 - 验收：`src/state/unifiedTemplate.test.ts` 9 条（快照保存/清空逐位恢复/旧 fixture×3/迁移/收藏缩略图保持/roundtrip/幂等）+ ui.dom 两 Tab 断言；vitest 427 → 436 全绿；关联 DECISIONS D-2026-09-17c
+- 续（2026-09-17e 独立场景打开）：点击模板卡片 = moduleToSceneDocument 归一化 → sceneStore.loadScene 一次性替换（复用场景文件链路；四类条目统一 REPLACE 语义；清 selection/测量；一条完整撤销事务；无快照 legacy 才 frameAll）；修复 A→B 叠加 Bug；vitest 440 → 449
 - 续（2026-09-17b 真实缩略图）：新保存 = RendererService.snapshotTemplate（复用 snapshotWithOverlay：3D 当前帧 + 图元 + 标注叠加，150×110 jpeg 0.8 与组合模块卡片同规格，用保存时相机不取景）；纯 2D 模板（种子版式/纯图元）= shapeSceneThumb（包围盒拟合 + shapesToSVG 矢量，缺省 anchors 补 free）；占位图仅剩三类 fallback（含 3D 的旧模板/渲染服务不可用/图片解析失败 onError）+ generateMissingThumbnails 幂等回填；vitest 436 → 440
 
 ### T-2.12 ✅ [P2] 内置分子：甲苯 C₇H₈ preset（真实构象数据驱动）—— 完成 2026-09-17

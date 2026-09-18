@@ -487,6 +487,10 @@ export function createSceneStore(): SceneStore {
         shapes: (doc.shapes ?? []).map((s) => shapeSchema.parse(s)), // T-11.1：补默认字段
         shapeSelectionIds: [],
         tool: 'select',
+        // 测量拾取是会话态（不进场景文档）：场景整体替换时旧原子引用指向已删组件，一并清空
+        //（2026-09-17 场景文件与模板打开共用此链路）
+        measurements: [],
+        measurePick: [],
         ...(doc.mode ? { mode: doc.mode } : {}), // 视角快照：形态随场景恢复
       });
       // 视角快照恢复（2026-09-13，模板五原则同源）：有 camera 字段原样恢复，
