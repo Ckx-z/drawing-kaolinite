@@ -14,10 +14,13 @@ import { moduleSchema } from '../core/schema';
 import type { ModuleEntry } from '../core/types';
 import { mineralOf } from '../core/minerals';
 import type { SceneEntry } from './sceneStore';
+import type { TemplateEntry } from './templateLibrary';
 
 export const MODULES_FORMAT = 'kaolin-modules/v1' as const;
 const MIGRATED_FLAG = 'kaolin_modules_migrated_v1';
 const LEGACY_KEY = 'kaolin_modules_v1';
+/** 旧 templateLibrary（kaolin-templates 库）→ 统一模板条目的一次性迁移标记 */
+const TEMPLATE_MIGRATED_FLAG = 'kaolin_templates_migrated_v1';
 
 /** 派发变更事件（ModulePanel 监听刷新） */
 export function notifyModulesChanged(): void {
@@ -42,10 +45,11 @@ function getDB(): KaolinDB {
 
 let cache: ModuleEntry[] | null = null;
 
-/** 面板打开（内存缓存，首次走迁移 + DB 读取） */
+/** 面板打开（内存缓存，首次走两段迁移 + DB 读取） */
 export async function listModules(): Promise<ModuleEntry[]> {
   if (cache) return cache;
   await migrateFromLocalStorage();
+  await migrateTemplatesToModules();
   cache = await getDB().modules.toArray();
   return cache;
 }
@@ -113,6 +117,149 @@ export function moduleEntryFromScene(
     createdAt: new Date().toISOString(),
     moduleVersion: 1,
   }) as ModuleEntry;
+}
+
+/* ---------- 统一模板（2026-09-17：moduleLibrary 吸收 templateLibrary 快照能力） ---------- */
+
+/** 完整可复现画面快照（保存入口采集；相机/2D 视图缺省 = 渲染服务不可用的兜底） */
+export interface TemplateSnapshotInput {
+  components: SceneEntry[];
+  shapes: unknown[];
+  annotations?: unknown[];
+  mode?: 'mixed' | 'diagram';
+  camera?: { position: [number, number, number]; target: [number, number, number] };
+  view?: { zoom: number; panX: number; panY: number };
+}
+
+/**
+ * 当前完整画面 → 统一模板条目（type:'template'）。一次性构造（先采集齐
+ * 相机/图元/缩略图再落库，杜绝"先写 entry 再异步补快照"的半成品模板）。
+ */
+export function templateEntryFromScene(snap: TemplateSnapshotInput, thumb: string, name: string): ModuleEntry {
+  return moduleSchema.parse({
+    id: `tpl-${Date.now()}`,
+    name,
+    type: 'template',
+    components: snap.components.map((c) => ({
+      id: c.id,
+      name: c.name,
+      type: c.type,
+      params: c.params,
+      transform: c.transform,
+      visible: c.visible,
+      locked: c.locked ?? false,
+    })),
+    shapes: structuredClone(snap.shapes),
+    annotations: snap.annotations?.length ? structuredClone(snap.annotations) : undefined,
+    mode: snap.mode,
+    camera: snap.camera,
+    view: snap.view,
+    thumb,
+    createdAt: new Date().toISOString(),
+    moduleVersion: 1,
+  }) as ModuleEntry;
+}
+
+/** 统一模板条目 → templateLibrary 载入视图（复用 applyTemplate：追加合并 + 快照恢复 + 禁 frameAll） */
+export function moduleToTemplate(m: Extract<ModuleEntry, { type: 'template' }>): TemplateEntry {
+  return {
+    id: m.id,
+    name: m.name,
+    components: m.components as TemplateEntry['components'],
+    shapes: (m.shapes ?? []) as SceneShapeLike[],
+    annotations: m.annotations as TemplateEntry['annotations'],
+    camera: m.camera,
+    mode: m.mode,
+    view: m.view,
+  };
+}
+type SceneShapeLike = TemplateEntry['shapes'][number];
+
+/** 占位缩略图（旧 templateLibrary 条目无 thumb / 渲染服务不可用兜底）：SVG dataURL——不建第二套缩略图管线 */
+export function placeholderTemplateThumb(builtin = false): string {
+  const icon = builtin ? '🧩' : '⭐';
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='150' height='110'><rect width='150' height='110' fill='#EEF1F5'/><text x='75' y='66' font-size='40' text-anchor='middle'>${icon}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+/**
+ * 旧 templateLibrary（独立 Dexie 库 kaolin-templates）→ 统一模板条目惰性迁移。
+ * 非破坏：旧表数据保留不删；稳定 id（tpl-* 原样，与 m* 不冲突）+ localStorage
+ * 标记双保险幂等——重复执行不产生重复条目。旧库不可用（极端环境）静默跳过。
+ */
+export async function migrateTemplatesToModules(): Promise<number> {
+  if (typeof localStorage !== 'undefined' && localStorage.getItem(TEMPLATE_MIGRATED_FLAG)) return 0;
+  let migrated = 0;
+  try {
+    const { listTemplates } = await import('./templateLibrary');
+    const legacy = await listTemplates();
+    const valid: ModuleEntry[] = [];
+    for (const t of legacy) {
+      const res = moduleSchema.safeParse({
+        id: t.id,
+        name: t.name,
+        type: 'template',
+        components: (t.components ?? []) as never,
+        shapes: t.shapes as never,
+        annotations: t.annotations,
+        camera: t.camera,
+        mode: t.mode,
+        view: t.view,
+        thumb: placeholderTemplateThumb(t.builtin ?? false),
+        createdAt: t.createdAt,
+        tags: ['模板'],
+        moduleVersion: 1,
+      });
+      if (res.success) valid.push(res.data as ModuleEntry);
+    }
+    if (valid.length) await getDB().modules.bulkPut(valid);
+    migrated = valid.length;
+  } catch {
+    /* 旧库打开失败——保持零迁移（下次启动重试） */
+  }
+  if (typeof localStorage !== 'undefined') localStorage.setItem(TEMPLATE_MIGRATED_FLAG, '1');
+  if (migrated) {
+    cache = null;
+    notifyModulesChanged();
+  }
+  return migrated;
+}
+
+/**
+ * 种子模板注入统一库（modules 表无 tpl-* 条目时；稳定 id 幂等）。
+ * 在 UI 层（ModulePanel）调用——listModules 保持纯净供测试使用。
+ */
+export async function ensureSeededTemplates(seed: TemplateEntry[]): Promise<void> {
+  try {
+    const all = await getDB().modules.toArray();
+    if (all.some((m) => m.id.startsWith('tpl-'))) return;
+    const valid: ModuleEntry[] = [];
+    for (const t of seed) {
+      const res = moduleSchema.safeParse({
+        id: t.id,
+        name: t.name,
+        type: 'template',
+        components: (t.components ?? []) as never,
+        shapes: t.shapes as never,
+        annotations: t.annotations,
+        camera: t.camera,
+        mode: t.mode,
+        view: t.view,
+        thumb: placeholderTemplateThumb(t.builtin ?? false),
+        createdAt: t.createdAt,
+        tags: ['模板'],
+        moduleVersion: 1,
+      });
+      if (res.success) valid.push(res.data as ModuleEntry);
+    }
+    if (valid.length) {
+      await getDB().modules.bulkPut(valid);
+      cache = null;
+      notifyModulesChanged();
+    }
+  } catch {
+    /* IndexedDB 不可用（极端环境）——模板功能静默降级 */
+  }
 }
 
 export async function deleteModule(id: string): Promise<void> {
@@ -201,7 +348,7 @@ export async function clearModuleLibrary(): Promise<void> {
 
 /* ---------- 检索 / 分类 / 收藏排序（T-3.2） ---------- */
 
-export type ModuleFilterType = 'all' | 'kaolinite_sheet' | 'halloysite_tube' | 'nanoparticle' | 'molecule' | 'rubber_substrate' | 'packed_layers' | 'combined';
+export type ModuleFilterType = 'all' | 'kaolinite_sheet' | 'halloysite_tube' | 'nanoparticle' | 'molecule' | 'rubber_substrate' | 'packed_layers' | 'combined' | 'template';
 
 export interface ModuleFilter {
   /** 关键词：命中名称或标签（不区分大小写）；空串 = 不过滤 */

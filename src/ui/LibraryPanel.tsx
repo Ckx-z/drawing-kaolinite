@@ -1,10 +1,10 @@
 /**
- * 素材库面板 —— T-1.6/T-2.3/T-2.8
- * 上：素材库（点击添加组件并取景）+ SMILES 分子导入；下：我的模块（IndexedDB 持久化，点击复用）。
+ * 素材库面板 —— T-1.6/T-2.3/T-2.8 / 2026-09-17 统一模板库
+ * 上：素材库（点击添加组件并取景）+ SMILES 分子导入；「模板」Tab = 我的模板
+ * （ModulePanel：模块/组合/完整画面模板统一卡片，IndexedDB 持久化）。
  */
-import { useRef,  useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useStore } from 'zustand';
-import seedTemplates from '../../data/seed-templates.json';
 import { formulaTo3D, resolveImportPath } from '../core/molecules/formula';
 import { parseSdfOrMol } from '../core/molecules/mol';
 import { findMineral } from '../core/minerals';
@@ -13,62 +13,16 @@ import { smilesTo3D } from '../core/molecules/smiles';
 import type { ComponentType } from '../core/types';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
-import { applyTemplate, ensureSeeded, listTemplates, type TemplateEntry } from '../state/templateLibrary';
 import { SidebarTabs } from './primitives';
 import ModulePanel from './ModulePanel';
 import { filterLib, LIB } from './paramDefs';
 
-/** T-11.8 机理图模板分区：种子 + 自存模板，点击追加载入（可 Ctrl+Z 撤销） */
-function TemplateSection() {
-  const [templates, setTemplates] = useState<TemplateEntry[]>([]);
-  const [msg, setMsg] = useState('');
-  const [q, setQ] = useState(''); // 模板搜索（2026-09-16，tab 内置）
-  /** 存/删模板后 bump → 重新拉列表（新卡片立即出现） */
-  const templateSeq = useStore(sceneStore, (s) => s.templateSeq);
-
-  useEffect(() => {
-    void ensureSeeded(seedTemplates as TemplateEntry[]).then(() =>
-      void listTemplates().then((all) => setTemplates(all.filter((t) => t.shapes.length || t.components?.length))),
-    );
-  }, [templateSeq]);
-
-  const shown = q.trim()
-    ? templates.filter((t) => `${t.name} ${t.desc ?? ''}`.toLowerCase().includes(q.trim().toLowerCase()))
-    : templates;
-  return (
-    <>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索模板…" style={{ width: '100%', marginBottom: 8 }} />
-      {!shown.length && <p className="hint">{templates.length ? '无匹配模板' : '暂无模板——顶栏「保存为… ▼」存一个试试'}</p>}
-      <div>
-        {shown.map((t) => (
-          <div
-            key={t.id}
-            className="lib-card"
-            title="点击载入模板（追加到当前画布，Ctrl+Z 可撤销）；顶栏「存为模板」可把当前场景存成自己的模板"
-            onClick={() => {
-              applyTemplate(sceneStore, t);
-              setMsg(`已载入「${t.name}」（双击文本修改内容）`);
-              setTimeout(() => setMsg(''), 2600);
-            }}
-          >
-            <div className="t">
-              <span className="ic">{t.builtin ? '🧩' : '⭐'}</span>
-              {t.name}
-            </div>
-            {t.desc && <div className="d">{t.desc}</div>}
-          </div>
-        ))}
-      </div>
-      {msg && <p className="hint">{msg}</p>}
-    </>
-  );
-}
-
 export default function LibraryPanel() {
   useStore(sceneStore, () => null); // 订阅以随 store 更新（当前卡片为静态列表）
   const [smiles, setSmiles] = useState('');
-  // 左栏 Tabs + 素材搜索（2026-09-16）：UI 态本地，不进 store
-  const [tab, setTab] = useState<'assets' | 'modules' | 'templates'>('assets');
+  // 左栏 Tabs + 素材搜索（2026-09-16）：UI 态本地，不进 store；
+  // 2026-09-17 统一模板库：模块/模板两 Tab 合并为「模板」（ModulePanel）
+  const [tab, setTab] = useState<'assets' | 'templates'>('assets');
   const [libQuery, setLibQuery] = useState('');
 
   const [smilesMsg, setSmilesMsg] = useState('');
@@ -196,7 +150,6 @@ export default function LibraryPanel() {
       <SidebarTabs
         tabs={[
           { value: 'assets', label: '素材' },
-          { value: 'modules', label: '模块' },
           { value: 'templates', label: '模板' },
         ]}
         value={tab}
@@ -269,8 +222,7 @@ export default function LibraryPanel() {
           <p className="hint">点击卡片添加组件；点击画布选中；Delete 删除、Esc 取消选中；SMILES / 化学式（如 Si、H2O）输入后回车导入。</p>
         </>
       )}
-      {tab === 'modules' && <ModulePanel />}
-      {tab === 'templates' && <TemplateSection />}
+      {tab === 'templates' && <ModulePanel />}
     </aside>
   );
 }

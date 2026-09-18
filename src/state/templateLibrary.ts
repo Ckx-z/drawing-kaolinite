@@ -9,7 +9,7 @@
  */
 import Dexie, { type Table } from 'dexie';
 import { z } from 'zod';
-import { componentSchema } from '../core/schema';
+import { componentSchema, templateSnapshotFields } from '../core/schema';
 import type { SceneShape } from '../core/shapes/schema';
 import type { Annotation } from '../core/types';
 import { runInBatch } from './history';
@@ -19,6 +19,10 @@ import type { SceneState } from './sceneStore';
 
 /* ---------- 数据模型 ---------- */
 
+/**
+ * 快照字段（camera/mode/view/shapes/annotations）自 core/schema.templateSnapshotFields
+ * 复用（2026-09-17 统一模板库：moduleLibrary 的 'template' 条目与本 schema 单一事实源）。
+ */
 export const templateSchema = z.strictObject({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -26,16 +30,16 @@ export const templateSchema = z.strictObject({
   builtin: z.boolean().optional(),
   components: z.array(componentSchema).optional(),
   // 透传（z.object({}) 是 strip 模式会把字段剥空；shapes/annotations 的正确性由源头保证）
-  shapes: z.array(z.unknown()),
-  annotations: z.array(z.unknown()).optional(),
+  shapes: templateSnapshotFields.shapes,
+  annotations: templateSnapshotFields.annotations.optional(),
   createdAt: z.string().optional(),
   // ---- 快照式复现（2026-09-13 用户五原则：位置/视角/比例/层级/群组锁定）----
   /** 保存时相机（position + 轨道目标）；缺省（旧模板）不恢复视角 */
-  camera: z.object({ position: z.tuple([z.number(), z.number(), z.number()]), target: z.tuple([z.number(), z.number(), z.number()]) }).optional(),
+  camera: templateSnapshotFields.camera.optional(),
   /** 画布形态（3D 混合 / 纯示意图） */
-  mode: z.enum(['mixed', 'diagram']).optional(),
+  mode: templateSnapshotFields.mode.optional(),
   /** 纯示意图模式的视图（zoom/pan） */
-  view: z.object({ zoom: z.number(), panX: z.number(), panY: z.number() }).optional(),
+  view: templateSnapshotFields.view.optional(),
 });
 
 /** 模板条目（annotations 手写类型避免 z.infer 交叉冲突） */

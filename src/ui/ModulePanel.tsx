@@ -1,21 +1,26 @@
 /**
- * 模块库面板 —— T-2.3 / T-3.2
- * 「我的模块」：搜索（名称/标签）+ 类型筛选 + 收藏排序 + 卡片网格（缩略图/实例化/删除）
- * + 导入/导出批量备份。
- * 数据源 moduleLibrary（IndexedDB）；实例化 = addComponent（参数全量覆盖，仍可继续修改）。
+ * 模板库面板 —— T-2.3 / T-3.2 / 2026-09-17 统一模板库
+ * 「我的模板」：搜索（名称/标签）+ 类型筛选 + 收藏排序 + 卡片网格（缩略图/载入/删除）
+ * + 导入/导出批量备份。数据源 moduleLibrary（IndexedDB，统一底座）；
+ * 三类条目：旧单组件模块 / 旧组合模块（插入当前场景，历史行为）/ 统一模板
+ * （type:'template' 完整画面快照——复用 applyTemplate 追加合并 + 视角原样恢复）。
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import seedTemplates from '../../data/seed-templates.json';
 import {
   deleteModule,
+  ensureSeededTemplates,
   exportModules,
   filterModules,
   importModules,
   listModules,
+  moduleToTemplate,
   toggleFavorite,
   type ModuleFilterType,
 } from '../state/moduleLibrary';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
+import { applyTemplate, type TemplateEntry } from '../state/templateLibrary';
 import type { ModuleEntry } from '../core/types';
 
 const TYPE_LABELS: Array<[ModuleFilterType, string]> = [
@@ -27,6 +32,7 @@ const TYPE_LABELS: Array<[ModuleFilterType, string]> = [
   ['rubber_substrate', '基底'],
   ['packed_layers', '密排层'],
   ['combined', '组合'],
+  ['template', '模板场景'],
 ];
 
 export default function ModulePanel() {
@@ -37,7 +43,11 @@ export default function ModulePanel() {
 
   useEffect(() => {
     const refresh = (): void => {
-      listModules().then(setModules);
+      // 种子模板注入统一库（稳定 id 幂等）→ 列表刷新
+      void ensureSeededTemplates(seedTemplates as TemplateEntry[])
+        .then(() => listModules())
+        .then(setModules)
+        .catch(() => setModules([])); // 存储不可用时空列表降级
     };
     refresh();
     window.addEventListener('kaolin-modules-changed', refresh);
@@ -49,6 +59,12 @@ export default function ModulePanel() {
 
   const instantiate = (m: ModuleEntry): void => {
     const s = sceneStore.getState();
+    if (m.type === 'template') {
+      // 统一模板（完整画面快照）：追加合并 + 相机/形态/2D 视图原样恢复，
+      // 单命令可撤销——禁止 frameAll/重排类取景（2026-09-13 五原则）
+      applyTemplate(sceneStore, moduleToTemplate(m));
+      return;
+    }
     if (m.type === 'combined') {
       // T-3.1 组合模块：逐组件 addComponent（变换原样还原 → 相对位置一致），
       // 实例化后各组件仍独立可选中/调参/删除
@@ -88,7 +104,7 @@ export default function ModulePanel() {
     reader.onload = async () => {
       try {
         const { imported, skipped } = await importModules(String(reader.result));
-        alert(`模块导入完成：${imported} 个成功${skipped ? `，${skipped} 个无效跳过` : ''}`);
+        alert(`模板导入完成：${imported} 个成功${skipped ? `，${skipped} 个无效跳过` : ''}`);
       } catch (err) {
         alert(`导入失败：${(err as Error).message}`);
       }
@@ -100,7 +116,7 @@ export default function ModulePanel() {
   return (
     <>
       <h3>
-        我的模块
+        我的模板
         <span className="tip">
           <button className="mini" onClick={onExport} title="导出 .kaolin-modules.json 批量备份">
             导出
@@ -147,7 +163,7 @@ export default function ModulePanel() {
               </div>
               <div
                 className="x"
-                title="删除模块"
+                title="删除模板"
                 onClick={(e) => {
                   e.stopPropagation();
                   void deleteModule(m.id);
@@ -159,10 +175,10 @@ export default function ModulePanel() {
           ))}
         </div>
       ) : modules.length ? (
-        <p className="hint">无匹配模块——换个关键词或类型试试。</p>
+        <p className="hint">无匹配模板——换个关键词或类型试试。</p>
       ) : (
         <p className="hint">
-          暂无模块。选中组件后点顶栏「★ 存为模块」、或点「★ 存组合」保存整景，即可反复复用；半年积累 8–10 个常用模块。
+          暂无模板。点顶栏「🧩 保存为模板」把当前画面（组件 + 图元 + 视角）存成可视化卡片，即可反复复用。
         </p>
       )}
     </>

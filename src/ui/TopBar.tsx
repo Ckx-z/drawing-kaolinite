@@ -8,7 +8,7 @@ import { useStore } from 'zustand';
 import { exportCurlAnimation } from '../export/animation';
 import { buildLayerPngs } from '../export/layers';
 import { SHAPE_TOOLS, type ShapeTool } from '../core/shapes/schema';
-import { moduleEntryFromComponent, moduleEntryFromScene, saveModule } from '../state/moduleLibrary';
+import { placeholderTemplateThumb, saveModule, templateEntryFromScene } from '../state/moduleLibrary';
 import { rendererRef } from '../state/rendererRef';
 import { sceneHistory, sceneStore } from '../state/sceneStore';
 import { shapeViewStore } from './shapes/view';
@@ -224,64 +224,36 @@ export default function TopBar() {
     );
   };
 
-  const onSaveModule = async (): Promise<void> => {
-    const s = sceneStore.getState();
-    if (!s.selectionId) {
-      flash('请先在画布中点选一个组件，再保存为模块');
-      return;
-    }
-    const comp = s.components.find((c) => c.id === s.selectionId);
-    const svc = rendererRef.current;
-    if (!comp || !svc) return;
-    const thumb = svc.snapshotComponent(comp.id);
-    await saveModule(moduleEntryFromComponent(comp, thumb));
-    flash(`已存为模块「${comp.name}」，以后一键复用`);
-  };
-
-  /** T-3.1：整景存为组合模块（组件各自变换入库，实例化时相对位置整体复现） */
-  const onSaveCombined = async (): Promise<void> => {
-    const s = sceneStore.getState();
-    const svc = rendererRef.current;
-    if (!svc) return;
-    if (!s.components.length) {
-      flash('场景为空，先添加组件再存组合模块');
-      return;
-    }
-    const thumb = svc.snapshotScene();
-    const name = `组合模块（${s.components.length} 组件）`;
-    await saveModule(moduleEntryFromScene(s.components, thumb, name));
-    flash(`已存组合模块「${name}」，实例化后各组件仍独立可调`);
-  };
-
-  /** T-11.8：当前场景存为机理图模板（组件+图元+标注快照，一键复用） */
+  /**
+   * 保存为模板（2026-09-17 统一模板库）：当前完整可复现画面 → 统一模板条目
+   * （components + shapes + annotations + 相机 + 形态 + 2D 视图 + 整景缩略图），
+   * 一次性构造落库（moduleLibrary 底座），不进 scene undo。
+   */
   const onSaveTemplate = async (): Promise<void> => {
     const s = sceneStore.getState();
     if (!s.shapes.length && !s.components.length) {
       flash('场景为空，先画点内容再存模板');
       return;
     }
-    const name = `我的模板（${s.shapes.length} 图元${s.components.length ? ` + ${s.components.length} 组件` : ''}）`;
-    const { saveTemplate } = await import('../state/templateLibrary');
-    const { shapeViewStore } = await import('./shapes/view');
-    // 快照采集（2026-09-13 用户五原则）：相机/形态/2D 视图随模板保存，
-    // 载入时原样恢复——不重排、不取景
     const svc = rendererRef.current;
-    await saveTemplate({
-      id: `tpl-user-${Date.now()}`,
-      name,
-      desc: '自存模板',
-      components: s.components.map((c) => ({ ...c })) as never,
-      shapes: structuredClone(s.shapes) as never,
-      annotations: structuredClone(s.annotations) as never,
-      createdAt: new Date().toISOString(),
-      mode: s.mode,
-      camera: svc
-        ? { position: svc.camera.position.toArray() as [number, number, number], target: svc.orbit.target.toArray() as [number, number, number] }
-        : undefined,
-      view: { zoom: shapeViewStore.getState().zoom, panX: shapeViewStore.getState().panX, panY: shapeViewStore.getState().panY },
-    });
-    sceneStore.getState().bumpTemplates(); // 模板分区立即出现新卡片
-    flash(`已存为模板「${name}」，左侧模板分区可一键载入`);
+    const name = `我的模板（${s.components.length} 组件${s.shapes.length ? ` + ${s.shapes.length} 图元` : ''}）`;
+    await saveModule(
+      templateEntryFromScene(
+        {
+          components: s.components,
+          shapes: s.shapes,
+          annotations: s.annotations,
+          mode: s.mode,
+          camera: svc
+            ? { position: svc.camera.position.toArray() as [number, number, number], target: svc.orbit.target.toArray() as [number, number, number] }
+            : undefined,
+          view: { zoom: shapeViewStore.getState().zoom, panX: shapeViewStore.getState().panX, panY: shapeViewStore.getState().panY },
+        },
+        svc ? svc.snapshotScene() : placeholderTemplateThumb(),
+        name,
+      ),
+    );
+    flash(`已存为模板「${name}」，左侧「模板」Tab 可一键复用`);
   };
 
   return (
@@ -389,34 +361,17 @@ export default function TopBar() {
         </DropdownMenu>
       </div>
       <div className="tb-spacer" />
-      {/* ── 保存为… ── */}
+      {/* ── 保存为模板（2026-09-17 统一模板库：唯一保存入口，完整画面快照） ── */}
       <div className="tb-group">
-        <DropdownMenu label="保存为…" title="把当前内容存为可复用资产">
-          <MenuItem
-            onClick={() => {
-              void onSaveModule();
-            }}
-            title="把选中的组件存入左侧「我的模块」，可反复复用"
-          >
-            ★ 存为模块（选中组件）
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              void onSaveCombined();
-            }}
-            title="把整景存为一个组合模块（管+颗粒+分子…整体复用，实例化后各组件仍独立可调）"
-          >
-            ★ 存组合模块（整景）
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
-              void onSaveTemplate();
-            }}
-            title="把当前场景（含图元/箭头/文字与视角）存为机理图模板，左侧模板区一键复用（T-11.8）"
-          >
-            🧩 存为模板（场景 + 视角）
-          </MenuItem>
-        </DropdownMenu>
+        <button
+          className="primary"
+          onClick={() => {
+            void onSaveTemplate();
+          }}
+          title="把当前完整画面（组件 + 图元 + 视角 + 2D 视图）存为可视化模板卡片，左侧「模板」Tab 一键复用"
+        >
+          🧩 保存为模板
+        </button>
       </div>
       {/* ── 导出区：主按钮 = 最近格式；下拉 = 全部格式 + 导出设置 ── */}
       <div className="tb-group">

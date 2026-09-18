@@ -13,7 +13,7 @@
 | **生产工程（主力）** | `src/` + `npm run dev` | React 19 + TypeScript + Vite 6；P0/P1 全部完成，P2 进行中 |
 | **桌面安装包 v0.2.0** | `src-tauri/target/release/bundle/` | Tauri v2：.app / .dmg（Apple Silicon）；文件关联 .kaolin-scene.json |
 | 三维 Demo（历史基线） | [demo/index.html](demo/index.html) | 技术验证基线，双击即用；`node demo/core/test.js` 回归 |
-| 种子模块库 | `data/seed-modules.json` | M2~M11 共 12 个成品模块（含缩略图，含莫来石 M9/M10、甲苯 M11），模块面板「导入」一键恢复 |
+| 种子模板库 | `data/seed-modules.json` + `data/seed-templates.json` | M2~M11 共 12 个成品模块 + 4 种子版式模板，统一进入「模板」Tab，「导入」一键恢复 |
 | CIF 种子库 | `data/*.cif` | 高岭石 / 地开石 / 珍珠石 / 蒙脱石 / 伊利石（AMCSD/COD 开放数据） |
 | 技术方案设计文档 | [docs/技术方案设计.md](docs/技术方案设计.md) | 架构 / 模块划分 / 核心算法推导 / 半年路线图 |
 | 记忆系统 | `PROJECT_STATE.md` · `TODO.md` · `DECISIONS.md` · `DATA_DICT.md` · `DAILY_LOG/` · `.agents/` | 跨会话/跨人员上下文零丢失 |
@@ -23,14 +23,14 @@
 ```bash
 npm install
 npm run dev        # 浏览器打开 http://localhost:5173/
-npm run test       # vitest 427 条（几何 / 矿物 / 分子 / 测量 / 状态 / 导出 / SMILES）
+npm run test       # vitest 436 条（几何 / 矿物 / 分子 / 测量 / 状态 / 导出 / SMILES / 统一模板库）
 npx tauri build    # 桌面安装包（.app + .dmg，首次约 5 分钟）
 npm run build      # tsc + vite 产物
 node demo/core/test.js   # 几何内核历史基线回归（ALL OK）
 ```
 
 操作：左侧素材库点选添加（或 SMILES 输入框导入任意分子）→ 画布点选组件 → 右侧面板调参数
-→ 顶栏 `★存为模块 / ★存组合` 积累素材库 → `导出 PNG / TIFF / SVG / 分层 PNG`。
+→ 顶栏 `🧩 保存为模板`（组件 + 图元 + 视角完整快照）积累模板库 → `导出 PNG / TIFF / SVG / 分层 PNG`。
 
 ## ✅ 已实现能力（全部实测验收）
 
@@ -48,14 +48,14 @@ node demo/core/test.js   # 几何内核历史基线回归（ALL OK）
 - 组件独立变换（gizmo）、图层面板、显隐/锁定、成组（组内整体变换）
 - 悬停/选中高亮（BBox 轻量拾取，60fps 无感）+ 画布↔图层面板双向联动
 - 撤销/重做（全部写操作可逆，滑块拖动合并为一步）
-- 组合模块：整景一键存/取，实例化后各组件仍独立可调
+- 组合模块：整景一键存/取，实例化后各组件仍独立可调（统一模板库内继续可用）
 - **机理图图元层**：矩形/椭圆/箭头（弧线弓高/单双端）/连线/文本；视口内拖拽编辑、8 手柄缩放、编组 Z 序；箭头可锚定 3D 组件随视角跟随
 - **纯 2D 示意图模式** + 磁吸对齐（六线 6px + 网格）+ 机理图模板库（4 种子版式 + 自存模板）
 - **多选批量**：Shift+点击多选 → 对齐 / 等距分布 / 统一参数风格
 - **键长/键角测量**：Alt+点击原子——两点键长（Å）、第三点键角（°），随 PNG/SVG 导出
 - **无限连续旋转**（多圈无跳变）+ gizmo 吸附（1/2/5Å、5°/15°/45°）
 
-**模块库**：IndexedDB 持久化（200 条 <100ms）、关键词/类型检索、收藏置顶、`.kaolin-modules.json` 导入导出
+**统一模板库**（2026-09-17）：moduleLibrary 底座吸收模板快照能力——单组件模块/组合模块/完整画面模板（组件+图元+相机+2D 视图+整景缩略图）同处「我的模板」；IndexedDB 持久化（200 条 <100ms）、关键词/类型检索、收藏置顶、`.kaolin-modules.json` 导入导出、旧模板库自动无损迁移
 
 **导出**（期刊 + PPT 双场景）
 - PNG：300/600 dpi、透明底（`px = cm×dpi/2.54`）

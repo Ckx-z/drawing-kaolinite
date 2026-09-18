@@ -122,3 +122,18 @@
 4. 三处硬编码同步点全部更新：paramDefs molecule 下拉 options、center.test kind 列表、registry 别名表。
 
 **验证**：toluene.test.ts 13 条（别名矩阵 10 词/化学式升级与 5 个近似式不误吞/15 原子 15 键 C7H8/分键型键长窗口/苯环共面 <0.01Å/质心 <1e-9/平移不变量 12 位/确定性/SMILES 双路差异 >0.02Å）；vitest 414 → 427 全绿。
+
+
+## D-2026-09-17c：统一模板库——moduleLibrary 为底座吸收 templateLibrary 快照能力
+
+**背景**：用户任务书（58 节）：用户界面不再区分「模块/组合模块/模板」三个概念，只看到「模板」；但成熟的 moduleLibrary（Dexie 持久化/可视化卡片/收藏/搜索/导入导出/历史数据）不得重写。
+
+**决策**：
+1. **底座选择**：moduleLibrary 继续作长期底座；templateLibrary 的快照能力（shapes/camera/mode/2D view）合并进 module entry——不建第三套 Library，不做全仓重命名（内部命名不变）。
+2. **类型判别**：moduleSchema 新增成员 `type:'template'`（components 可空数组 = 支持纯 2D 模板；"至少组件或图元之一"由保存入口空场景检查保证——判别联合成员不能 refine 包装）。快照字段 schema 自 templateLibrary 平移至 core/schema.templateSnapshotFields 单一事实源，templateLibrary 反向复用。旧 combined 的 components.min(1) 原样保留（零语义回归）。
+3. **保存**：顶栏唯一入口「🧩 保存为模板」= 完整可复现画面（components 全量 + shapes + annotations + 相机 + 形态 + 2D 视图 + snapshotScene 整景缩略图）一次性构造落库；渲染服务不可用时占位 SVG 缩略图兜底；不进 scene undo（Library 操作语义）。
+4. **加载分流**：type:'template' → moduleToTemplate 转换后复用 applyTemplate（追加合并 + id 重映射锚定/编组 + 快照恢复 + runInBatch 单命令 + 禁 frameAll——2026-09-13 五原则管线原样）；旧单组件/combined 历史行为不变（combined 的 frameAll 是其历史行为，保留）。
+5. **旧数据**：templateLibrary（独立 Dexie 库 kaolin-templates）惰性迁移进 modules 表——稳定 id（tpl-* 前缀天然与 m* 不冲突）+ localStorage 标记双保险幂等；旧模板无缩略图 → 一次性占位 SVG（不建第二套缩略图系统）；**旧表保留不删**（兼容优先于数据库洁癖）；种子模板 ensureSeededTemplates 注入统一库（稳定 id 幂等）。
+6. **导入导出**：外层继续 kaolin-modules/v1（不造 kaolin-templates/v2）；importer 经扩展后 moduleSchema 天然接受旧单组件/旧组合/新模板三类；项目从未有模板导出格式，无需兼容第四类。
+
+**验证**：unifiedTemplate.test.ts 9 条（任务书 Test 3-14 全覆盖）+ ui.dom.test 两 Tab/唯一保存入口断言 + templateLibrary.test 6 条原样通过；vitest 427 → 436 全绿；fake-indexeddb 真库 roundtrip/幂等验证。

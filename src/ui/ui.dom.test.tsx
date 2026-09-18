@@ -51,7 +51,7 @@ afterEach(() => {
 });
 
 describe('TopBar 信息架构（Phase1）', () => {
-  it('六区分层：工程/撤销重做/工具/模式 seg/视图/保存为…/导出；一级无导出六按钮与存为三按钮', () => {
+  it('六区分层：工程/撤销重做/工具/模式 seg/视图/保存为模板/导出；一级无导出六按钮与旧存为三按钮', () => {
     render(<TopBar />);
     // 分段控件存在且 3D 段激活
     const segOn = q('.seg-btn.on');
@@ -59,13 +59,15 @@ describe('TopBar 信息架构（Phase1）', () => {
     expect(texts('.seg-btn')).toHaveLength(2);
     // 高频视角常驻
     expect(texts('.topbar .tb-group button')).toEqual(expect.arrayContaining(['等距', '正视', '俯视']));
-    // 收纳验证：一级按钮不再有 6 导出/3 存为/dpi select/透明底/渲染档/接触阴影/水平吸附/示例场景/清空
+    // 统一保存入口（2026-09-17）：一级「保存为模板」按钮存在
     const flat = texts('.topbar > .tb-group > button, .topbar .seg-btn').join('|');
-    for (const gone of ['导出 TIFF', '导出 PDF', '导出 SVG', '导出分层 PNG', '导出动画 GIF', '存为模块', '存组合', '存为模板', '水平吸附', '示例场景', '清空']) {
+    expect(flat).toContain('保存为模板');
+    // 收纳验证：一级按钮不再有 6 导出/旧存为两入口/保存为…下拉/dpi select/透明底/渲染档/接触阴影/水平吸附/示例场景/清空
+    for (const gone of ['导出 TIFF', '导出 PDF', '导出 SVG', '导出分层 PNG', '导出动画 GIF', '存为模块', '存组合', '保存为…', '水平吸附', '示例场景', '清空']) {
       expect(flat).not.toContain(gone);
     }
-    // 下拉容器在（打开/保存为…/视图/导出）
-    expect(qa('.dd-root').length).toBeGreaterThanOrEqual(4);
+    // 下拉容器在（打开/视图/导出——保存为…下拉已随统一入口移除）
+    expect(qa('.dd-root').length).toBeGreaterThanOrEqual(3);
     // 主动作按钮：导出 PNG（最近格式默认）
     expect(texts('.dd-root > button').join('|')).toContain('导出 PNG');
   });
@@ -90,10 +92,10 @@ describe('TopBar 信息架构（Phase1）', () => {
   });
 });
 
-describe('LibraryPanel Tabs 与搜索（Phase3）', () => {
-  it('三 Tab 存在且素材 Tab 默认激活；搜索过滤生效', () => {
+describe('LibraryPanel Tabs 与搜索（Phase3；2026-09-17 统一模板库）', () => {
+  it('两 Tab（素材|模板）且素材 Tab 默认激活；搜索过滤生效', () => {
     render(<LibraryPanel />);
-    expect(texts('.side-tab')).toEqual(['素材', '模块', '模板']);
+    expect(texts('.side-tab')).toEqual(['素材', '模板']);
     expect(q('.side-tab.on')?.textContent).toBe('素材');
     // 素材卡（两行式副标题）
     expect(texts('.lib-card .t').join('|')).toContain('埃洛石纳米管');
@@ -107,14 +109,15 @@ describe('LibraryPanel Tabs 与搜索（Phase3）', () => {
     expect(host.textContent).toContain('无匹配素材');
   });
 
-  it('切到模板 Tab：TemplateSection 挂载（种子模板出现）', async () => {
+  it('切到模板 Tab：ModulePanel 挂载（我的模板 + 种子模板注入统一库）', async () => {
     render(<LibraryPanel />);
     click(qa('.side-tab').find((t) => t.textContent === '模板')!);
-    // 种子模板经 ensureSeeded 异步注入——轮询等待
+    // 种子模板经 ensureSeededTemplates 异步注入统一库——轮询等待
     await act(async () => {
       await new Promise((r) => setTimeout(r, 300));
     });
-    expect(host.textContent).toContain('界面反应三步版式');
+    expect(host.textContent).toContain('我的模板');
+    expect(host.textContent).toContain('界面反应三步版式'); // 种子模板卡片（占位缩略图 + 名称）
   });
 });
 

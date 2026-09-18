@@ -300,6 +300,46 @@ export const combinedModuleSchema = z.strictObject({
   favorite: z.boolean().optional(),
 });
 
+/* ---------- 场景模板快照字段（2026-09-17 统一模板库；自 templateLibrary 平移为单一事实源） ---------- */
+export const templateSnapshotFields = {
+  /** 图元（shape schema 透传——z.object 是 strip 模式会剥字段，正确性由源头保证） */
+  shapes: z.array(z.unknown()),
+  /** 标注 */
+  annotations: z.array(z.unknown()),
+  /** 保存时相机（position + 轨道目标）；缺省（旧条目）不恢复视角 */
+  camera: z.object({
+    position: z.tuple([z.number(), z.number(), z.number()]),
+    target: z.tuple([z.number(), z.number(), z.number()]),
+  }),
+  /** 画布形态（3D 混合 / 纯示意图） */
+  mode: z.enum(['mixed', 'diagram']),
+  /** 纯示意图模式的视图（zoom/pan） */
+  view: z.object({ zoom: z.number(), panX: z.number(), panY: z.number() }),
+};
+
+/**
+ * 统一模板条目（2026-09-17）：moduleLibrary 吸收 templateLibrary 快照能力——
+ * 完整可复现画面 = 组件 + 图元 + 相机 + 形态 + 2D 视图 + 整景缩略图。
+ * components 允许为空（纯 2D 模板：只有 shapes）；"至少组件或图元之一"
+ * 由保存入口的空场景检查保证（判别联合成员不能 refine 包装）。
+ */
+export const sceneTemplateModuleSchema = z.strictObject({
+  type: z.literal('template'),
+  id: z.string().min(1),
+  name: z.string().min(1),
+  components: z.array(componentSchema),
+  thumb: z.string().startsWith('data:image/'),
+  tags: z.array(z.string()).optional(),
+  createdAt: z.string().optional(),
+  moduleVersion: z.number().optional(),
+  favorite: z.boolean().optional(),
+  shapes: templateSnapshotFields.shapes.optional(),
+  annotations: templateSnapshotFields.annotations.optional(),
+  camera: templateSnapshotFields.camera.optional(),
+  mode: templateSnapshotFields.mode.optional(),
+  view: templateSnapshotFields.view.optional(),
+});
+
 export const moduleSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('kaolinite_sheet'), params: sheetParamsSchema, ...moduleCommon }),
   z.strictObject({ type: z.literal('halloysite_tube'), params: tubeParamsSchema, ...moduleCommon }),
@@ -316,6 +356,7 @@ export const moduleSchema = z.discriminatedUnion('type', [
     ...moduleCommon,
   }),
   combinedModuleSchema,
+  sceneTemplateModuleSchema,
 ]);
 
 /* ---------- 默认值（与 DATA_DICT / demo DEFAULTS 一致） ---------- */

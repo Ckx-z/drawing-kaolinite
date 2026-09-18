@@ -113,6 +113,7 @@
 | 测量可见性一致性 | RendererService.measureAtomWorldPos | 2026-09-16（e41f1d6）：组件隐藏/纯 2D 模式时测量在屏幕叠加与 PNG/SVG 导出两侧一致隐藏 |
 | 矿物注册表 interlayer | `src/core/minerals.ts` | 2026-09-13（T-2.4 收尾）：层间元素集（伊利石 K、蒙脱石 Ca/Na）驱动 showInterlayer 开关 |
 | 莫来石（第六矿物） | `minerals.ts`/`crystal.ts`/`schema.ts`/`mullite.test.ts` + `data/mullite.cif` | 2026-09-17：COD 2310785 平均结构（Pbam 骨架硅酸盐）；parseCIF 读 occupancy 剔零占位；分裂位双组分渲染 + 退化键守卫；d001 下限放宽 2.5（= 沿 c 堆叠周期）；layered=false 排除管组件；414 tests |
+| 统一模板库（模块+模板合一） | `schema.ts` sceneTemplateModuleSchema + `moduleLibrary.ts` + `ModulePanel.tsx` + `TopBar.tsx` | 2026-09-17：moduleLibrary 底座吸收 templateLibrary 快照能力——type:'template' 条目 = 组件+图元+相机+形态+2D 视图+整景缩略图；左栏两 Tab（素材\|模板）；顶栏唯一保存入口「🧩 保存为模板」；旧模板库惰性无损迁移（稳定 id 幂等+占位缩略图）；kaolin-modules/v1 导入导出兼容四种条目；436 tests |
 | 甲苯 preset（第八种内置分子） | `builders.ts` MOLECULES / `registry.ts` 别名 / `toluene.test.ts` + `data/toluene.sdf` | 2026-09-17：PubChem CID 1140 3D 构象（MMFF94）转录；别名 甲苯/toluene/TOL/C7H8 多路直达；搜索词只解析身份几何唯一来自 preset；427 tests |
 | 滚轮缩放灵敏度 | interaction.ts + RendererService | 2026-09-13（24a3d9c）：3D zoomSpeed 0.5 + 2D 灵敏度减半，方向/中心/上下限不变 |
 | 防漂移对账增强 | `scripts/check_library_state.py` | 2026-09-16：新增版本一致性/种子模块数对账/陈旧描述/下一步已完成矛盾四组检查 |

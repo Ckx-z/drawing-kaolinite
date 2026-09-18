@@ -160,6 +160,14 @@
 - 双入口：📁 文件选择器 + 拖拽到导入框（行为一致）；非法文件预校验不入库
 - 关联：`src/core/molecules/mol.ts`（+5 tests）
 
+### T-11.9 ✅ [P1] 统一模板库：模块库+模板库合一 —— 完成 2026-09-17
+- moduleLibrary 为底座（Dexie/卡片/收藏/搜索/导入导出/历史数据全保留），吸收 templateLibrary 快照能力（shapes/camera/mode/2D view）
+- schema 新增判别成员 `type:'template'`（components 可空 = 纯 2D 模板；快照字段自 templateSchema 平移单一事实源）；旧单组件/组合条目零改动兼容
+- 顶栏删「保存为…」下拉（存为模块/存组合），唯一入口 `🧩 保存为模板`（完整画面一次性构造落库，不进 undo）；左栏两 Tab（素材|模板），原「我的模块」卡片 UI 原样成为「我的模板」
+- 加载分流：template → 复用 applyTemplate（追加合并+快照恢复+单命令撤销+禁 frameAll）；旧单组件/combined 历史行为不变
+- 旧 templateLibrary 惰性无损迁移（稳定 id=tpl-* 幂等双保险 + 占位 SVG 缩略图；旧表保留不删）；种子模板注入统一库
+- 验收：`src/state/unifiedTemplate.test.ts` 9 条（快照保存/清空逐位恢复/旧 fixture×3/迁移/收藏缩略图保持/roundtrip/幂等）+ ui.dom 两 Tab 断言；vitest 427 → 436 全绿；关联 DECISIONS D-2026-09-17c
+
 ### T-2.12 ✅ [P2] 内置分子：甲苯 C₇H₈ preset（真实构象数据驱动）—— 完成 2026-09-17
 - 数据源：PubChem CID 1140 3D 构象 SDF（MMFF94，OEChem）→ `data/toluene.sdf` 存档；坐标逐位转录 `MOLECULES['C₇H₈']`（15 原子/15 键）
 - 别名：甲苯/甲基苯/toluene/TOL/methylbenzene + 化学式 C7H8/C₇H₈/c7h8（QUERY_ALIASES + FORMULA_PRESETS）；tol 纯字母小写化精确匹配
@@ -425,7 +433,7 @@ T-2.1 / T-2.3 / T-9.1–T-9.2 可在 T-1.7 后立即并行
 | P2 | 22 | 内核增强 / 渲染 / 导出 / 记忆系统（含 T-2.10~T-2.12 莫来石/甲苯） |
 | P3 | 11 | 桌面端 / 交互 / 后续迭代 |
 | 已完成基线 | 2 | 技术验证（T-0.1 / T-0.2，回归基准，不计入工作量） |
-| **合计** | **49 条** | 待澄清问题 4 → **0**（已于 2026-09-05 全部决策闭环，见顶部决策表） |
+| **合计** | **50 条** | 待澄清问题 4 → **0**（已于 2026-09-05 全部决策闭环，见顶部决策表） |
 
 ---
 

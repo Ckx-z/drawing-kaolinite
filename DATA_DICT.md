@@ -93,6 +93,21 @@
 
 扩展（已实现 T-2.8，见 §五 smiles）：`sdf`（文件导入，T-2.10 待做）。
 
+### 统一模板条目（2026-09-17，moduleSchema 新成员 type:'template'）
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `type` | `'template'` | ✓ | 判别值：完整画面模板 |
+| `components` | `componentSchema[]` | ✓ | 完整场景组件（**可为空 = 纯 2D 模板**；至少组件或图元之一由保存入口保证） |
+| `shapes` / `annotations` | 快照透传数组 | – | 图元/标注（shape schema 正确性由源头保证） |
+| `camera` | `{position:[x,y,z], target:[x,y,z]}` | – | 保存时相机（缺省不恢复视角） |
+| `mode` | `'mixed'\|'diagram'` | – | 画布形态 |
+| `view` | `{zoom, panX, panY}` | – | 纯示意图 2D 视图 |
+| `thumb` | dataURL | ✓ | 整景缩略图（snapshotScene；旧模板迁移条目 = 占位 SVG） |
+| `id/name/tags/createdAt/moduleVersion/favorite` | — | — | 与旧模块元数据同构 |
+
+导入导出外壳继续 `kaolin-modules/v1`（新字段向后兼容：旧文件零新增字段即可通过）。快照字段单一事实源 = `core/schema.ts templateSnapshotFields`（templateLibrary 反向复用）。
+
 ## 六、rubber_substrate 橡胶基底
 
 | 参数 | 类型 | 范围 | 默认 | 单位 | 说明 |
