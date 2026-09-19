@@ -634,6 +634,16 @@ input[type='checkbox'] {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* 内联重命名输入（2026-09-17：替代 window.prompt——Tauri WKWebView 未实现 prompt） */
+.mod-card .mod-rename {
+  font-size: 11px;
+  padding: 2px 5px;
+  margin: 1px;
+  width: calc(100% - 12px);
+  border: 1px solid var(--acc, #e08a4e);
+  border-radius: 3px;
+  outline: none;
+}
 .mod-card .x {
   position: absolute;
   top: 3px;

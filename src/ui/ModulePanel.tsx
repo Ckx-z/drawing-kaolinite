@@ -79,12 +79,38 @@ export default function ModulePanel() {
     }
   };
 
-  /** 重命名（纯 metadata 更新：不触发打开/缩略图/收藏变化；原生 prompt 零新依赖） */
-  const onRename = (m: ModuleEntry): void => {
-    const input = window.prompt('重命名模板', m.name);
-    if (input === null) return; // 取消
-    const name = input.trim();
-    if (!name || name === m.name) return;
+  /**
+   * 重命名（2026-09-17 修复：内联编辑替代 window.prompt——Tauri/WKWebView 的
+   * wry 未实现 prompt，静默返回 null 导致打包版点击 ✎ 无任何反馈）。
+   * 纯 metadata 更新：不触发打开/缩略图/收藏变化。
+   */
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [nameInvalid, setNameInvalid] = useState(false);
+
+  const startRename = (m: ModuleEntry): void => {
+    setEditingId(m.id);
+    setEditingName(m.name);
+    setNameInvalid(false);
+  };
+
+  const cancelRename = (): void => {
+    setEditingId(null);
+    setNameInvalid(false);
+  };
+
+  const commitRename = (m: ModuleEntry): void => {
+    const name = editingName.trim();
+    if (!name) {
+      setNameInvalid(true); // 空名不关闭编辑（任务书：无效时保持编辑态并提示）
+      return;
+    }
+    if (name === m.name) {
+      cancelRename();
+      return;
+    }
+    setEditingId(null);
+    setNameInvalid(false);
     renameModule(m.id, name)
       .then(() => setModules((prev) => prev.map((x) => (x.id === m.id ? { ...x, name } : x))))
       .catch((err: Error) => alert(`重命名失败：${err.message}`));
@@ -163,7 +189,30 @@ export default function ModulePanel() {
                   }
                 }}
               />
-              <div className="n">{m.name}</div>
+              {editingId === m.id ? (
+                <input
+                  className="mod-rename"
+                  style={nameInvalid ? { borderColor: '#e5735f' } : undefined}
+                  value={editingName}
+                  autoFocus
+                  onFocus={(e) => e.currentTarget.select()}
+                  onChange={(e) => {
+                    setEditingName(e.target.value);
+                    if (nameInvalid) setNameInvalid(false);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') commitRename(m);
+                    else if (e.key === 'Escape') cancelRename();
+                  }}
+                  onBlur={() => commitRename(m)}
+                  placeholder="模板名称"
+                  title={nameInvalid ? '模板名称不能为空' : 'Enter 保存 · Esc 取消'}
+                />
+              ) : (
+                <div className="n">{m.name}</div>
+              )}
               <div
                 className="fav"
                 data-on={m.favorite ? '1' : '0'}
@@ -180,7 +229,7 @@ export default function ModulePanel() {
                 title="重命名模板（只改名称，其余不变）"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onRename(m);
+                  startRename(m);
                 }}
               >
                 ✎

@@ -181,3 +181,12 @@
 **B. 模板重命名**：`renameModule(id, name)` = toggleFavorite 同款 UPDATE 模式（listModules 取 entry → put({...entry, name}) → cache 失效 + 通知），绝不删除+重建；空白名拒绝（schema name min(1) 单一事实源）；种子模板已是 Dexie 普通条目（稳定 id tpl-*）直接改名，不触发重复注入/缩略图回填。UI = 卡片 hover 显 ✎（与 ✕ 同风格），stopPropagation 隔离打开；window.prompt 原生交互零新依赖。
 
 **验证**：shapeClipboard.test 12 条（五类图元 ID/属性/独立性、连续错开、计数重置、锚定清理、逐次 Undo、多选整体粘贴）+ rename 5 条（只改 name/空白拒绝/持久化+搜索+导出/legacy 两类/种子不重复注入）；vitest 449 → 466 全绿。
+
+
+## D-2026-09-18：模板重命名点击无响应修复——window.prompt 在 Tauri 打包版不可用
+
+**根因**：2026-09-17f 的重命名用 `window.prompt`——浏览器 dev 模式正常，但 Tauri v2/wry 的 WKWebView 只实现了 alert/confirm，**prompt 未接 `runJavaScriptTextInputPanelWithPrompt` delegate，静默返回 null**。打包版点击 ✎ → `if (input === null) return` → 无弹窗无反馈（与"按钮无响应"症状完全吻合）。
+
+**修复**：内联编辑替代原生弹窗（任务书十三/十四推荐形态）——点击 ✎ 进入 editingId/editingName 状态，卡片名称位变为输入框（autofocus 全选）；Enter/blur 保存、Esc 取消；空名红框（#e5735f）保持编辑态不关闭；输入框 click/keydown stopPropagation（不触发卡片打开，也不进全局快捷键）。数据链路复用既有 renameModule（UPDATE 模式）零改动。
+
+**验证**：ui.dom.test +2（点击 ✎ 进入编辑态且 loadScene 零调用 spy 验证 / Enter 保存后 UI 立即刷新 + Dexie 重读新名 / 空名拒绝保持编辑 / Esc 取消恢复原名）；vitest 466 → 468 全绿。

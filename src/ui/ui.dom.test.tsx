@@ -11,6 +11,7 @@ import 'fake-indexeddb/auto';
 import { createSceneStore, sceneStore } from '../state/sceneStore';
 import TopBar from './TopBar';
 import LibraryPanel from './LibraryPanel';
+import ModulePanel from './ModulePanel';
 import ParamPanel from './ParamPanel';
 
 let host: HTMLDivElement;
@@ -157,6 +158,93 @@ describe('LibraryPanel Tabs 与搜索（Phase3；2026-09-17 统一模板库）',
       sceneStore.getState().removeComponent(id);
       sceneStore.getState().removeShape(shapeId);
     }
+  });
+});
+
+describe('模板重命名（2026-09-17 修复：内联编辑替代 prompt，Tauri 打包版可用）', () => {
+  it('点击 ✎ 进入编辑态且不触发打开模板；Enter 保存后卡片立即显示新名', async () => {
+    // spy openTemplate 的底层调用（loadScene）
+    const { sceneStore: store } = await import('../state/sceneStore');
+    const loads: unknown[] = [];
+    const origLoad = store.getState().loadScene;
+    (store as unknown as { setState: (p: unknown) => void }).setState({
+      loadScene: (raw: unknown) => {
+        loads.push(raw);
+        return origLoad(raw);
+      },
+    });
+    try {
+      render(<ModulePanel />);
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 300));
+      });
+      const card = qa('.mod-card')[0];
+      expect(card).toBeTruthy();
+      const before = card.querySelector('.n')?.textContent;
+
+      const pencil = card.querySelector('.ren') as HTMLElement;
+      expect(pencil).toBeTruthy();
+      click(pencil);
+      // Test 1：进入编辑态（input 出现并聚焦）
+      const input = card.querySelector('.mod-rename') as HTMLInputElement;
+      expect(input).toBeTruthy();
+      expect(input.value).toBe(before);
+      // Test 9：点击 ✎ 没有触发 openTemplate（loadScene 零调用）
+      expect(loads).toHaveLength(0);
+
+      // 输入新名 + Enter 保存
+      act(() => {
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+        setter.call(input, '实验一：莫来石-CeO₂');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      act(() => {
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      });
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+      });
+      // UI 立即刷新：卡片显示新名
+      expect(card.querySelector('.mod-rename')).toBeNull(); // 编辑态关闭
+      expect(card.querySelector('.n')?.textContent).toBe('实验一：莫来石-CeO₂');
+      // 数据层持久（Dexie 重读）
+      const { listModules } = await import('../state/moduleLibrary');
+      const all = await listModules();
+      const renamed = all.find((m) => m.name === '实验一：莫来石-CeO₂');
+      expect(renamed).toBeTruthy();
+      // 全程未打开模板
+      expect(loads).toHaveLength(0);
+    } finally {
+      (store as unknown as { setState: (p: unknown) => void }).setState({ loadScene: origLoad });
+    }
+  });
+
+  it('空名保存被拒绝且保持编辑态；Esc 取消恢复原名', async () => {
+    render(<ModulePanel />);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 300));
+    });
+    const card = qa('.mod-card')[0];
+    const before = card.querySelector('.n')?.textContent;
+    click(card.querySelector('.ren') as HTMLElement);
+    const input = card.querySelector('.mod-rename') as HTMLInputElement;
+
+    // 空名 → 拒绝，编辑态保持
+    act(() => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      setter.call(input, '   ');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+    expect(card.querySelector('.mod-rename')).toBeTruthy(); // 未关闭
+    expect((card.querySelector('.mod-rename') as HTMLInputElement).style.borderColor).toBe('rgb(229, 115, 95)'); // 红框提示（#e5735f）
+
+    // Esc → 取消，恢复原名
+    act(() => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    expect(card.querySelector('.mod-rename')).toBeNull();
+    expect(card.querySelector('.n')?.textContent).toBe(before);
   });
 });
 
