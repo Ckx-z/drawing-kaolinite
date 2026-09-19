@@ -23,7 +23,7 @@
 ```bash
 npm install
 npm run dev        # 浏览器打开 http://localhost:5173/
-npm run test       # vitest 497 条（几何 / 矿物 / 分子 / 测量 / 状态 / 导出 / SMILES / 统一模板库）
+npm run test       # vitest 505 条（几何 / 矿物 / 分子 / 测量 / 状态 / 导出 / SMILES / 统一模板库）
 npx tauri build    # 桌面安装包（.app + .dmg，首次约 5 分钟）
 npm run build      # tsc + vite 产物
 node demo/core/test.js   # 几何内核历史基线回归（ALL OK）

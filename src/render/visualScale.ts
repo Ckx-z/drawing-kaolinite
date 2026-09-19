@@ -14,19 +14,24 @@ import { getElement } from '../core/elements';
 export const SPACE_FILLING_VDW_SCALE = 0.92;
 /** 球棍原子球：cov × 0.42（2026-09-19：0.95 → 0.42） */
 export const BALL_STICK_ATOM_SCALE = 0.42;
-/** 球棍键圆柱半径（Å；2026-09-19：0.16 → 0.13） */
-export const BALL_STICK_BOND_RADIUS = 0.13;
+/** 球棍键圆柱半径（Å；2026-09-19b：0.13 → 0.12） */
+export const BALL_STICK_BOND_RADIUS = 0.12;
 /** 键圆柱两端入球重叠（Å/端）：球-棍无缝，不改变化学长度 */
 export const BALL_STICK_BOND_OVERLAP = 0.1;
-/** 球棍原子球下限（Å）：极小共价半径元素（H cov 0.31 → 0.130）抬到可辨识尺寸 */
-export const BALL_STICK_MIN_ATOM_R = 0.14;
+/**
+ * 球棍原子球下限（Å）：H cov 0.31×0.42=0.130 若无下限将与键半径同量级，
+ * 视觉退化为"圆柱末端白帽子"。max(cov×scale, 0.20) → H=0.20 / C=0.319 /
+ * bond=0.12，H/bond ≈ 1.67——H 明确为球。通用规则不特判 H（cov×0.42 < 0.20
+ * 仅 H 与 He，后者不出现于任何素材，矿物最小元素 O 0.66×0.42=0.277 不受钳制）。
+ */
+export const BALL_STICK_MIN_ATOM_RADIUS = 0.2;
 
 /** 元素显示半径（3D InstancedMesh 与 SVG 导出同源） */
 export function displayRadius(el: string, ballstick: boolean): number {
   const info = getElement(el);
   if (ballstick) {
     const cov = info?.cov ?? 1;
-    return Math.max(cov * BALL_STICK_ATOM_SCALE, BALL_STICK_MIN_ATOM_R);
+    return Math.max(cov * BALL_STICK_ATOM_SCALE, BALL_STICK_MIN_ATOM_RADIUS);
   }
   return (info?.vdw ?? 1.6) * SPACE_FILLING_VDW_SCALE;
 }
