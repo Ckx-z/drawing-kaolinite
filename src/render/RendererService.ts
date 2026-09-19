@@ -44,9 +44,9 @@ import { drawShapes } from '../ui/shapes/draw';
 import { shapeViewStore } from '../ui/shapes/view';
 import { presetPosition, type CameraPreset } from './postfx';
 import { annotationsToSVG, sceneToSVG, shapesToSVG, viewTransformedShape, type SvgAtom, type SvgComponentInput } from '../export/svg';
-import { getElement } from '../core/elements';
 import { activeColorFor } from './palette';
 import { addAtoms, addBonds, recolorAtomMesh } from './instanced';
+import { BALL_STICK_BOND_RADIUS, displayRadius } from './visualScale';
 import { setActivePalette, type PaletteSetting } from './palette';
 import { substrateMaterial } from './materials';
 import { buildSubstrateGeometry } from './substrate';
@@ -96,12 +96,9 @@ export interface ExportOptions {
  */
 const WHEEL_ZOOM_SPEED = 0.5;
 
-/** SVG 导出的原子显示半径基准（与 instanced.ts 同款约定） */
+/** SVG 导出的原子显示半径基准（与 instanced.ts 同款约定——visualScale.ts 单一事实源） */
 function baseRadiusFor(el: string, ballstick: boolean): number {
-  const info = getElement(el);
-  const cov = info?.cov ?? 1;
-  const vdw = info?.vdw ?? 1.6;
-  return ballstick ? cov * 0.95 : vdw * 0.92;
+  return displayRadius(el, ballstick);
 }
 
 export class RendererService {
@@ -816,7 +813,7 @@ export class RendererService {
         visible: comp.visible,
         atoms,
         bonds: ballstick ? data.bonds : [], // 空间填充不画键（与 3D 渲染一致）
-        bondRadius: 0.16 * comp.transform.scale,
+        bondRadius: BALL_STICK_BOND_RADIUS * comp.transform.scale, // 线稿 SVG 与 3D 同源（visualScale）
         bondColor: '#8f959c',
       });
     }
@@ -1183,7 +1180,7 @@ export class RendererService {
       const style = (comp.params as { style?: string }).style;
       const ballstick = style === '球棍' || comp.type === 'molecule';
       addAtoms(rec.group, data.atoms, ballstick);
-      if (ballstick && data.bonds.length) addBonds(rec.group, data.atoms, data.bonds, 0.16);
+      if (ballstick && data.bonds.length) addBonds(rec.group, data.atoms, data.bonds, BALL_STICK_BOND_RADIUS);
       rec.data = data;
       rec.atomCount = data.atoms.length;
     } else {

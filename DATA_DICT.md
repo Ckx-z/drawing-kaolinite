@@ -89,8 +89,8 @@
 
 | 参数 | 取值 | 说明 |
 |---|---|---|
-| `kind` | `H₂O` / `O₂` / `CO₂` / `N₂` / `Ca²⁺` / `Ce³⁺` / `·OH (羟基自由基)` / `C₇H₈` | 内置库（标准键长键角）；默认渲染恒为球棍（cov×0.95 + 键） |
-| `C₃H₈` 丙烷 | preset | **几何 = 内置 SMILES 构象器运行时生成**（`smilesTo3D('CCC')`，单一真源零手搓）；11 原子/10 键；C–C ≈1.53、C–H ≈1.09。搜索别名：丙烷/propane/C3H8（registry.ts） |
+| `kind` | `H₂O` / `O₂` / `CO₂` / `N₂` / `Ca²⁺` / `Ce³⁺` / `·OH (羟基自由基)` / `C₇H₈` | 内置库（标准键长键角）；默认渲染恒为球棍（cov×0.42 + 下限 0.14Å，键 r=0.13Å 两端入球 0.1Å——visualScale.ts 单一事实源，2026-09-19） |
+| `C₃H₈` 丙烷 | preset | **PubChem CID 6334 3D 构象（MMFF94）逐位转录**，源存档 `data/propane.sdf`（2026-09-19，下载经零重复坐标程序化校验）；11 原子/10 键；C–C ≈1.519、C–H ≈1.095、C–C–C = 111.7°。搜索别名：丙烷/propane/C3H8；直接输 SMILES `CCC` 仍走构象器（示意级，两路独立） |
 | `C₇H₈` 甲苯 | preset | **PubChem CID 1140 3D 构象（MMFF94）逐位转录**，源文件存档 `data/toluene.sdf`（2026-09-17）。15 原子/15 键；芳 C–C ≈1.395、环–CH₃ ≈1.492、C–H ≈1.09；苯环共面 <0.01Å。搜索别名：甲苯/甲基苯/toluene/tol/methylbenzene/C7H8（registry.ts）；几何与 SMILES 路径并存互不干扰 |
 | （默认 scale） | 4 | 分子默认整体缩放 4 倍（DEFAULT_SCALE.molecule），否则相对片层太小 |
 

@@ -205,3 +205,17 @@
 6. 种子模块 M12/M13（晶体晶胞片层）/M14（丙烷分子）→ 15 条。
 
 **验证**：catalyst.test 16 条（晶胞/symop 192/展开 56 与 12/别名矩阵/不错拆防御/layered+管排除/切片线性 1400×nc/六角不崩/schema/风格化颗粒回归）+ propane.test 9 条（别名/11 原子 10 键/键长窗口/质心 <1e-9/单一真源距离矩阵一致/确定性）+ minerals.test 基线扩展；vitest 468 → 495 全绿。
+
+
+## D-2026-09-19：官方分子 preset = 数据库真实构象（丙烷修复）+ 球棍视觉比例集中管理
+
+**背景**：① 丙烷 preset 此前由 `smilesTo3D('CCC')` 运行时构造，"官方标准素材"与"任意 SMILES 示意构象"混用，违背甲苯/水分子确立的 preset 语义；② 球棍 atom = cov×0.95 使原子球几乎覆盖整键（C–C 1.52Å vs 两球半径和 1.44Å），画面接近空间填充。
+
+**决策**：
+1. **丙烷数据源**：PubChem CID 6334 3D conformer（MMFF94）逐位转录 `MOLECULES['C₃H₈']`，源存档 `data/propane.sdf`。下载经程序化校验循环（原子/键行数=声明数、零重复坐标、组成 C3H8）——本会话网络存在内容注入损坏，裸 curl 两次返回重复行文件，校验重试第 0 次通过。双路语义与甲苯一致：搜索→preset 真实构象；SMILES "CCC"→构象器示意级（测试断言两路几何独立，maxDiff>0.02）。
+2. **视觉常量集中**：新建 `src/render/visualScale.ts` 单一事实源——`SPACE_FILLING_VDW_SCALE=0.92`（不变）、`BALL_STICK_ATOM_SCALE=0.42`（原 0.95）、`BALL_STICK_BOND_RADIUS=0.13`（原 0.16）、`BALL_STICK_BOND_OVERLAP=0.1`、`BALL_STICK_MIN_ATOM_R=0.14`（H cov 0.31×0.42=0.130 抬至 0.14）。`displayRadius(el, ballstick)` 统一供 3D InstancedMesh 与 SVG 导出（此前 0.95/0.92 散落 instanced.ts + RendererService baseRadiusFor 两处）。
+3. **键可见长度**：addBonds 本为 center-to-center 圆柱（情况 A）——不改化学长度，圆柱 y 尺度 = 中心距 + 2×overlap（两端入球消除接缝）；键长/键角测量走原子中心坐标，不受视觉 overlap 影响。SVG 线稿键半径同步 0.13。
+4. **统一比例不分轨**：分子与晶体共用 0.42（Co₃O₄/CeO₂/高岭石键长 1.9–2.0Å，球半径 0.28–0.53，可见棍长 ~1.2Å+，不会变细线框架；实测门禁全绿）。未引入 MOLECULE_/CRYSTAL_ 分轨常量——若后续实机观察晶体过细再分轨并记录。
+5. 键角工具复用测量系统 `measures.angleDeg`（单一实现，未复制第二套数学）。
+
+**验证**：propane.test 重写 9 条（C3H8 组成/2C-C+8C-H/C-C 1.50–1.56/C-H 1.06–1.12/C-C-C 107–115 且锁定 111.7°/四面体代表角 107.3-109.4/非键 H-H ≥1.6/质心+确定性/两路独立性）；vitest 495 → 497 全绿（甲苯/SMILES/SVG/CIF/测量全回归）。

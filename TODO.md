@@ -172,6 +172,11 @@
 - 续（2026-09-17e 独立场景打开）：点击模板卡片 = moduleToSceneDocument 归一化 → sceneStore.loadScene 一次性替换（复用场景文件链路；四类条目统一 REPLACE 语义；清 selection/测量；一条完整撤销事务；无快照 legacy 才 frameAll）；修复 A→B 叠加 Bug；vitest 440 → 449
 - 续（2026-09-17b 真实缩略图）：新保存 = RendererService.snapshotTemplate（复用 snapshotWithOverlay：3D 当前帧 + 图元 + 标注叠加，150×110 jpeg 0.8 与组合模块卡片同规格，用保存时相机不取景）；纯 2D 模板（种子版式/纯图元）= shapeSceneThumb（包围盒拟合 + shapesToSVG 矢量，缺省 anchors 补 free）；占位图仅剩三类 fallback（含 3D 的旧模板/渲染服务不可用/图片解析失败 onError）+ generateMissingThumbnails 幂等回填；vitest 436 → 440
 
+### T-2.14 ✅ [P1] 丙烷真实构象修复 + 球棍视觉比例（D-2026-09-19）—— 完成 2026-09-19
+- 丙烷 preset：弃 smilesTo3D('CCC') 运行时构造 → PubChem CID 6334（MMFF94）逐位转录 + data/propane.sdf 存档（下载零重复坐标程序化校验）；两路独立有断言（SMILES CCC 照常）
+- 球棍视觉：visualScale.ts 集中常量（atom cov×0.95→0.42 + H 下限 0.14；bond r 0.16→0.13；两端入球 overlap 0.1——center-to-center 不改化学长度，测量不受影响）；空间填充 0.92 不变；分子/晶体统一比例不分轨
+- 测试：propane.test 重写 9 条（C-C-C=111.7° 锁定、四面体代表角、非键最小距、两路独立性）；vitest 495 → 497 全绿
+
 ### T-2.13 ✅ [P1] 催化氧化物 CIF 直驱 + 丙烷 preset（Co₃O₄/CeO₂/C₃H₈）—— 完成 2026-09-18
 - Co₃O₄ = COD 9005888（Fd-3m 尖晶石 a=8.0968，展开 Co24O32=56）；CeO₂ = COD 9009008（Fm-3m 萤石 a=5.4110，展开 Ce4O8=12）——解析层零适配（显式 symop 192 + 全占位）
 - MineralDef.aliases 整词搜索：co3o4/ceo2/ceria/cobalt oxide/cerianite 等；含数字串不折叠 → Co3O4/CeO2 不错拆直达矿物（分子侧 null 防误吞）
@@ -445,7 +450,7 @@ T-2.1 / T-2.3 / T-9.1–T-9.2 可在 T-1.7 后立即并行
 | P2 | 22 | 内核增强 / 渲染 / 导出 / 记忆系统（含 T-2.10~T-2.12 莫来石/甲苯） |
 | P3 | 11 | 桌面端 / 交互 / 后续迭代 |
 | 已完成基线 | 2 | 技术验证（T-0.1 / T-0.2，回归基准，不计入工作量） |
-| **合计** | **51 条** | 待澄清问题 4 → **0**（已于 2026-09-05 全部决策闭环，见顶部决策表） |
+| **合计** | **52 条** | 待澄清问题 4 → **0**（已于 2026-09-05 全部决策闭环，见顶部决策表） |
 
 ---
 

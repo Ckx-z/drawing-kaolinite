@@ -4,14 +4,12 @@
  * LOD：原子数 >15k 用 8 段球、>6k 用 12 段、其余 18 段。
  */
 import * as THREE from 'three';
-import { getElement } from '../core/elements';
 import type { Atom, Bond } from '../core/geometry';
 import { atomMaterial, bondMaterial } from './materials';
 import { activeColorFor } from './palette';
+import { BALL_STICK_BOND_OVERLAP, displayRadius } from './visualScale';
 
-const FALLBACK = { cov: 1, vdw: 1.6, color: '#9AA0A6', name: '未知' };
-
-/** 原子 → 按元素分桶的 InstancedMesh（空间填充 = vdw×0.92；球棍 = cov×0.95） */
+/** 原子 → 按元素分桶的 InstancedMesh（空间填充 = vdw×0.92；球棍 = cov×0.42 + 下限 0.14，visualScale.ts 单一事实源） */
 export function addAtoms(g: THREE.Group, atoms: Atom[], ballstick: boolean): void {
   const byEl: Record<string, Atom[]> = {};
   for (const a of atoms) (byEl[a.el] = byEl[a.el] ?? []).push(a);
@@ -20,8 +18,7 @@ export function addAtoms(g: THREE.Group, atoms: Atom[], ballstick: boolean): voi
   const mtx = new THREE.Matrix4();
   const col = new THREE.Color();
   for (const el in byEl) {
-    const info = getElement(el) ?? FALLBACK;
-    const baseR = ballstick ? info.cov * 0.95 : info.vdw * 0.92;
+    const baseR = displayRadius(el, ballstick);
     const arr = byEl[el];
     const m = new THREE.InstancedMesh(sph, atomMaterial, arr.length);
     m.userData.matKind = 'atom'; // T-4.1 双轨切换按此换材质
@@ -78,7 +75,9 @@ export function addBonds(g: THREE.Group, atoms: Atom[], bonds: Bond[], rad: numb
     const len = dir.length() || 1e-4;
     mid.addVectors(v1, v2).multiplyScalar(0.5);
     q.setFromUnitVectors(up, dir.normalize());
-    s.set(rad, len, rad);
+    // center-to-center + 两端各入球 overlap：化学长度（原子中心距）不变，
+    // 仅渲染圆柱延伸入球内消除球-棍接缝（键长测量不受影响）
+    s.set(rad, len + BALL_STICK_BOND_OVERLAP * 2, rad);
     mtx.compose(mid, q, s);
     m.setMatrixAt(k, mtx);
   }
