@@ -8,6 +8,7 @@
 import * as C from './crystal';
 import type { Atom, Bond, GeometryData } from './geometry';
 import { centerAtoms } from './molecules/center';
+import { smilesTo3D } from './molecules/smiles';
 import { mineralOf } from './minerals';
 import type { MoleculeParams, PackedLayerParams, ParticleParams, SheetParams, TubeParams } from './types';
 
@@ -298,6 +299,15 @@ export const MOLECULES: Record<MoleculeParams['kind'], MoleculeDef> = {
       [0, 2],
     ],
   },
+  // 丙烷（2026-09-18）：几何由内置 SMILES 规则式构象器运行时生成（单一真源，
+  // 零手搓坐标——同输入确定性输出：C–C 链 sp3、C–H 1.09Å、C–C–C ≈112°）
+  'C₃H₈': (() => {
+    const m = smilesTo3D('CCC');
+    return {
+      atoms: m.atoms.map((a) => ({ el: a.el, x: a.x, y: a.y, z: a.z })),
+      bonds: m.bonds.map((b) => [b[0], b[1]] as Bond), // 构象器键三元组 [i,j,order] 取连接关系
+    };
+  })(),
   'O₂': {
     atoms: [
       { el: 'O', x: -0.6, y: 0, z: 0 },

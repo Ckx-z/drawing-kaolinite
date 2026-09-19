@@ -41,11 +41,11 @@ describe('矿物名称匹配（中文搜索识别）', () => {
   it('mineralOf 未知键回退高岭石（旧场景兼容）', () => {
     expect(mineralOf(undefined).key).toBe('kaolinite');
     expect(mineralOf('no-such').key).toBe('kaolinite');
-    expect(MINERAL_KEYS).toHaveLength(6); // 2026-09-17 +莫来石
+    expect(MINERAL_KEYS).toHaveLength(8); // 2026-09-17 +莫来石；2026-09-18 +Co₃O₄/CeO₂
   });
 });
 
-describe('六矿物 CIF 晶体结构基线（原子数 / 化学计量 / 对称性锁定）', () => {
+describe('八矿物 CIF 晶体结构基线（原子数 / 化学计量 / 对称性锁定）', () => {
   const BASELINES: Record<string, { expanded: number; byEl: Record<string, number>; symops: number; c: number }> = {
     kaolinite: { expanded: 26, byEl: { Al: 4, Si: 4, O: 18 }, symops: 2, c: 7.4048 },
     dickite: { expanded: 52, byEl: { Al: 8, Si: 8, O: 36 }, symops: 4, c: 14.736 },
@@ -55,6 +55,9 @@ describe('六矿物 CIF 晶体结构基线（原子数 / 化学计量 / 对称�
     // 渲染位点集（分裂位双组分 + 部分占位全显示、零占位 Si3 剔除）；
     // CIF 声明化学式 Al4.8Si1.2O9.6 见 MINERALS.mullite.formula
     mullite: { expanded: 28, byEl: { Al: 10, Si: 4, O: 14 }, symops: 8, c: 2.8899 },
+    // 2026-09-18 催化氧化物（COD 9005888 / 9009008，全占位有序模型）
+    co3o4: { expanded: 56, byEl: { Co: 24, O: 32 }, symops: 192, c: 8.0968 },
+    ceo2: { expanded: 12, byEl: { Ce: 4, O: 8 }, symops: 192, c: 5.411 },
   };
 
   it.each(Object.entries(BASELINES))('%s：对称展开原子数与化学计量与 CIF 一致', (key, base) => {
@@ -75,7 +78,7 @@ describe('六矿物 CIF 晶体结构基线（原子数 / 化学计量 / 对称�
   });
 });
 
-describe('六矿物片层生成（严格 CIF 管线）', () => {
+describe('八矿物片层生成（严格 CIF 管线）', () => {
   it.each(MINERAL_KEYS)('%s：单层生成成功且带层标记', (key) => {
     const def = MINERALS[key];
     const g = buildKaoliniteSheet(def.cifText, {
@@ -91,7 +94,7 @@ describe('六矿物片层生成（严格 CIF 管线）', () => {
     expect(groupByLayer(g.atoms)).toHaveLength(1);
     // 元素集合与 CIF 展开一致（无编造元素）
     const els = new Set(g.atoms.map((a) => a.el));
-    for (const el of els) expect(['Al', 'Si', 'O', 'H', 'K', 'Ca']).toContain(el);
+    for (const el of els) expect(['Al', 'Si', 'O', 'H', 'K', 'Ca', 'Co', 'Ce']).toContain(el);
   });
 
   it('蒙脱石含间层 Ca、伊利石含层间 K（CIF 位点原样呈现）', () => {

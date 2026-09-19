@@ -11,7 +11,7 @@
 
 - **任务形态**：科研绘图工具（非结构查看器、非模拟软件）
 - **技术路线**：Web 前端（TypeScript + React 19 + Three.js/WebGL2）+ Tauri v2 桌面端（macOS 已交付，D01/D10）
-- **核心卖点**：模块库沉淀 —— 官方种子模块 12 条 + 自存模块/模板持续积累，新学生一键复用
+- **核心卖点**：模块库沉淀 —— 官方种子模块 15 条 + 自存模块/模板持续积累，新学生一键复用
 - **当前形态**：**生产工程（`src/`）为主体并已发布 v0.2.0**（`demo/` 仅为历史技术验证基线）
 
 ---
@@ -24,7 +24,7 @@
 | 模块 | 状态 |
 | --- | --- |
 | 工程基座（Vite+TS+React+zod+zustand+Worker） | ✅ |
-| 参数化几何内核（CIF 六矿物含莫来石/片层/管/颗粒/密排层/基底） | ✅ |
+| 参数化几何内核（CIF 八矿物：五种层状+莫来石+Co₃O₄+CeO₂/片层/管/颗粒/密排层/基底） | ✅ |
 | 分子导入（SMILES / 化学式 / MOL·SDF 文件） | ✅ |
 | 模块库（Dexie + 检索收藏 + 导入导出） | ✅ |
 | 出版导出（PNG/TIFF/SVG/PDF/GIF/分层 PNG） | ✅ |
@@ -96,10 +96,10 @@
 | 晶学严格模式 | `src/core/crystal.ts` | T-2.7：sheetParams.strictCell 开关——真实三斜投影（全投影+层间沿 c 轴堆叠，层片倾斜）；Si–O 键长与 CIF 距离矩阵偏差 <0.5%；默认示意正交化（D03 后路落地） |
 | 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移 + 导入导出；T-3.2：filterModules 检索/类型筛选/收藏排序 + toggleFavorite（favorite 字段向后兼容） |
 | 撤销/重做 | `src/state/history.ts` + `commands.ts` | T-2.1：attachHistory 实例包装（UI 零改动）；全量快照命令 + 800ms 合并窗口；栈深可配（默认 100）；Ctrl/Cmd+Z、+Shift/Y（App.tsx）；sceneStore 单例已挂接（sceneHistory） |
-| 素材模块 | 模块库内 12 个条目 | 官方种子模块 12 条（M2 片层、M3 管、M4 颗粒 S/M/L 三条独立、M5 基底、M6 组合、M7 多壁管、M8 复合场景、M9 莫来石单层薄片、M10 莫来石堆叠块、M11 甲苯分子）——M1 为历史样图不计入 seed-modules 条目 |
-| 种子模块库 | `data/seed-modules.json` | kaolin-modules/v1 全量备份（M2~M11 共 12 条含缩略图）；模块面板「导入」即可整套恢复/分发 |
+| 素材模块 | 模块库内 12 个条目 | 官方种子模块 15 条（M2 片层、M3 管、M4 颗粒 S/M/L、M5 基底、M6 组合、M7 多壁管、M8 复合场景、M9/M10 莫来石、M11 甲苯、M12 Co₃O₄、M13 CeO₂、M14 丙烷）——M1 为历史样图不计入 seed-modules 条目 |
+| 种子模块库 | `data/seed-modules.json` | kaolin-modules/v1 全量备份（M2~M14 共 15 条含缩略图）；模块面板「导入」即可整套恢复/分发 |
 | 三维 Demo | `demo/index.html` | 双击可用；生产版功能对照基准 |
-| CIF 种子库 | `data/*.cif` | 高岭石/地开石/珍珠石/蒙脱石/伊利石/莫来石（COD 2310785） |
+| CIF 种子库 | `data/*.cif` | 高岭石/地开石/珍珠石/蒙脱石/伊利石/莫来石/Co₃O₄（COD 9005888）/CeO₂（COD 9009008） |
 | 决策日志 | `DECISIONS.md` | D01–D10（D10：桌面端 Worker 内联 + 异步挂起必须可回退） |
 | 参数字典 | `DATA_DICT.md` | 五类组件参数 + 场景 JSON schema |
 | 桌面端稳定性 | `src/core/worker.ts` + `cache.ts` + `index.css` | 2026-09-08 修复：Worker `?worker&inline`（data URL，零运行时 fetch）+ 4s 握手超时回退主线程 + IndexedDB 4s 门直通 + canvas CSS 100% 钉死/body overflow:hidden/顶栏 wrap；233 tests |
@@ -114,6 +114,7 @@
 | 矿物注册表 interlayer | `src/core/minerals.ts` | 2026-09-13（T-2.4 收尾）：层间元素集（伊利石 K、蒙脱石 Ca/Na）驱动 showInterlayer 开关 |
 | 莫来石（第六矿物） | `minerals.ts`/`crystal.ts`/`schema.ts`/`mullite.test.ts` + `data/mullite.cif` | 2026-09-17：COD 2310785 平均结构（Pbam 骨架硅酸盐）；parseCIF 读 occupancy 剔零占位；分裂位双组分渲染 + 退化键守卫；d001 下限放宽 2.5（= 沿 c 堆叠周期）；layered=false 排除管组件；414 tests |
 | 统一模板库（模块+模板合一） | `schema.ts` sceneTemplateModuleSchema + `moduleLibrary.ts` + `ModulePanel.tsx` + `TopBar.tsx` | 2026-09-17：moduleLibrary 底座吸收 templateLibrary 快照能力——type:'template' 条目 = 组件+图元+相机+形态+2D 视图+整景缩略图；左栏两 Tab（素材\|模板）；顶栏唯一保存入口「🧩 保存为模板」；旧模板库惰性无损迁移（稳定 id 幂等）；**真实缩略图体系（2026-09-17b）**：新保存 = snapshotTemplate（snapshotWithOverlay 管线：3D 当前帧+图元+标注，150×110 jpeg 0.8 与组合模块同规格，保存视角构图）；纯 2D 模板 = shapeSceneThumb 矢量渲染（shapesToSVG 复用）；占位图仅限含 3D 组件的旧模板/渲染服务不可用/img 解析失败三类 fallback + generateMissingThumbnails 幂等回填；kaolin-modules/v1 导入导出兼容四种条目；**模板独立场景打开（2026-09-17e）**：点击卡片 = moduleToSceneDocument 归一化（四类条目完整替换语义）→ sceneStore.loadScene 一次性替换（与场景文件共用链路；清 selection/测量拾取；相机/形态/2D 视图恢复；锚定按原 id 天然成立；一条完整撤销事务）；无快照 legacy 才 frameAll；**图元复制粘贴 + 模板重命名（2026-09-17f）**：Cmd+C/V/D 双槽剪贴板修复（needsSelection 认图元选择——图元复制失效根因；pasteCount 逐次错开 12×n 且重新 Copy 重置；箭头/连线副本清外部锚定转自由图元）；renameModule 纯 metadata UPDATE（id/thumb/favorite/createdAt 不变，卡片 ✎ 入口 stopPropagation）；**重命名交互修复（2026-09-18）**：window.prompt 在 Tauri/wry WKWebView 未实现（静默返回 null）→ 打包版点击 ✎ 零反馈——改内联编辑（Enter 保存/Esc 取消/blur 保存/空名红框保持编辑态）；468 tests |
+| 催化氧化物 + 丙烷（Co₃O₄/CeO₂/C₃H₈） | `minerals.ts` aliases + `catalyst.test.ts` + `propane.test.ts` + `data/co3o4.cif`/`ceo2.cif` | 2026-09-18：COD 真实 CIF 直驱（尖晶石 56 原子/萤石 12 原子严格计量）；aliases 整词搜索（co3o4/ceo2/ceria/cobalt oxide，含数字串不折叠不错拆）；丙烷 = smilesTo3D('CCC') 运行时构造 MOLECULES（单一真源）；与 CeO₂ 风格化颗粒并存；495 tests |
 | 甲苯 preset（第八种内置分子） | `builders.ts` MOLECULES / `registry.ts` 别名 / `toluene.test.ts` + `data/toluene.sdf` | 2026-09-17：PubChem CID 1140 3D 构象（MMFF94）转录；别名 甲苯/toluene/TOL/C7H8 多路直达；搜索词只解析身份几何唯一来自 preset；427 tests |
 | 滚轮缩放灵敏度 | interaction.ts + RendererService | 2026-09-13（24a3d9c）：3D zoomSpeed 0.5 + 2D 灵敏度减半，方向/中心/上下限不变 |
 | 防漂移对账增强 | `scripts/check_library_state.py` | 2026-09-16：新增版本一致性/种子模块数对账/陈旧描述/下一步已完成矛盾四组检查 |

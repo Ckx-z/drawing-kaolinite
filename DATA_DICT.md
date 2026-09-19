@@ -32,6 +32,8 @@
 | 蒙脱石 | Montmorillonite | Ca0.5Al2Si4O12 | Al2Si4O12Ca0.5-Montmorillonite.cif（COD 9002779，Viani 2002） | 15.0 Å | 38 原子 | Al4Si8O24Ca2（P1 已全展开；Ca0.5 占位按位点全显示） |
 | 伊利石 | Illite | KAl4Si2O12 | Al4KSi2O12-Illite.cif | 20.14 Å（双层晶胞） | 76 原子 | K4Al16Si8O48 |
 | 莫来石 | Mullite | Al4.8Si1.2O9.6 | mullite.cif（COD 2310785，Birkenstock 2015） | 2.89 Å（= c 轴；**非层状骨架矿物，此值为沿 c 堆叠周期**，schema 下限 2.5） | 28 原子（Pbam 8 操作展开） | Al10Si4O14（渲染位点集；声明化学式见左列） |
+| 四氧化三钴 | Cobalt(II,III) oxide | Co3O4 | co3o4.cif（COD 9005888，Liu & Prewitt 尖晶石） | 8.0968 Å（= c = a；**立方非层状，沿 c 堆叠周期**） | 56 原子（Fd-3m 192 操作展开） | Co24O32（Co²⁺ 8a + Co³⁺ 16d + O 32e u=0.263，全占位） |
+| 二氧化铈 | Cerium dioxide | CeO2 | ceo2.cif（COD 9009008） | 5.411 Å（= c = a；**立方非层状，沿 c 堆叠周期**） | 12 原子（Fm-3m 192 操作展开） | Ce4O8（萤石：Ce 4a + O 8c） |
 
 几何生成严格走 parseCIF → expandSymmetry → buildSlab（无硬编码坐标）；基线由 `src/core/minerals.test.ts` + `src/core/mullite.test.ts` 锁定。羟基：高岭石/地开石按 O-H 位点标签补 H；珍珠石用 CIF 显式 H；蒙脱石/伊利石/莫来石 CIF 无 H 位点（模型即无 H，原样遵循）。矿物组件存为模块时自动写中文/英文/化学式 tags（模块库中文搜索可检索）。
 
@@ -88,6 +90,7 @@
 | 参数 | 取值 | 说明 |
 |---|---|---|
 | `kind` | `H₂O` / `O₂` / `CO₂` / `N₂` / `Ca²⁺` / `Ce³⁺` / `·OH (羟基自由基)` / `C₇H₈` | 内置库（标准键长键角）；默认渲染恒为球棍（cov×0.95 + 键） |
+| `C₃H₈` 丙烷 | preset | **几何 = 内置 SMILES 构象器运行时生成**（`smilesTo3D('CCC')`，单一真源零手搓）；11 原子/10 键；C–C ≈1.53、C–H ≈1.09。搜索别名：丙烷/propane/C3H8（registry.ts） |
 | `C₇H₈` 甲苯 | preset | **PubChem CID 1140 3D 构象（MMFF94）逐位转录**，源文件存档 `data/toluene.sdf`（2026-09-17）。15 原子/15 键；芳 C–C ≈1.395、环–CH₃ ≈1.492、C–H ≈1.09；苯环共面 <0.01Å。搜索别名：甲苯/甲基苯/toluene/tol/methylbenzene/C7H8（registry.ts）；几何与 SMILES 路径并存互不干扰 |
 | （默认 scale） | 4 | 分子默认整体缩放 4 倍（DEFAULT_SCALE.molecule），否则相对片层太小 |
 

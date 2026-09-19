@@ -189,7 +189,7 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
       key: 'kind',
       label: '分子种类',
       type: 'select',
-      options: ['H₂O', 'O₂', 'CO₂', 'N₂', 'Ca²⁺', 'Ce³⁺', '·OH (羟基自由基)', 'C₇H₈'],
+      options: ['H₂O', 'O₂', 'CO₂', 'N₂', 'Ca²⁺', 'Ce³⁺', '·OH (羟基自由基)', 'C₇H₈', 'C₃H₈'],
       // 与 MOLECULE_KINDS 同步（第二处副本；SMILES/化学式导入的分子几何由导入串决定，隐藏下拉避免误导）
       when: (p) => !p.smiles && !p.formula,
     },
@@ -239,10 +239,10 @@ const SUBSCRIPT: Record<string, string> = {
 };
 
 export const LIB: LibraryItem[] = [
-  { type: 'kaolinite_sheet', icon: '▬', name: '高岭土片层', desc: '1–3 层堆叠 · CIF 驱动 · 六矿物（含莫来石）· 矩形/六角', en: 'Kaolinite Sheet' },
+  { type: 'kaolinite_sheet', icon: '▬', name: '高岭土片层', desc: '1–3 层堆叠 · CIF 驱动 · 八矿物（含莫来石/Co₃O₄/CeO₂）· 矩形/六角', en: 'Kaolinite Sheet' },
   { type: 'halloysite_tube', icon: '◯', name: '埃洛石纳米管', desc: '片层卷曲生成 · 卷曲进度可动画', en: 'Halloysite Nanotube' },
   { type: 'nanoparticle', icon: '⬤', name: '纳米颗粒 CeO₂', desc: '簇装小晶粒 / 光滑球 · 尺寸可调', en: 'Nanoparticle' },
-  { type: 'molecule', icon: '✦', name: '小分子 / 离子', desc: '水分子 H₂O · 甲苯 C₇H₈ · 氧气 O₂ · 二氧化碳 CO₂ · 氮气 N₂ · 阳离子（可输 water/toluene/甲苯 搜索）', en: 'Molecule / Ion' },
+  { type: 'molecule', icon: '✦', name: '小分子 / 离子', desc: '水分子 H₂O · 甲苯 C₇H₈ · 丙烷 C₃H₈ · 氧气 O₂ · 二氧化碳 CO₂ · 氮气 N₂ · 阳离子（可输 water/toluene/propane/甲苯 搜索）', en: 'Molecule / Ion' },
   { type: 'rubber_substrate', icon: '▭', name: '橡胶基底', desc: '圆角软质平板', en: 'Rubber Substrate' },
   { type: 'packed_layers', icon: '⬢', name: '密排原子层', desc: '六方/立方密排 · 逐原子堆叠开关 · 层数可调', en: 'Close-Packed Layers' },
 ];

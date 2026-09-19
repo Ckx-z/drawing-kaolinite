@@ -77,8 +77,10 @@ export const sheetParamsSchema = z.strictObject({
   edgeH: z.boolean(),
   // T-2.7：晶学严格模式（保留 β/γ 夹角的真实三斜投影）；默认示意正交化（D03）
   strictCell: z.boolean().default(false),
-  /** 矿物种类（2026-09-12 五选一；2026-09-17 +莫来石 = 六选一）；缺省高岭石（旧场景兼容） */
-  mineral: z.enum(['kaolinite', 'dickite', 'nacrite', 'montmorillonite', 'illite', 'mullite']).default('kaolinite'),
+  /** 矿物种类（2026-09-12 五选一；2026-09-17 +莫来石；2026-09-18 +Co₃O₄/CeO₂ = 八选一）；缺省高岭石（旧场景兼容） */
+  mineral: z
+    .enum(['kaolinite', 'dickite', 'nacrite', 'montmorillonite', 'illite', 'mullite', 'co3o4', 'ceo2'])
+    .default('kaolinite'),
   // 单原子模式（2026-09-08）：全部原子统一为 singleEl（简化示意）；
   // singleLayers（2026-09-10）：single 下只显示前 N 层（builder clamp 到 layers）
   atomMode,
@@ -129,6 +131,8 @@ export const MOLECULE_KINDS = [
   '·OH (羟基自由基)',
   // 2026-09-17：甲苯 preset（PubChem CID 1140 构象，几何见 builders.MOLECULES）
   'C₇H₈',
+  // 2026-09-18：丙烷 preset（内置 SMILES 构象器运行时生成）
+  'C₃H₈',
 ] as const;
 
 export const moleculeParamsSchema = z.strictObject({

@@ -24,8 +24,18 @@ import montmorilloniteCif from '../../data/Al2Si4O12Ca0.5-Montmorillonite.cif?ra
 import nacriteCif from '../../data/Al2Si2O9H4-Nacrite.cif?raw';
 import kaoliniteCif from '../../data/kaolinite.cif?raw';
 import mulliteCif from '../../data/mullite.cif?raw';
+import co3o4Cif from '../../data/co3o4.cif?raw';
+import ceo2Cif from '../../data/ceo2.cif?raw';
 
-export type MineralKey = 'kaolinite' | 'dickite' | 'nacrite' | 'montmorillonite' | 'illite' | 'mullite';
+export type MineralKey =
+  | 'kaolinite'
+  | 'dickite'
+  | 'nacrite'
+  | 'montmorillonite'
+  | 'illite'
+  | 'mullite'
+  | 'co3o4'
+  | 'ceo2';
 
 export interface MineralDef {
   key: MineralKey;
@@ -42,11 +52,17 @@ export interface MineralDef {
   /** 层间物种元素（T-2.4：showInterlayer=false 时隐藏；空 = 无层间物） */
   interlayer: readonly string[];
   /**
-   * 是否层状矿物（默认 true）。false = 骨架/架状结构（莫来石）：
+   * 是否层状矿物（默认 true）。false = 骨架/架状结构（莫来石/尖晶石/萤石）：
    * d001 语义为"沿 c 的堆叠周期"而非层间距，且不出现在管组件的矿物下拉
    * （骨架结构卷管无晶体学意义）。
    */
   layered?: boolean;
+  /**
+   * 额外搜索别名（整词匹配、小写化；2026-09-18 催化氧化物）：
+   * 化学式（co3o4/ceo2——含数字串不做小写折叠，Co 与 C 大小写天然不混淆）
+   * 与英文名变体（ceria/cobalt oxide 等）经此直达。
+   */
+  aliases?: readonly string[];
 }
 
 export const MINERALS: Record<MineralKey, MineralDef> = {
@@ -107,6 +123,31 @@ export const MINERALS: Record<MineralKey, MineralDef> = {
     interlayer: [],
     layered: false,
   },
+  // 2026-09-18 催化氧化物（任务书：真实 CIF 直驱，与 CeO₂ 风格化簇装颗粒并存）
+  co3o4: {
+    key: 'co3o4',
+    zh: ['四氧化三钴'],
+    en: 'Cobalt(II,III) oxide',
+    // COD 9005888（Liu & Prewitt，尖晶石 Fd-3m，a=8.0968）；展开 Co24O32（56/晶胞）
+    formula: 'Co3O4',
+    cifText: co3o4Cif,
+    d001Default: 8.0968, // 立方：沿 c 堆叠周期 = a（非层状，layered=false）
+    interlayer: [],
+    layered: false,
+    aliases: ['co3o4', 'co₃o₄', 'cobalt oxide', 'tricobalt tetroxide', 'cobalt spinel'],
+  },
+  ceo2: {
+    key: 'ceo2',
+    zh: ['二氧化铈'],
+    en: 'Cerium dioxide',
+    // COD 9009008（萤石 Fm-3m，a=5.4110）；展开 Ce4O8（12/晶胞）
+    formula: 'CeO2',
+    cifText: ceo2Cif,
+    d001Default: 5.411,
+    interlayer: [],
+    layered: false,
+    aliases: ['ceo2', 'ceo₂', 'ceria', 'cerium oxide', 'cerianite'],
+  },
 };
 
 export const MINERAL_KEYS = Object.keys(MINERALS) as MineralKey[];
@@ -121,6 +162,8 @@ export function mineralOf(key: string | undefined): MineralDef {
  * - 含中文：别名包含匹配（"高岭石""珍珠陶土"）
  * - 纯 ASCII：仅整词相等，或 ≥4 字符的前缀匹配（Mont→Montmorillonite），
  *   避免 "C"/"CO"/"Si" 等化学式输入被英文包含匹配误吞
+ * - 额外别名（2026-09-18 催化氧化物）：整词匹配（小写化），覆盖化学式
+ *   （co3o4/ceo2——含数字串与 Co2 防混淆规则天然兼容）与英文名变体
  */
 export function findMineral(input: string): MineralDef | null {
   const q = input.trim().toLowerCase();
@@ -129,8 +172,11 @@ export function findMineral(input: string): MineralDef | null {
   for (const def of Object.values(MINERALS)) {
     if (hasZh) {
       if (def.zh.some((z) => z.includes(q))) return def;
-    } else if (def.en.toLowerCase() === q || (q.length >= 4 && def.en.toLowerCase().startsWith(q))) {
-      return def;
+    } else {
+      if (def.en.toLowerCase() === q || (q.length >= 4 && def.en.toLowerCase().startsWith(q))) {
+        return def;
+      }
+      if (def.aliases?.some((a) => a.toLowerCase() === q)) return def;
     }
   }
   return null;

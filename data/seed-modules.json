@@ -515,6 +515,92 @@
       "thumb": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2796%27%20height%3D%2772%27%3E%3Crect%20width%3D%2796%27%20height%3D%2772%27%20fill%3D%27%23F4F5F7%27%2F%3E%3Cg%20stroke%3D%27%23555%27%20stroke-width%3D%272%27%3E%3Cpath%20d%3D%27M40%2022%20L58%2022%20L67%2037%20L58%2052%20L40%2052%20L31%2037%20Z%27%20fill%3D%27none%27%2F%3E%3Cline%20x1%3D%2749%27%20y1%3D%2752%27%20x2%3D%2749%27%20y2%3D%2764%27%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2740%27%20cy%3D%2722%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3Ccircle%20cx%3D%2758%27%20cy%3D%2722%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3Ccircle%20cx%3D%2767%27%20cy%3D%2737%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3Ccircle%20cx%3D%2758%27%20cy%3D%2752%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3Ccircle%20cx%3D%2740%27%20cy%3D%2752%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3Ccircle%20cx%3D%2731%27%20cy%3D%2737%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3Ccircle%20cx%3D%2749%27%20cy%3D%2764%27%20r%3D%275%27%20fill%3D%27%233a3a3a%27%2F%3E%3C%2Fsvg%3E",
       "createdAt": "2026-09-17T08:30:00.000Z",
       "moduleVersion": 1
+    },
+    {
+      "type": "kaolinite_sheet",
+      "params": {
+        "Lx": 40,
+        "Ly": 40,
+        "layers": 1,
+        "d001": 8.0968,
+        "shape": "矩形",
+        "style": "球棍",
+        "edgeH": false,
+        "mineral": "co3o4"
+      },
+      "id": "m1788847000001",
+      "name": "M12 四氧化三钴晶胞 Co₃O₄（尖晶石）",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": 1
+      },
+      "thumb": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22110%22%3E%3Crect%20width%3D%22150%22%20height%3D%22110%22%20fill%3D%22%2523F4F5F7%22%2F%3E%3Cg%20stroke%3D%22%2523889999%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M30%2075%20L60%2045%20L100%2045%20L125%2070%20L95%2095%20L55%2095%20Z%22%20fill%3D%22none%22%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2275%22%20r%3D%228%22%20fill%3D%22%25234a6fa5%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%2245%22%20r%3D%228%22%20fill%3D%22%25234a6fa5%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%2270%22%20r%3D%228%22%20fill%3D%22%25234a6fa5%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%2295%22%20r%3D%226%22%20fill%3D%22%2523e05548%22%2F%3E%3Ccircle%20cx%3D%2255%22%20cy%3D%2295%22%20r%3D%226%22%20fill%3D%22%2523e05548%22%2F%3E%3Ccircle%20cx%3D%22100%22%20cy%3D%2245%22%20r%3D%226%22%20fill%3D%22%2523e05548%22%2F%3E%3C%2Fsvg%3E",
+      "createdAt": "2026-09-19T02:00:00.000Z",
+      "moduleVersion": 1
+    },
+    {
+      "type": "kaolinite_sheet",
+      "params": {
+        "Lx": 32,
+        "Ly": 32,
+        "layers": 1,
+        "d001": 5.411,
+        "shape": "矩形",
+        "style": "球棍",
+        "edgeH": false,
+        "mineral": "ceo2"
+      },
+      "id": "m1788847000002",
+      "name": "M13 二氧化铈晶胞 CeO₂（萤石）",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": 1
+      },
+      "thumb": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22110%22%3E%3Crect%20width%3D%22150%22%20height%3D%22110%22%20fill%3D%22%2523F4F5F7%22%2F%3E%3Cg%20stroke%3D%22%2523889999%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M30%2075%20L60%2045%20L100%2045%20L125%2070%20L95%2095%20L55%2095%20Z%22%20fill%3D%22none%22%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2275%22%20r%3D%228%22%20fill%3D%22%2523e8c96b%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%2245%22%20r%3D%228%22%20fill%3D%22%2523e8c96b%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%2270%22%20r%3D%228%22%20fill%3D%22%2523e8c96b%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%2295%22%20r%3D%226%22%20fill%3D%22%2523e05548%22%2F%3E%3Ccircle%20cx%3D%2255%22%20cy%3D%2295%22%20r%3D%226%22%20fill%3D%22%2523e05548%22%2F%3E%3Ccircle%20cx%3D%22100%22%20cy%3D%2245%22%20r%3D%226%22%20fill%3D%22%2523e05548%22%2F%3E%3C%2Fsvg%3E",
+      "createdAt": "2026-09-19T02:00:00.000Z",
+      "moduleVersion": 1
+    },
+    {
+      "type": "molecule",
+      "params": {
+        "kind": "C₃H₈"
+      },
+      "id": "m1788847000003",
+      "name": "M14 丙烷分子 C₃H₈",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": 4
+      },
+      "thumb": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22110%22%3E%3Crect%20width%3D%22150%22%20height%3D%22110%22%20fill%3D%22%2523F4F5F7%22%2F%3E%3Cline%20x1%3D%2245%22%20y1%3D%2255%22%20x2%3D%22105%22%20y2%3D%2255%22%20stroke%3D%22%2523555%22%20stroke-width%3D%223%22%2F%3E%3Ccircle%20cx%3D%2245%22%20cy%3D%2255%22%20r%3D%229%22%20fill%3D%22%25233a3a3a%22%2F%3E%3Ccircle%20cx%3D%2275%22%20cy%3D%2255%22%20r%3D%229%22%20fill%3D%22%25233a3a3a%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%2255%22%20r%3D%229%22%20fill%3D%22%25233a3a3a%22%2F%3E%3Ccircle%20cx%3D%2235%22%20cy%3D%2238%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%2255%22%20cy%3D%2238%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%2235%22%20cy%3D%2272%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%2275%22%20cy%3D%2236%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%2275%22%20cy%3D%2274%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%2238%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%2272%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%2230%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3C%2Fsvg%3E",
+      "createdAt": "2026-09-19T02:00:00.000Z",
+      "moduleVersion": 1
     }
   ],
   "note": "种子模块库全量备份：M2~M8 共 9 条（浏览器实测入库后导出；模块面板「导入」即可整套恢复/分发）"

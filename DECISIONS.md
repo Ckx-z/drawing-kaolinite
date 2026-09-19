@@ -190,3 +190,18 @@
 **修复**：内联编辑替代原生弹窗（任务书十三/十四推荐形态）——点击 ✎ 进入 editingId/editingName 状态，卡片名称位变为输入框（autofocus 全选）；Enter/blur 保存、Esc 取消；空名红框（#e5735f）保持编辑态不关闭；输入框 click/keydown stopPropagation（不触发卡片打开，也不进全局快捷键）。数据链路复用既有 renameModule（UPDATE 模式）零改动。
 
 **验证**：ui.dom.test +2（点击 ✎ 进入编辑态且 loadScene 零调用 spy 验证 / Enter 保存后 UI 立即刷新 + Dexie 重读新名 / 空名拒绝保持编辑 / Esc 取消恢复原名）；vitest 466 → 468 全绿。
+
+
+## D-2026-09-18b：催化氧化物 CIF 直驱（Co₃O₄/CeO₂）+ 丙烷 preset
+
+**背景**：用户任务书新增四素材。甲苯 C₇H₈ 已于 2026-09-17 内置（PubChem 构象 + 全别名矩阵 + M11），本轮核对验收不重做。
+
+**决策**：
+1. **CIF 数据源**：Co₃O₄ = COD 9005888（Liu & Prewitt，Fd-3m origin 2，a=8.0968，Co1 8a/Co2 16d/O 32e u=0.263，192 symop，全占位有序模型——候选 9005887 原子块被 COD 改标签历史损坏故弃）；CeO₂ = COD 9009008（Fm-3m 萤石，a=5.4110，96→解析得 192 symop）。展开实测 Co24O32=56、Ce4O8=12，与晶胞化学计量严格一致，解析层零适配（显式 symop + occupancy 管线全覆盖）。
+2. **非层状语义**：沿莫来石先例 layered=false——d001 = 沿 c 堆叠周期（立方 = a），管组件双重排除（下拉过滤 + 管 schema 枚举）；六角切片保留（几何裁剪通用不崩）。
+3. **搜索**：MineralDef 新增可选 `aliases`（整词匹配小写化）——co3o4/co₃o₄/cobalt oxide/tricobalt tetroxide/cobalt spinel 与 ceo2/ceo₂/ceria/cerium oxide/cerianite 直达；「Co3O4/CeO2」含数字混合串不做小写折叠（Co2 防混淆先例规则），分子侧 resolveMoleculeQuery 对二者返回 null（矿物优先命中，不错拆、不误入团簇生成器）。
+4. **丙烷几何**：MOLECULES['C₃H₈'] 模块初始化时由 `smilesTo3D('CCC')` 运行时构造（单一真源=构象器，零手搓零新依赖；构象器键三元组 [i,j,order] 取前两位入 Bond）。别名 丙烷/propane/C3H8 + FORMULA_PRESETS C3H8/c3h8。
+5. **并存**：CeO₂ 风格化簇装颗粒（buildParticle，Ce/O 硬编码晶格）不动——CIF 直驱晶体与风格化颗粒两条路径并存（任务书明确）；不生成 Co₃O₄ 纳米管/颗粒（骨架不卷管；颗粒构建器专属则套用即手搓，同莫来石决策）。
+6. 种子模块 M12/M13（晶体晶胞片层）/M14（丙烷分子）→ 15 条。
+
+**验证**：catalyst.test 16 条（晶胞/symop 192/展开 56 与 12/别名矩阵/不错拆防御/layered+管排除/切片线性 1400×nc/六角不崩/schema/风格化颗粒回归）+ propane.test 9 条（别名/11 原子 10 键/键长窗口/质心 <1e-9/单一真源距离矩阵一致/确定性）+ minerals.test 基线扩展；vitest 468 → 495 全绿。
