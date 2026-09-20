@@ -163,6 +163,17 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
       when: (p) => (MINERALS[(p.mineral as MineralKey) ?? 'kaolinite']?.interlayer.length ?? 0) > 0,
     },
   ],
+  crystal_surface: [
+    mineralField(),
+    { key: 'h', group: '晶体结构', label: 'Miller h', min: 0, max: 3, step: 1 },
+    { key: 'k', group: '晶体结构', label: 'Miller k', min: 0, max: 3, step: 1 },
+    { key: 'l', group: '晶体结构', label: 'Miller l', min: 0, max: 3, step: 1 },
+    { key: 'sizeX', group: '基础', label: '表面尺寸 X', unit: 'Å', min: 8, max: 40, step: 1 },
+    { key: 'sizeY', group: '基础', label: '表面尺寸 Y', unit: 'Å', min: 8, max: 40, step: 1 },
+    { key: 'thickness', group: '基础', label: 'slab 厚度', unit: 'Å', min: 4, max: 30, step: 1 },
+    { key: 'termination', group: '高级', label: 'termination 候选', min: 0, max: 9, step: 1 },
+    { key: 'style', group: '基础', label: '渲染风格', type: 'select', options: ['空间填充', '球棍'] },
+  ],
   halloysite_tube: [
     { key: 'innerR', group: '基础', label: '内半径', unit: 'Å', min: 8, max: 40, step: 1 },
     { key: 'length', group: '基础', label: '管长', unit: 'Å', min: 30, max: 200, step: 5 },
@@ -239,6 +250,7 @@ const SUBSCRIPT: Record<string, string> = {
 };
 
 export const LIB: LibraryItem[] = [
+  { type: 'crystal_surface', icon: '▤', name: '晶体表面（Miller 切割）', desc: 'CIF → 真实晶格切面 slab（CeO₂(111) 等）· 未弛豫初始结构', en: 'Crystal Surface' },
   { type: 'kaolinite_sheet', icon: '▬', name: '高岭土片层', desc: '1–3 层堆叠 · CIF 驱动 · 八矿物（含莫来石/Co₃O₄/CeO₂）· 矩形/六角', en: 'Kaolinite Sheet' },
   { type: 'halloysite_tube', icon: '◯', name: '埃洛石纳米管', desc: '片层卷曲生成 · 卷曲进度可动画', en: 'Halloysite Nanotube' },
   { type: 'nanoparticle', icon: '⬤', name: '纳米颗粒 CeO₂', desc: '簇装小晶粒 / 光滑球 · 尺寸可调', en: 'Nanoparticle' },

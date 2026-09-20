@@ -15,6 +15,7 @@ import type {
   paletteSettingSchema,
   particleParamsSchema,
   sceneDocumentSchema,
+  crystalSurfaceParamsSchema,
   sheetParamsSchema,
   substrateParamsSchema,
   transformSchema,
@@ -29,6 +30,7 @@ export type Vec3 = z.infer<typeof transformSchema>['position'];
 export type Transform = z.infer<typeof transformSchema>;
 
 /** 各类型 params（sheet/tube 用 z.input：singleLayers 等带默认值的新增键可选，字面量构造零负担；运行时由 builder 容错） */
+export type CrystalSurfaceParams = z.input<typeof crystalSurfaceParamsSchema>;
 export type SheetParams = z.input<typeof sheetParamsSchema>;
 export type TubeParams = z.input<typeof tubeParamsSchema>;
 export type ParticleParams = z.input<typeof particleParamsSchema>;
@@ -52,4 +54,4 @@ export type Annotation = z.infer<typeof annotationSchema>;
 export type ModuleEntry = z.infer<typeof moduleSchema>;
 
 /** 任意类型 params 的并集（ DEFAULT_PARAMS 索引用） */
-export type AnyParams = SheetParams | TubeParams | ParticleParams | MoleculeParams | SubstrateParams | PackedLayerParams;
+export type AnyParams = SheetParams | TubeParams | ParticleParams | MoleculeParams | SubstrateParams | PackedLayerParams | CrystalSurfaceParams;

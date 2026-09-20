@@ -229,7 +229,7 @@ describe('默认值工厂（与 DATA_DICT / demo DEFAULTS 一致）', () => {
         visible: true,
       })),
     });
-    expect(doc.components).toHaveLength(6);
+    expect(doc.components).toHaveLength(7); // 2026-09-20 +crystal_surface
     expect(moduleSchema.safeParse({ ...DEMO_SCENE, id: '' }).success).toBe(false);
   });
 });

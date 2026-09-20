@@ -12,6 +12,7 @@
  *    丢弃过期响应（滑块连续拖动只采纳最后一次）。
  */
 import {
+  buildCrystalSurface,
   buildHalloysiteTube,
   buildKaoliniteSheet,
   buildMolecule,
@@ -24,10 +25,11 @@ import { formulaTo3D } from './molecules/formula';
 import { parseSdfOrMol } from './molecules/mol';
 import { resolveCanonicalFormula } from './molecules/registry';
 import { smilesTo3D } from './molecules/smiles';
-import type { MoleculeParams, PackedLayerParams, ParticleParams, SheetParams, TubeParams } from './types';
+import type { CrystalSurfaceParams, MoleculeParams, PackedLayerParams, ParticleParams, SheetParams, TubeParams } from './types';
 
 export type GeometryKind =
   | 'kaolinite_sheet'
+  | 'crystal_surface'
   | 'halloysite_tube'
   | 'nanoparticle'
   | 'molecule'
@@ -35,6 +37,7 @@ export type GeometryKind =
 
 export type GeometryParams =
   | SheetParams
+  | CrystalSurfaceParams
   | TubeParams
   | ParticleParams
   | MoleculeParams
@@ -64,12 +67,14 @@ export type WorkerResponse =
 
 /** 统一计算入口（主线程同步引擎与 Worker 脚本共用） */
 export function computeGeometry(req: GeometryRequest): GeometryResult {
-  if ((req.kind === 'kaolinite_sheet' || req.kind === 'halloysite_tube') && !req.cifText) {
+  if ((req.kind === 'kaolinite_sheet' || req.kind === 'halloysite_tube' || req.kind === 'crystal_surface') && !req.cifText) {
     throw new Error('CIF 数据未设置');
   }
   switch (req.kind) {
     case 'kaolinite_sheet':
       return buildKaoliniteSheet(req.cifText, req.params as SheetParams);
+    case 'crystal_surface':
+      return buildCrystalSurface(req.cifText, req.params as CrystalSurfaceParams);
     case 'halloysite_tube':
       return buildHalloysiteTube(req.cifText, req.params as TubeParams);
     case 'nanoparticle':

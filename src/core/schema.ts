@@ -17,6 +17,7 @@ import { shapeSchema } from './shapes/schema';
 
 export const COMPONENT_TYPES = [
   'kaolinite_sheet',
+  'crystal_surface',
   'halloysite_tube',
   'nanoparticle',
   'molecule',
@@ -204,6 +205,21 @@ export const tubeComponentSchema = z.strictObject({
   ...componentCommon,
 });
 
+/* ---------- 晶面表面（PHASE B 2026-09-20：CIF → Miller slab 通用晶体表面） ---------- */
+export const crystalSurfaceParamsSchema = z.strictObject({
+  mineral: z.enum(['kaolinite', 'dickite', 'nacrite', 'montmorillonite', 'illite', 'mullite', 'co3o4', 'ceo2']).default('ceo2'),
+  /** Miller 指数（不全为零；000 在 builder 校验报错） */
+  h: z.number().int().min(0).max(3),
+  k: z.number().int().min(0).max(3),
+  l: z.number().int().min(0).max(3),
+  sizeX: z.number().min(8).max(40),
+  sizeY: z.number().min(8).max(40),
+  thickness: z.number().min(4).max(30),
+  /** termination 候选索引（满层枚举，确定性；越界自动钳制） */
+  termination: z.number().int().min(0).max(9).default(0),
+  style: renderStyle,
+});
+
 export const particleComponentSchema = z.strictObject({
   type: z.literal('nanoparticle'),
   params: particleParamsSchema,
@@ -213,6 +229,12 @@ export const particleComponentSchema = z.strictObject({
 export const moleculeComponentSchema = z.strictObject({
   type: z.literal('molecule'),
   params: moleculeParamsSchema,
+  ...componentCommon,
+});
+
+export const crystalSurfaceComponentSchema = z.strictObject({
+  type: z.literal('crystal_surface'),
+  params: crystalSurfaceParamsSchema,
   ...componentCommon,
 });
 
@@ -233,6 +255,7 @@ export const componentSchema = z.discriminatedUnion('type', [
   tubeComponentSchema,
   particleComponentSchema,
   moleculeComponentSchema,
+  crystalSurfaceComponentSchema,
   substrateComponentSchema,
   packedLayerComponentSchema,
 ]);
@@ -349,6 +372,7 @@ export const moduleSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('halloysite_tube'), params: tubeParamsSchema, ...moduleCommon }),
   z.strictObject({ type: z.literal('nanoparticle'), params: particleParamsSchema, ...moduleCommon }),
   z.strictObject({ type: z.literal('molecule'), params: moleculeParamsSchema, ...moduleCommon }),
+  z.strictObject({ type: z.literal('crystal_surface'), params: crystalSurfaceParamsSchema, ...moduleCommon }),
   z.strictObject({
     type: z.literal('rubber_substrate'),
     params: substrateParamsSchema,
@@ -400,6 +424,7 @@ export const DEFAULT_PARAMS = {
   molecule: { kind: 'H₂O' },
   rubber_substrate: { Lx: 140, Ly: 90, thickness: 5 },
   packed_layers: { el: 'Si', n: 7, layers: 3, dist: 4, stacking: 'AB', mask: '' },
+  crystal_surface: { mineral: 'ceo2', h: 1, k: 1, l: 1, sizeX: 16, sizeY: 16, thickness: 10, termination: 0, style: '球棍' },
 } as const;
 
 /** molecule 默认整体缩放 4（太小看不清），其余 1（demo DEFAULT_SCALE） */

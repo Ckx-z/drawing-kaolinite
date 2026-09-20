@@ -47,6 +47,7 @@ export type SceneEntry = SceneComponent & { id: string };
 
 export const TYPE_NAMES: Record<ComponentType, string> = {
   kaolinite_sheet: '高岭土片层',
+  crystal_surface: '晶体表面',
   halloysite_tube: '埃洛石管',
   nanoparticle: '纳米颗粒',
   molecule: '分子',

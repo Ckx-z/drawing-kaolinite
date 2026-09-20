@@ -9,7 +9,8 @@ import * as C from './crystal';
 import type { Atom, Bond, GeometryData } from './geometry';
 import { centerAtoms } from './molecules/center';
 import { mineralOf } from './minerals';
-import type { MoleculeParams, PackedLayerParams, ParticleParams, SheetParams, TubeParams } from './types';
+import { buildMillerSlab } from './surface/slab';
+import type { CrystalSurfaceParams, MoleculeParams, PackedLayerParams, ParticleParams, SheetParams, TubeParams } from './types';
 
 /* 确定性伪随机（同一种子同一颗粒形，保证模块复现） */
 export function mulberry32(seed: number): () => number {
@@ -276,6 +277,24 @@ export function buildParticle(p: ParticleParams): GeometryData {
     }
   }
   return applyAtomMode({ atoms, bonds: [], meta: { n: atoms.length } }, p);
+}
+
+/* ============================================================
+ * 素材：晶面表面（PHASE B 2026-09-20）—— CIF → Miller slab 通用晶体表面
+ * 与高岭土层状 builder 严格分离（无 d001/卷曲/层间语义）；
+ * surface/ 模块承担全部科学数学，本函数仅做接线。
+ * ============================================================ */
+export function buildCrystalSurface(cifText: string, p: CrystalSurfaceParams): GeometryData {
+  const slab = buildMillerSlab(cifText, {
+    h: p.h,
+    k: p.k,
+    l: p.l,
+    sizeX: p.sizeX,
+    sizeY: p.sizeY,
+    thickness: p.thickness,
+    termination: p.termination ?? 0,
+  });
+  return { atoms: slab.atoms, bonds: slab.bonds, meta: {} };
 }
 
 /* ============================================================

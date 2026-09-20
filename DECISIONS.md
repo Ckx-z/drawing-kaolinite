@@ -228,3 +228,14 @@
 **决策**：球棍显示使用共价半径缩放 + 最小视觉球半径，真实元素半径数据不修改——`BALL_STICK_MIN_ATOM_RADIUS` 0.14→0.20、`BALL_STICK_BOND_RADIUS` 0.13→0.12。最终 H=0.20 / C=0.319 / bond=0.12（H/bond≈1.67，C>H>bond 层级明确）。通用 max() 规则不特判 H：cov×0.42<0.20 仅 H 与 He（He 不出现于素材），矿物最小元素 O=0.277 不受钳制。空间填充 vdW×0.92 零变化；原子坐标/CIF/SDF/MOLECULES/测量零触碰（渲染规则层变更，旧场景自动生效）；SVG 经 baseRadiusFor 委托 displayRadius 同步。
 
 **验证**：新 visualScale.test 8 条（H>bond×1.5、C>H>bond、H≈MIN、C/O 不被钳制、空间填充逐位不变、丙烷 C-H/C-C 中心距仍数据库值、未知元素回退、SVG 同源静态断言）；vitest 497 → 505 全绿。
+
+
+## D-2026-09-20：Scientific Geometry Foundation + Surface & Adsorption Builder MVP
+
+**PHASE A**：①Canonical Asset Registry（`core/assets/registry.ts`）——聚合不替换：矿物几何仍唯一来自 MINERALS、分子来自 MOLECULES，registry 只做身份解析（多搜索词→`mineral:ceo2` 式稳定 id）+ provenance（COD/AMCSD/PubChem 来源内嵌为可查询 metadata，不再只写 README）+ geometrySource/Quality 等级（runtime metadata，不升级 scene schema）。②阳离子补 canonical 别名（钙离子/Ca²⁺ 等可搜索）。③scientificGeometry.test 统一科学不变量（H₂O 104.5°/CO₂ 线性/晶胞化学计量/莫来石占位语义）。④STRUCTURE_BENCHMARK.md（参考值/实测/容差）与 V0.3_ROADMAP。
+
+**PHASE B**：①Miller 表面 = **真实晶格数学**（倒易格矢 G=h a*+k b*+l c* 定法向；表面重复矢量 = 与 G 正交的最短直接晶格整数组合，由 a_i·a*_j=δ_ij 保证；斜坐标 (α,β) 折叠 + 整数 u/v 副本铺窗——矩形独立取模在斜格上会产生非法余数位置，实测踩坑修正）。②termination = 满层确定性枚举（两端无半原子残层；O/Ce 端面差异即 termination 语义），geometrySource='generated' 不冒充 reference。③吸附候选 = site（top/bridge/hollow，近邻阈值自适应）/orientation（两段基投影合成：分子短轴→z→targetZ）/vdW 估算距离/clash（<0.7×vdW 和自动沿法向推出）。**无任何能量计算与稳定性声称**（geometryMethod='initial'）。④crystal_surface 组件接线（schema/worker/RendererService fallback/paramDefs/LIB/DEFAULT_PARAMS），存参数不存网格，候选输出为普通 molecule+transform（无第二套场景系统）。
+
+**环境事件**：@types/three 被网络层注入损坏（src/ 目录坏、tgz 截断、npm/npmmirror 均 141KB 污染）——jsdelivr 逐文件镜像重建（624 文件零失败）。首轮全量测试的间歇挂起亦为环境级（复跑干净）。
+
+**验证**：vitest 505 → 534（registry 3 + scientificGeometry 13 + slab 8 + adsorb 8 - 计数重排）；tsc/lint/build 全绿；五矿物/SMILES/模板/导出零回归。

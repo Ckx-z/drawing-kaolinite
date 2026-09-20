@@ -17,6 +17,7 @@ import { measureLabel } from '../core/measures';
 import type { Measurement } from '../core/measures';
 import { drawMeasurements } from '../ui/measure/draw';
 import {
+  buildCrystalSurface,
   buildHalloysiteTube,
   buildKaoliniteSheet,
   buildMolecule,
@@ -1213,6 +1214,11 @@ export class RendererService {
         const cif1 = mineralOf((comp.params as { mineral?: string }).mineral).cifText || this.cifText;
         if (!cif1) throw new Error('未设置 CIF 数据（setCifText）');
         return buildKaoliniteSheet(cif1, comp.params);
+      }
+      case 'crystal_surface': {
+        const cifS = mineralOf((comp.params as { mineral?: string }).mineral).cifText || this.cifText;
+        if (!cifS) throw new Error('未设置 CIF 数据（setCifText）');
+        return buildCrystalSurface(cifS, comp.params as import('../core/types').CrystalSurfaceParams);
       }
       case 'halloysite_tube': {
         const cif2 = mineralOf((comp.params as { mineral?: string }).mineral).cifText || this.cifText;
