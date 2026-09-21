@@ -196,6 +196,18 @@ export const PARAM_DEFS: Record<ComponentType, ParamDef[]> = {
     ...ATOM_MODE_BASE,
   ],
   molecule: [
+    // 显示模型（2026-09-21c）：type === 'molecule' 即显示——与来源无关
+    // （preset/SMILES/化学式/MOL/SDF/吸附 Apply 统一；纯显示，切换零几何重建语义）
+    {
+      key: 'style',
+      group: '基础',
+      label: '显示模型',
+      type: 'select',
+      options: [
+        { value: '球棍', label: '球棍模型' },
+        { value: '空间填充', label: '空间填充模型' },
+      ],
+    },
     {
       key: 'kind',
       label: '分子种类',

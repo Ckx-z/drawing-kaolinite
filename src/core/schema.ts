@@ -138,6 +138,10 @@ export const MOLECULE_KINDS = [
 
 export const moleculeParamsSchema = z.strictObject({
   kind: z.enum(MOLECULE_KINDS),
+  // 显示模型（2026-09-21c 统一）：所有 molecule 来源（preset/SMILES/化学式/MOL/SDF/
+  // 吸附 Apply）共用——纯渲染表达，不影响几何/测量；复用 renderStyle，
+  // default 兼容旧场景与旧模板（缺省 = 球棍）
+  style: renderStyle.default('球棍'),
   // T-2.8：SMILES 导入的分子（kind 保留为回退显示）；几何 = smilesTo3D(smiles) 确定性重建
   smiles: z.string().min(1).optional(),
   // 2026-09-08：化学式导入（大小写不敏感，规范化串如 Fe2O3）；几何 = formulaTo3D 紧密团簇
@@ -421,7 +425,7 @@ export const DEFAULT_PARAMS = {
     singleLayers: 1,
   },
   nanoparticle: { radius: 9, grains: 160, seed: 7, mode: '簇装', atomMode: 'full', singleEl: 'Ce' },
-  molecule: { kind: 'H₂O' },
+  molecule: { kind: 'H₂O', style: '球棍' },
   rubber_substrate: { Lx: 140, Ly: 90, thickness: 5 },
   packed_layers: { el: 'Si', n: 7, layers: 3, dist: 4, stacking: 'AB', mask: '' },
   crystal_surface: { mineral: 'ceo2', h: 1, k: 1, l: 1, sizeX: 16, sizeY: 16, thickness: 10, termination: 0, style: '球棍' },

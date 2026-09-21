@@ -864,7 +864,7 @@ export class RendererService {
         ),
         new THREE.Vector3().setScalar(comp.transform.scale),
       );
-      const ballstick = (comp.params as { style?: string }).style === '球棍' || comp.type === 'molecule';
+      const ballstick = ((comp.params as { style?: string }).style ?? '球棍') === '球棍'; // SVG 与 3D 同款判定（含 molecule）
       const atoms: SvgAtom[] = data.atoms.map((a) => {
         const v = new THREE.Vector3(a.x, a.y, a.z).applyMatrix4(mtx);
         // 半径：颗粒自带晶粒 r；其余按显示基准（空间填充 vdw×0.92 / 球棍 cov×0.95）；世界半径含组件缩放
@@ -1242,8 +1242,9 @@ export class RendererService {
     trace(`geometry-apply ${comp.name} atoms=${data?.atoms?.length ?? 0} bonds=${data?.bonds?.length ?? 0}`);
     this.clearGroup(rec.group);
     if (data) {
-      const style = (comp.params as { style?: string }).style;
-      const ballstick = style === '球棍' || comp.type === 'molecule';
+      // 显示模型：molecule 与晶体组件统一读 params.style（molecule 旧数据缺省 = 球棍）
+      const style = (comp.params as { style?: string }).style ?? '球棍';
+      const ballstick = style === '球棍';
       addAtoms(rec.group, data.atoms, ballstick);
       if (ballstick && data.bonds.length) addBonds(rec.group, data.atoms, data.bonds, BALL_STICK_BOND_RADIUS);
       rec.data = data;

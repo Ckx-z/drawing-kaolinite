@@ -250,3 +250,12 @@
 **取向语义修正（任务书 19-21）**：`adsorbateOrientAxis` 用分子拓扑轴替代 PCA 短轴冒充——methyl-down = 甲基碳−环心（C₇H₈ 转录序 3 − 环 0,1,2,4,5,6 质心）、end-on = 端碳−中心碳；对齐 −法向；dot-product 测试 <10°。position 改质心世界位 T；欧拉改 THREE 'XYZ' 序分解（组件 transform 直接复现，测试同序矩阵重建验证 1e-3Å）。
 
 **验证**：adsorptionWorkflow.test 9 条（meta 双链路/候选不污染 scene/切换不变/apply+1 一条 Undo/参数失效/methyl·end-on dot-product/欧拉一致性/模板 roundtrip）；vitest 534 → 543 全绿；tsc/lint/build 全过。
+
+
+## D-2026-09-21c：Molecule 显示模型统一（球棍/空间填充）——从"来源特权"到"类型参数"
+
+**根因三层**：①moleculeParamsSchema 无 style 字段；②渲染层两处硬编码 `|| comp.type === 'molecule'` 恒球棍（applyGeometry L1246 + exportSVG L867）；③ParamPanel molecule 无控件——内置分子其实也从未能切换（DATA_DICT"分子默认渲染恒为球棍"）。
+
+**修复（复用 renderStyle，零新字段体系）**：moleculeParamsSchema + `style: renderStyle.default('球棍')`（旧场景/模板 default 补全兼容）；DEFAULT_PARAMS.molecule 注入；两处渲染判定改为统一读 `params.style ?? '球棍'`（molecule 与晶体同款）；paramDefs molecule 增「显示模型」（球棍模型/空间填充模型，无 when——type==='molecule' 即显示，与来源无关）。纯渲染表达：GeometryData 恒含 bonds（空间填充仅渲染隐藏），原子坐标/键连接/测量/Component ID/transform/selection 零影响；批量统一风格现对 molecule 同样生效（sceneStore 旧"跳过 molecule"断言随之更新）。切换走 params→rebuildComponent（缓存指纹含 style 致几何缓存 miss，但构象确定性重建毫秒级；几何不变量测试锁定切换前后 atoms/bonds 逐位相同）。
+
+**验证**：moleculeStyle.test 6 条（default/切换/控件无 when/几何不变量/scene roundtrip+旧数据/SMILES·化学式·MOL 三来源统一注入）；vitest 545→551（+6）；串行全量全绿（strictCell 并行偶发 flake 为环境调度，单独三连过、与本改动无关）。

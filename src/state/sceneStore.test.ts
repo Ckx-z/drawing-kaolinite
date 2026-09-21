@@ -281,7 +281,7 @@ describe('组件多选与批量操作（T-7.3）', () => {
     expect(xs).toEqual([10, 30, 50]);
   });
 
-  it('批量参数：统一风格只作用适用类型（molecule 无 style 键自动跳过）', () => {
+  it('批量参数：统一风格作用于所有含 style 类型（2026-09-21c 起 molecule 亦合法持有 style）', () => {
     const store = createSceneStore();
     const sheet = store.getState().addComponent('kaolinite_sheet');
     const mol = store.getState().addComponent('molecule');
@@ -291,7 +291,10 @@ describe('组件多选与批量操作（T-7.3）', () => {
     store.getState().applyParamsToSelection({ style: '球棍' });
     const cs = store.getState().components;
     expect((cs.find((c) => c.id === sheet)!.params as { style: string }).style).toBe('球棍');
-    expect(cs.find((c) => c.id === mol)!.params).not.toHaveProperty('style'); // molecule 未被污染
+    // 2026-09-21c：molecule 拥有统一显示模型参数——批量风格现同样生效（kind 不受影响）
+    const mp = cs.find((c) => c.id === mol)!.params as { style: string; kind: string };
+    expect(mp.style).toBe('球棍');
+    expect(mp.kind).toBe('H₂O');
   });
 
   it('批量统一缩放 + 一条撤销', () => {
