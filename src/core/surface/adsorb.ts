@@ -28,11 +28,13 @@ export interface AdsorbOptions {
 export interface AdsorbCandidate {
   name: string;
   site: AdsiteKind;
+  /** 吸附位点在 surface 局部系的坐标（JSON-safe metadata，任务书二十七） */
+  siteLocalPosition: [number, number, number];
   orientation: OrientationKind;
   /** 变换后分子原子（局部坐标，已平移使质心在原点）与键（索引不变） */
   atoms: Atom[];
   bonds: Bond[];
-  /** 放置变换（组件 transform 语义：分子组件 position/rotation 直接可用） */
+  /** 放置变换（surface 局部系：分子质心位 + 欧拉；adapter 组合 surface transform 成世界 pose） */
   position: [number, number, number];
   rotation: [number, number, number];
   /** 分子-表面最小原子距（Å，clash 修正后） */
@@ -145,13 +147,41 @@ function molecularShortAxis(atoms: Atom[]): V3 {
 
 const applyR = (R: number[][], v: V3): V3 => [dot(R[0]! as V3, v), dot(R[1]! as V3, v), dot(R[2]! as V3, v)];
 
-/** 矩阵 → XYZ 欧拉角（度；R = Rx(a)·Ry(b)·Rz(c)，与 THREE.Euler 默认序一致） */
-function eulerXYZ(R: number[][]): V3 {
-  const b = Math.asin(Math.max(-1, Math.min(1, R[2]![0]!)));
-  const a = Math.atan2(-R[2]![1]!, R[2]![2]!);
-  const c = Math.atan2(-R[1]![0]!, R[0]![0]!);
-  return [(a * 180) / Math.PI, (b * 180) / Math.PI, (c * 180) / Math.PI];
+/** 欧拉角（度，XYZ 序）→ 旋转矩阵（纯数学，scene transform 组合复用，任务书十二） */
+export function eulerDegToMatrix(e: V3): number[][] {
+  const [a, b, c] = [(e[0] * Math.PI) / 180, (e[1] * Math.PI) / 180, (e[2] * Math.PI) / 180];
+  const [ca, sa, cb, sb, cc, sc] = [Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b), Math.cos(c), Math.sin(c)];
+  return [
+    [cb * cc, -cb * sc, sb],
+    [sa * sb * cc + ca * sc, -sa * sb * sc + ca * cc, -sa * cb],
+    [-ca * sb * cc + sa * sc, ca * sb * sc + sa * cc, ca * cb],
+  ];
 }
+
+/** 矩阵 → XYZ 欧拉角（度；R = Rx(a)·Ry(b)·Rz(c)，与 THREE.Euler 默认序一致） */
+export function matrixToEulerDeg(R: number[][]): V3 {
+  // 通用两分支分解（2026-09-21b 修复：单 asin 分支在 b>90° 时给出假解——
+  // 组合旋转 Rw 落入第二分支导致世界 pose 偏差 Å 级）
+  const sb = Math.max(-1, Math.min(1, R[2]![0]!));
+  const b1 = Math.asin(sb);
+  const cb1 = Math.cos(b1); // ≥ 0（主分支）
+  if (cb1 > 1e-6) {
+    const a = Math.atan2(-R[2]![1]!, R[2]![2]!);
+    const c = Math.atan2(-R[1]![0]!, R[0]![0]!);
+    return [(a * 180) / Math.PI, (b1 * 180) / Math.PI, (c * 180) / Math.PI];
+  }
+  if (cb1 < 1e-6 && Math.abs(sb) > 1 - 1e-9) {
+    // 真万向锁：b=±90°，c 并入 a（取 c=0）
+    const a = Math.atan2(R[1]![2]!, R[1]![1]!) * (sb > 0 ? 1 : -1);
+    return [(a * 180) / Math.PI, (sb * 90), 0];
+  }
+  // 第二分支：b' = 180° - b1（cos b < 0）
+  const b2 = Math.PI - b1;
+  const a2 = Math.atan2(R[2]![1]!, -R[2]![2]!);
+  const c2 = Math.atan2(R[1]![0]!, -R[0]![0]!);
+  return [(a2 * 180) / Math.PI, (b2 * 180) / Math.PI, (c2 * 180) / Math.PI];
+}
+
 
 /**
  * 生成一个吸附候选（确定性）。分子先按 orientation 旋转（短轴 → 目标方向），
@@ -234,7 +264,7 @@ export function generateAdsorbCandidate(
   }
   if (minD < 0) throw new Error('吸附候选无法解除空间碰撞（检查 distance 参数）');
 
-  const rot = eulerXYZ(R);
+  const rot = matrixToEulerDeg(R);
   // position = 放置平移 T（质心居中分子旋转后质心 = T）——组件 transform
   // {position:T, rotation:rot, scale:1} 渲染原子与 atoms 逐位一致（测试锁定）
   const cx = placedAtoms.reduce((a, x) => a + x.x / placedAtoms.length, 0);
@@ -243,6 +273,7 @@ export function generateAdsorbCandidate(
   return {
     name: `${opts.orientation}-${opts.site}${opts.siteIndex ?? 0}`,
     site: opts.site,
+    siteLocalPosition: [site.x, site.y, site.z],
     orientation: opts.orientation,
     atoms: placedAtoms,
     bonds: mol.bonds.map((b) => [...b] as Bond),

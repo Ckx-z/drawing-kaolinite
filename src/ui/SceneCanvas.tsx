@@ -19,7 +19,7 @@ import { hoverStore } from '../render/highlight';
 import { bindRenderer } from '../state/rendererBinding';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
-import { useAdsorptionStore } from '../state/adsorptionStore';
+import { useAdsorptionStore, worldCandidateAtoms } from '../state/adsorptionStore';
 
 /** 叠加 canvas：随渲染画布同尺寸；rAF 重绘标注 + 图元（与渲染同步即可） */
 function AnnotationOverlay(): React.ReactElement {
@@ -157,10 +157,34 @@ export default function SceneCanvas() {
     };
     const unbind = bindRenderer(sceneStore, svc);
     // 吸附候选预览（2026-09-21）：UI 态 → 渲染层命令式同步（不进 sceneStore/Undo）
-    const unbindAdsorption = useAdsorptionStore.subscribe((st) => {
+    const pushPreview = (): void => {
+      const st = useAdsorptionStore.getState();
       const cand = st.candidates[st.activeIndex];
-      if (cand) svc.setAdsorptionPreview(cand.atoms, cand.bonds);
-      else svc.clearAdsorptionPreview();
+      if (!cand || !st.surface) {
+        svc.clearAdsorptionPreview();
+        return;
+      }
+      const surfT = sceneStore.getState().components.find((c) => c.id === st.surface?.compId)?.transform;
+      if (!surfT) {
+        svc.clearAdsorptionPreview(); // 表面组件被删 → 预览随之清除
+        return;
+      }
+      const w = worldCandidateAtoms(cand, st.adsorbate, surfT);
+      svc.setAdsorptionPreview(w.atoms, w.bonds);
+    };
+    const unbindAdsorption = useAdsorptionStore.subscribe(pushPreview);
+    // Surface transform 变化（移动/旋转/缩放）→ 预览跟随（任务书十九方案 A）：
+    // 只重算 15 原子的 pose 组合，不重建 slab/不重跑吸附算法（任务书五十）
+    let lastT = '';
+    const unbindSurfT = sceneStore.subscribe((st) => {
+      const sid = useAdsorptionStore.getState().surface?.compId;
+      if (!sid) return;
+      const t = st.components.find((c) => c.id === sid)?.transform;
+      const sig = t ? JSON.stringify(t) : '';
+      if (sig !== lastT) {
+        lastT = sig;
+        pushPreview();
+      }
     });
     rendererRef.current = svc;
 
@@ -211,6 +235,7 @@ export default function SceneCanvas() {
       clearTimeout(prebakeTimer);
       unbind();
       unbindAdsorption();
+      unbindSurfT();
       svc.clearAdsorptionPreview();
       unhover();
       disposeShapes();
