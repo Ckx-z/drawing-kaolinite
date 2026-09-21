@@ -110,6 +110,9 @@ export class RendererService {
   readonly tc: TransformControls;
 
   private records = new Map<string, ComponentRecord>();
+  /** 吸附候选预览组（2026-09-21）：挂在主 scene 但 raycast 全禁用、导出路径统一隐藏——不参与拾取/LayerPanel/Template/Export */
+  private adsorptionPreviewGroup: THREE.Group | null = null;
+  private previewVisBeforeExport = false;
 
   /** 组件的首个原子实例网格（Alt+点击原子等 UI 拾取用；无原子型返回 null） */
   atomMeshOf(compId: string): { userData: { atoms: Atom[] } } | null {
@@ -538,6 +541,7 @@ export class RendererService {
    * 临时隐藏其他组件与 gizmo → 渲染一帧 → 离屏画布缩放绘制 → 恢复现场。
    */
   snapshotComponent(id: string, width = 150, height = 110): string {
+    return this.withPreviewHidden(() => {
     const rec = this.records.get(id);
     if (!rec) return '';
     const prevVisibility: Array<[string, boolean]> = [];
@@ -563,6 +567,7 @@ export class RendererService {
       if (r) r.group.visible = v;
     }
     return oc.toDataURL('image/jpeg', 0.8);
+    });
   }
 
   /**
@@ -570,6 +575,7 @@ export class RendererService {
    * 只隐藏 gizmo，保留所有组件当前可见性 → 渲染一帧 → 离屏画布缩放绘制。
    */
   snapshotScene(width = 150, height = 110): string {
+    return this.withPreviewHidden(() => {
     const tcVisible = this.tc.visible;
     this.tc.visible = false;
     this.renderer.render(this.scene, this.camera);
@@ -584,6 +590,7 @@ export class RendererService {
     }
     this.tc.visible = tcVisible;
     return oc.toDataURL('image/jpeg', 0.8);
+    });
   }
 
   /**
@@ -592,7 +599,11 @@ export class RendererService {
    * 直接取当前已渲染帧 → 缩略图视角 ≡ 保存视角 ≡ 恢复视角（禁止 frameAll 类取景）。
    */
   snapshotTemplate(width = 150, height = 110, shapes?: SceneShape[], annotations?: Annotation[]): string {
-    return this.snapshotWithOverlay(width, height, annotations ?? [], shapes).toDataURL('image/jpeg', 0.8);
+    // 模板缩略图不含未 Apply 吸附候选：隐藏预览渲一帧后再合成
+    return this.withPreviewHidden(() => {
+      this.renderer.render(this.scene, this.camera);
+      return this.snapshotWithOverlay(width, height, annotations ?? [], shapes).toDataURL('image/jpeg', 0.8);
+    });
   }
 
   /**
@@ -614,6 +625,58 @@ export class RendererService {
       y: ((1 - ndc.y) / 2) * H,
       visible: true,
     };
+  }
+
+  /** 吸附候选预览：重建预览组（正常结构 + 略透明标识预览；不改变科学坐标） */
+  setAdsorptionPreview(atoms: import('../core/geometry').Atom[], bonds: import('../core/geometry').Bond[]): void {
+    this.clearAdsorptionPreview();
+    const g = new THREE.Group();
+    g.userData.adsorptionPreview = true;
+    addAtoms(g, atoms, true); // 预览恒球棍（原子可辨、键清晰）
+    addBonds(g, atoms, bonds, BALL_STICK_BOND_RADIUS);
+    g.traverse((o) => {
+      o.raycast = () => undefined; // 预览不参与拾取
+      const mesh = o as THREE.Mesh;
+      if (mesh.material) {
+        const m = (mesh.material as THREE.Material).clone();
+        m.transparent = true;
+        m.opacity = 0.75; // 轻透明 = 预览标识（未 Apply）
+        mesh.material = m;
+      }
+    });
+    this.scene.add(g);
+    this.adsorptionPreviewGroup = g;
+  }
+
+  clearAdsorptionPreview(): void {
+    if (!this.adsorptionPreviewGroup) return;
+    this.scene.remove(this.adsorptionPreviewGroup);
+    this.adsorptionPreviewGroup.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.geometry) mesh.geometry.dispose();
+    });
+    this.adsorptionPreviewGroup = null;
+  }
+
+  /** 导出快照期间隐藏预览（PNG/TIFF/PDF/模板缩略图不含未 Apply 候选，任务书四十六） */
+  private withPreviewHidden<T>(fn: () => T): T {
+    const vis = this.adsorptionPreviewGroup?.visible ?? false;
+    if (this.adsorptionPreviewGroup) this.adsorptionPreviewGroup.visible = false;
+    try {
+      return fn();
+    } finally {
+      if (this.adsorptionPreviewGroup) this.adsorptionPreviewGroup.visible = vis;
+    }
+  }
+
+  /** 组件科学元数据（crystal_surface 结构信息 UI / 吸附失效校验用；records.data.meta） */
+  getGeometryMeta(compId: string): import('../core/geometry').ScientificGeometryMeta | Record<string, number> | null {
+    return this.records.get(compId)?.data?.meta ?? null;
+  }
+
+  /** 组件几何只读访问（吸附候选生成比对 surface 现状） */
+  getComponentGeometry(compId: string): GeometryData | null {
+    return this.records.get(compId)?.data ?? null;
   }
 
   /** 目标点处每 Å 像素数（比例尺刻度换算） */
@@ -1131,6 +1194,7 @@ export class RendererService {
     prevPR: number;
     prevBg: THREE.Color | THREE.Texture | null;
   }): void {
+    if (this.adsorptionPreviewGroup) this.adsorptionPreviewGroup.visible = this.previewVisBeforeExport;
     this.scene.background = st.prevBg;
     this.renderer.setPixelRatio(st.prevPR);
     this.renderer.setSize(st.prevSize.x, st.prevSize.y, false);

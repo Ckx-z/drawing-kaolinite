@@ -2,12 +2,16 @@
  * 参数面板 —— T-1.6（对齐 demo：滑块/下拉/勾选 + 变换数字输入 + gizmo 模式）
  * 参数经 store.updateParams（schema 校验）；变换经 setTransform；重建节流由 bindRenderer 承担。
  */
-import {
-  type ReactNode, useState } from 'react';
+import { useEffect,
+  type ReactNode, useState  } from 'react';
 import { useStore } from 'zustand';
 import type { PaletteSetting, Transform } from '../core/types';
 import { PALETTES, resolveColor } from '../render/palette';
 import { rendererRef } from '../state/rendererRef';
+import { mineralOf } from '../core/minerals';
+import { assetById, CANONICAL_ASSETS } from '../core/assets/registry';
+import { useAdsorptionStore } from '../state/adsorptionStore';
+import type { ScientificGeometryMeta } from '../core/geometry';
 import { measureLabel } from '../core/measures';
 import { sceneStore } from '../state/sceneStore';
 import { groupParams, PARAM_DEFS, type ParamDef } from './paramDefs';
@@ -714,6 +718,98 @@ function ParamGroups(props: { type: string; params: Record<string, unknown>; com
   );
 }
 
+/** 结构信息（crystal_surface 专属，2026-09-21）：params + registry provenance + 几何 meta */
+function ScientificInfoSection({ comp }: { comp: { id: string; params: unknown } }): React.JSX.Element {
+  const p = comp.params as { mineral?: string; h?: number; k?: number; l?: number; termination?: number };
+  const def = mineralOf(String(p.mineral ?? 'ceo2'));
+  const asset = assetById(`mineral:${def.key}`);
+  const [meta, setMeta] = useState<ScientificGeometryMeta | null>(null);
+  const sig = JSON.stringify(comp.params);
+  useEffect(() => {
+    const t = setTimeout(() => setMeta((rendererRef.current?.getGeometryMeta(comp.id) as ScientificGeometryMeta) ?? null), 150);
+    return () => clearTimeout(t);
+  }, [comp.id, sig]);
+  const row = (k: string, v: string) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '2px 0' }}>
+      <span style={{ opacity: 0.65 }}>{k}</span>
+      <span>{v}</span>
+    </div>
+  );
+  return (
+    <>
+      <div className="subhead">结构信息</div>
+      <div className="ctl" style={{ padding: '4px 8px' }}>
+        {row('材料', `${def.zh[0]} ${def.formula}`)}
+        {row('结构来源', `${asset?.provenance?.sourceDatabase ?? 'CIF'} ${asset?.provenance?.sourceId ?? ''}`.trim())}
+        {row('晶面', `(${p.h ?? 1} ${p.k ?? 1} ${p.l ?? 1})`)}
+        {row('Termination', `${p.termination ?? 0}${meta && typeof meta.terminationCount === 'number' ? ` / ${meta.terminationCount} 候选` : ''}`)}
+        {row('几何状态', 'Generated Surface（切割生成）')}
+        {row('表面弛豫', '否')}
+        {row('优化', '否')}
+      </div>
+    </>
+  );
+}
+
+/** 吸附构型（crystal_surface 专属）：候选 = 未优化初始几何；预览不进场景，Apply 才成为正式组件 */
+function AdsorptionSection({ comp }: { comp: { id: string; params: unknown } }): React.JSX.Element {
+  const st = useAdsorptionStore();
+  const p = comp.params as unknown as { mineral?: string; h: number; k: number; l: number; sizeX: number; sizeY: number; thickness: number; termination?: number };
+  const sig = JSON.stringify([p.mineral, p.h, p.k, p.l, p.sizeX, p.sizeY, p.thickness, p.termination, st.adsorbate, st.site]);
+  const hasCand = st.candidates.length > 0;
+  useEffect(() => {
+    if (hasCand) void st.generate(comp.id, p as never); // surface/吸附参数变化 → 旧候选即刻失效重建（确定性）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sig]);
+  const refMolecules = CANONICAL_ASSETS.filter((a) => a.type === 'molecule' && a.geometryQuality === 'reference' && a.moleculeKind && !/²⁺|³⁺/.test(a.id));
+  const cand = st.candidates[st.activeIndex];
+  const label: Record<string, string> = { parallel: '平行', tilted: '倾斜 30°', perpendicular: '垂直', 'methyl-down': '甲基朝下', 'end-on': '端基朝下' };
+  return (
+    <>
+      <div className="subhead">吸附构型</div>
+      <div className="ctl" style={{ display: 'grid', gap: 6, padding: '6px 8px' }}>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12 }}>
+          吸附物
+          <select value={st.adsorbate} onChange={(e) => useAdsorptionStore.setState({ adsorbate: e.target.value, candidates: [], activeIndex: 0 })}>
+            {refMolecules.map((a) => <option key={a.id} value={a.moleculeKind!}>{a.nameZh} {a.moleculeKind}</option>)}
+          </select>
+        </label>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12 }}>
+          位点
+          <select value={st.site} onChange={(e) => useAdsorptionStore.setState({ site: e.target.value as 'top', candidates: [], activeIndex: 0 })}>
+            <option value="top">Top（顶位）</option>
+            <option value="bridge">Bridge（桥位）</option>
+            <option value="hollow">Hollow（空位）</option>
+          </select>
+        </label>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12 }}>
+          初始距离
+          <input type="number" step={0.1} min={1.5} max={6} value={st.distance}
+            onChange={(e) => useAdsorptionStore.setState({ distance: Number(e.target.value), candidates: [], activeIndex: 0 })} style={{ width: 56 }} /> Å
+        </label>
+        <button className="mini" onClick={() => { try { st.generate(comp.id, p as never); } catch (err) { alert(`候选生成失败：${(err as Error).message}`); } }}>
+          生成候选（{label[st.candidates[0]?.orientation ?? 'parallel'] === '平行' ? '4 取向' : '4 取向'}）
+        </button>
+        {hasCand && cand && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+              <button className="mini" onClick={() => st.setActive(Math.max(0, st.activeIndex - 1))} disabled={st.activeIndex === 0}>←</button>
+              候选 {st.activeIndex + 1} / {st.candidates.length}
+              <button className="mini" onClick={() => st.setActive(Math.min(st.candidates.length - 1, st.activeIndex + 1))} disabled={st.activeIndex >= st.candidates.length - 1}>→</button>
+            </div>
+            <div style={{ fontSize: 12 }}>
+              {label[cand.orientation] ?? cand.orientation} · {cand.site} 位 · 最近距离 {cand.minDistance.toFixed(2)} Å ·{' '}
+              {cand.clashResolved ? '碰撞已自动修正' : '无严重碰撞'} · <span style={{ opacity: 0.7 }}>未优化</span>
+            </div>
+            <button className="primary" style={{ padding: '3px 8px' }} onClick={() => void st.apply()}>应用此构型</button>
+          </>
+        )}
+        <div style={{ fontSize: 11, opacity: 0.6 }}>候选为未优化初始几何，不代表最低能构型</div>
+      </div>
+    </>
+  );
+}
+
 export default function ParamPanel() {
   const selected = useStore(sceneStore, (s) => s.components.find((c) => c.id === s.selectionId) ?? null);
   const multiIds = useStore(sceneStore, (s) => s.componentSelectionIds);
@@ -778,6 +874,8 @@ export default function ParamPanel() {
         参数<span className="tip">（{selected.name}）</span>
       </h3>
       <ParamGroups type={selected.type} params={selected.params as Record<string, unknown>} compId={selected.id} />
+      {selected.type === 'crystal_surface' && <ScientificInfoSection comp={selected} />}
+      {selected.type === 'crystal_surface' && <AdsorptionSection comp={selected} />}
 
       <div className="subhead">吸 附</div>
       <SnapControls snap={snap} onChange={applySnap} />

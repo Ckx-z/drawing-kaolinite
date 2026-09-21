@@ -18,10 +18,32 @@ export interface Atom {
 
 export type Bond = [number, number];
 
+/**
+ * 科学几何元数据（2026-09-21 产品闭环）：JSON-safe 纯数据（无 THREE/类实例/函数）
+ * ——Worker postMessage structured-clone 与 cache 序列化天然安全；可由 params+CIF
+ * 确定性重建的 runtime metadata，不写入 scene schema。
+ */
+export interface ScientificGeometryMeta {
+  /** canonical 资产 id（如 mineral:ceo2，assets/registry.ts 规范） */
+  sourceAssetId?: string;
+  millerIndex?: [number, number, number];
+  /** 表面系法向（表面坐标系恒 [0,0,1]，记录语义） */
+  surfaceNormal?: [number, number, number];
+  surfaceVectorU?: [number, number, number];
+  surfaceVectorV?: [number, number, number];
+  termination?: number;
+  terminationCount?: number;
+  composition?: Record<string, number>;
+  geometrySource?: 'reference' | 'generated' | 'relaxed' | 'dft-optimized';
+  relaxed?: boolean;
+  optimized?: boolean;
+  optimizationMethod?: string | null;
+}
+
 export interface GeometryData {
   atoms: Atom[];
   bonds: Bond[];
-  meta?: Record<string, number>;
+  meta?: Record<string, number> | ScientificGeometryMeta;
 }
 
 /** 包围盒尺寸（Å） */

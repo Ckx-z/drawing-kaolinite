@@ -22,6 +22,7 @@ import {
   type ModuleFilterType,
 } from '../state/moduleLibrary';
 import { rendererRef } from '../state/rendererRef';
+import { clearAdsorption } from '../state/adsorptionStore';
 import { sceneStore } from '../state/sceneStore';
 import type { TemplateEntry } from '../state/templateLibrary';
 import type { ModuleEntry } from '../core/types';
@@ -71,6 +72,7 @@ export default function ModulePanel() {
    * 不调用「清空场景」UI handler，无确认弹窗（点击即表达打开意图）。
    */
   const openTemplate = (m: ModuleEntry): void => {
+    clearAdsorption(); // 模板切换清吸附预览（任务书四十七）
     try {
       const restored = sceneStore.getState().loadScene(moduleToSceneDocument(m));
       if (!restored) rendererRef.current?.frameAll();

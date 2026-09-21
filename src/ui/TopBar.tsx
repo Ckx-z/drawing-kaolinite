@@ -9,6 +9,7 @@ import { exportCurlAnimation } from '../export/animation';
 import { buildLayerPngs } from '../export/layers';
 import { SHAPE_TOOLS, type ShapeTool } from '../core/shapes/schema';
 import { placeholderTemplateThumb, saveModule, templateEntryFromScene } from '../state/moduleLibrary';
+import { clearAdsorption } from '../state/adsorptionStore';
 import { rendererRef } from '../state/rendererRef';
 import { sceneHistory, sceneStore } from '../state/sceneStore';
 import { shapeViewStore } from './shapes/view';
@@ -132,6 +133,7 @@ export default function TopBar() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
+        clearAdsorption(); // 场景文件载入清旧预览
         const restored = sceneStore.getState().loadScene(String(reader.result));
         if (!restored) rendererRef.current?.frameAll(); // 旧场景无视角快照 → 回退取景
         flash('场景已载入，所有参数均可继续修改');
@@ -264,6 +266,7 @@ export default function TopBar() {
    * 二次确认 → store.clear() → frameAll 取景复位。不可撤销（不进 undo）。
    */
   const onClearScene = (): void => {
+    clearAdsorption(); // 清空场景同时清吸附预览（任务书八十九）
     if (window.confirm('确定清空画布？此操作不可撤销——建议先「保存场景」。')) {
       sceneStore.getState().clear();
       rendererRef.current?.frameAll();

@@ -294,7 +294,25 @@ export function buildCrystalSurface(cifText: string, p: CrystalSurfaceParams): G
     thickness: p.thickness,
     termination: p.termination ?? 0,
   });
-  return { atoms: slab.atoms, bonds: slab.bonds, meta: {} };
+  // 科学元数据管线（2026-09-21）：slab.meta → GeometryData.meta（此前在此丢失）
+  return {
+    atoms: slab.atoms,
+    bonds: slab.bonds,
+    meta: {
+      sourceAssetId: `mineral:${p.mineral}`,
+      millerIndex: slab.meta.millerIndex,
+      surfaceNormal: slab.meta.normal,
+      surfaceVectorU: slab.meta.u,
+      surfaceVectorV: slab.meta.v,
+      termination: p.termination ?? 0,
+      terminationCount: slab.meta.terminationCount,
+      composition: slab.meta.composition,
+      geometrySource: 'generated',
+      relaxed: false,
+      optimized: false,
+      optimizationMethod: null,
+    },
+  };
 }
 
 /* ============================================================

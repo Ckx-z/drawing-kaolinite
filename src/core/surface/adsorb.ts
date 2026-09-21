@@ -79,6 +79,36 @@ export function surfaceSites(surf: SlabResult): Record<AdsiteKind, Array<{ x: nu
   return { top: sorted(top.map((a) => ({ x: a.x, y: a.y, z: a.z }))), bridge: sorted(bridges), hollow: sorted(hollows) };
 }
 
+/**
+ * 取向语义轴（2026-09-21 产品闭环，任务书十九~二十一）：优先分子拓扑真实方向，
+ * 不用 PCA 短轴冒充——
+ *  - C₇H₈ + methyl-down：甲基碳（转录序 3）− 苯环心（环碳 0,1,2,4,5,6 质心）；
+ *  - C₃H₈ + end-on：端碳（1）− 中心碳（0）链端方向；
+ *  - 其余：molecularShortAxis 回退（平面分子≈环法向）。
+ */
+export function adsorbateOrientAxis(
+  kind: string,
+  atoms: Atom[],
+  orientation: OrientationKind,
+): V3 {
+  if (kind === 'C₇H₈' && orientation === 'methyl-down') {
+    const ring = [0, 1, 2, 4, 5, 6].map((i) => atoms[i]!);
+    const c = ring.reduce((acc, a) => ({ x: acc.x + a.x / ring.length, y: acc.y + a.y / ring.length, z: acc.z + a.z / ring.length }), { x: 0, y: 0, z: 0 });
+    const m = atoms[3]!;
+    const v: V3 = [m.x - c.x, m.y - c.y, m.z - c.z];
+    const L = norm(v) || 1;
+    return [v[0] / L, v[1] / L, v[2] / L];
+  }
+  if (kind === 'C₃H₈' && orientation === 'end-on') {
+    const a = atoms[0]!;
+    const b = atoms[1]!;
+    const v: V3 = [b.x - a.x, b.y - a.y, b.z - a.z];
+    const L = norm(v) || 1;
+    return [v[0] / L, v[1] / L, v[2] / L];
+  }
+  return molecularShortAxis(atoms);
+}
+
 /** 分子"平面法向/短轴"= 坐标协方差最小特征向量（芳香环平面 → 环法向；链 → 垂直链向） */
 function molecularShortAxis(atoms: Atom[]): V3 {
   const c: V3 = [0, 0, 0];
@@ -115,13 +145,12 @@ function molecularShortAxis(atoms: Atom[]): V3 {
 
 const applyR = (R: number[][], v: V3): V3 => [dot(R[0]! as V3, v), dot(R[1]! as V3, v), dot(R[2]! as V3, v)];
 
-/** 矩阵 → ZYX 欧拉角（度，组件 transform.rotation 语义） */
-function eulerZYX(R: number[][]): V3 {
-  const sy = -R[2]![0]!;
-  const pitch = Math.asin(Math.max(-1, Math.min(1, sy)));
-  const yaw = Math.atan2(R[1]![0]!, R[0]![0]!);
-  const roll = Math.atan2(R[2]![1]!, R[2]![2]!);
-  return [(roll * 180) / Math.PI, (pitch * 180) / Math.PI, (yaw * 180) / Math.PI];
+/** 矩阵 → XYZ 欧拉角（度；R = Rx(a)·Ry(b)·Rz(c)，与 THREE.Euler 默认序一致） */
+function eulerXYZ(R: number[][]): V3 {
+  const b = Math.asin(Math.max(-1, Math.min(1, R[2]![0]!)));
+  const a = Math.atan2(-R[2]![1]!, R[2]![2]!);
+  const c = Math.atan2(-R[1]![0]!, R[0]![0]!);
+  return [(a * 180) / Math.PI, (b * 180) / Math.PI, (c * 180) / Math.PI];
 }
 
 /**
@@ -133,6 +162,7 @@ export function generateAdsorbCandidate(
   surf: SlabResult,
   mol: { atoms: Atom[]; bonds: Bond[] },
   opts: AdsorbOptions,
+  adsorbateKind = '',
 ): AdsorbCandidate {
   const sites = surfaceSites(surf);
   const list = sites[opts.site];
@@ -159,8 +189,8 @@ export function generateAdsorbCandidate(
       targetZ = [0, 0, -1];
       break; // 翻转（端基朝下）
   }
-  // 两段合成：R0 把分子短轴（环法向）对到 z；R1 把 z 对到 targetZ。
-  const shortAxis = molecularShortAxis(mol.atoms);
+  // 两段合成：R0 把取向语义轴（拓扑优先，见 adsorbateOrientAxis）对到 z；R1 把 z 对到 targetZ。
+  const shortAxis = adsorbateOrientAxis(adsorbateKind, mol.atoms, opts.orientation);
   const mk = (zIn: V3): number[][] => {
     const ref: V3 = Math.abs(zIn[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
     const c = cross(ref, zIn);
@@ -204,14 +234,19 @@ export function generateAdsorbCandidate(
   }
   if (minD < 0) throw new Error('吸附候选无法解除空间碰撞（检查 distance 参数）');
 
-  const rot = eulerZYX(R);
+  const rot = eulerXYZ(R);
+  // position = 放置平移 T（质心居中分子旋转后质心 = T）——组件 transform
+  // {position:T, rotation:rot, scale:1} 渲染原子与 atoms 逐位一致（测试锁定）
+  const cx = placedAtoms.reduce((a, x) => a + x.x / placedAtoms.length, 0);
+  const cy = placedAtoms.reduce((a, x) => a + x.y / placedAtoms.length, 0);
+  const cz = placedAtoms.reduce((a, x) => a + x.z / placedAtoms.length, 0);
   return {
     name: `${opts.orientation}-${opts.site}${opts.siteIndex ?? 0}`,
     site: opts.site,
     orientation: opts.orientation,
     atoms: placedAtoms,
     bonds: mol.bonds.map((b) => [...b] as Bond),
-    position: [site.x, site.y, site.z + dist],
+    position: [cx, cy, cz],
     rotation: rot,
     minDistance: minD,
     clashResolved,
@@ -225,7 +260,11 @@ export function generateAdsorptionCandidates(
   mol: { atoms: Atom[]; bonds: Bond[] },
   site: AdsiteKind = 'top',
   distance?: number,
+  adsorbateKind = '',
 ): AdsorbCandidate[] {
-  const orients: OrientationKind[] = ['parallel', 'tilted', 'perpendicular', 'methyl-down'];
-  return orients.map((o) => generateAdsorbCandidate(surf, mol, { site, orientation: o, distance }));
+  // 取向按吸附物给出真实语义集：甲苯含 methyl-down（环心→甲基碳轴），
+  // 丙烷含 end-on（链端方向）；其余分子给前三通用取向
+  const orients: OrientationKind[] =
+    adsorbateKind === 'C₃H₈' ? ['parallel', 'tilted', 'perpendicular', 'end-on'] : ['parallel', 'tilted', 'perpendicular', 'methyl-down'];
+  return orients.map((o) => generateAdsorbCandidate(surf, mol, { site, orientation: o, distance }, adsorbateKind));
 }

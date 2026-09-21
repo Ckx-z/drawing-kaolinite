@@ -19,6 +19,7 @@ import { hoverStore } from '../render/highlight';
 import { bindRenderer } from '../state/rendererBinding';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
+import { useAdsorptionStore } from '../state/adsorptionStore';
 
 /** 叠加 canvas：随渲染画布同尺寸；rAF 重绘标注 + 图元（与渲染同步即可） */
 function AnnotationOverlay(): React.ReactElement {
@@ -155,6 +156,12 @@ export default function SceneCanvas() {
       if (t) sceneStore.getState().setTransform(id, t);
     };
     const unbind = bindRenderer(sceneStore, svc);
+    // 吸附候选预览（2026-09-21）：UI 态 → 渲染层命令式同步（不进 sceneStore/Undo）
+    const unbindAdsorption = useAdsorptionStore.subscribe((st) => {
+      const cand = st.candidates[st.activeIndex];
+      if (cand) svc.setAdsorptionPreview(cand.atoms, cand.bonds);
+      else svc.clearAdsorptionPreview();
+    });
     rendererRef.current = svc;
 
     // T-7.1 悬停：pointermove 节流 → BBox 级轻量拾取 → hoverStore（渲染外壳 + 图层面板联动）
@@ -203,6 +210,8 @@ export default function SceneCanvas() {
     return () => {
       clearTimeout(prebakeTimer);
       unbind();
+      unbindAdsorption();
+      svc.clearAdsorptionPreview();
       unhover();
       disposeShapes();
       dom.removeEventListener('pointermove', onMove);

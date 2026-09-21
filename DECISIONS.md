@@ -239,3 +239,14 @@
 **环境事件**：@types/three 被网络层注入损坏（src/ 目录坏、tgz 截断、npm/npmmirror 均 141KB 污染）——jsdelivr 逐文件镜像重建（624 文件零失败）。首轮全量测试的间歇挂起亦为环境级（复跑干净）。
 
 **验证**：vitest 505 → 534（registry 3 + scientificGeometry 13 + slab 8 + adsorb 8 - 计数重排）；tsc/lint/build 全绿；五矿物/SMILES/模板/导出零回归。
+
+
+## D-2026-09-21：产品闭环——Surface Metadata 管线修复 + 吸附工作流 UI
+
+**P0-A Metadata 丢失**：buildCrystalSurface 曾返回 `meta:{}`（slab.meta 在接线处丢弃）。修复：`geometry.ts` 新增 `ScientificGeometryMeta`（JSON-safe 纯数据联合类型，Worker structured-clone/缓存序列化天然安全）；builders 组装（sourceAssetId=`mineral:ceo2` 式 canonical id、millerIndex、normal/u/v、termination(+count)、composition、geometrySource='generated'、relaxed=false）；RendererService 暴露 `getGeometryMeta`/`getComponentGeometry`；测试锁定 buildMillerSlab→buildCrystalSurface→worker roundtrip 全链不丢。
+
+**P0-B 吸附 UI 全工作流**：①`adsorptionStore`（独立 zustand——预览不进 sceneStore/Undo/LayerPanel/Template）；generate 用 params+CIF 确定性重建 slab（主线程轻量）。②RendererService 专用 `adsorptionPreviewGroup`（raycast 全禁用、透明 0.75 预览标识）；**导出四路径统一隐藏**（beginOffscreen/snapshotScene/snapshotComponent/snapshotTemplate）→ 未 Apply 候选不进任何导出与模板缩略图。③SceneCanvas 仿 hoverStore 订阅接线。④Apply = `addComponent('molecule', {kind, transform:{position:T, rotation, scale:1}})` 普通组件（一条 Undo，可编辑/成组/模板）。⑤ParamPanel 两区块：【结构信息】（材料/来源 registry provenance/晶面/termination/Generated Surface/未弛豫未优化）+【吸附构型】（吸附物下拉=CANONICAL_ASSETS reference 分子派生、site、distance 真传底层、生成→←n/4→单预览切换→clash 状态→应用；固定提示"未优化初始几何"）。⑥失效：surface/吸附参数变化 useEffect 重建；模板打开/清空/场景载入三挂点 clearAdsorption。
+
+**取向语义修正（任务书 19-21）**：`adsorbateOrientAxis` 用分子拓扑轴替代 PCA 短轴冒充——methyl-down = 甲基碳−环心（C₇H₈ 转录序 3 − 环 0,1,2,4,5,6 质心）、end-on = 端碳−中心碳；对齐 −法向；dot-product 测试 <10°。position 改质心世界位 T；欧拉改 THREE 'XYZ' 序分解（组件 transform 直接复现，测试同序矩阵重建验证 1e-3Å）。
+
+**验证**：adsorptionWorkflow.test 9 条（meta 双链路/候选不污染 scene/切换不变/apply+1 一条 Undo/参数失效/methyl·end-on dot-product/欧拉一致性/模板 roundtrip）；vitest 534 → 543 全绿；tsc/lint/build 全过。

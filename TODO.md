@@ -172,6 +172,12 @@
 - 续（2026-09-17e 独立场景打开）：点击模板卡片 = moduleToSceneDocument 归一化 → sceneStore.loadScene 一次性替换（复用场景文件链路；四类条目统一 REPLACE 语义；清 selection/测量；一条完整撤销事务；无快照 legacy 才 frameAll）；修复 A→B 叠加 Bug；vitest 440 → 449
 - 续（2026-09-17b 真实缩略图）：新保存 = RendererService.snapshotTemplate（复用 snapshotWithOverlay：3D 当前帧 + 图元 + 标注叠加，150×110 jpeg 0.8 与组合模块卡片同规格，用保存时相机不取景）；纯 2D 模板（种子版式/纯图元）= shapeSceneThumb（包围盒拟合 + shapesToSVG 矢量，缺省 anchors 补 free）；占位图仅剩三类 fallback（含 3D 的旧模板/渲染服务不可用/图片解析失败 onError）+ generateMissingThumbnails 幂等回填；vitest 436 → 440
 
+### T-2.16 ✅ [P1] 产品闭环：Surface Metadata 管线 + 吸附工作流 UI —— 完成 2026-09-21
+- P0-A：meta:{} 丢失修复（ScientificGeometryMeta JSON-safe 联合 + builders 组装 + getGeometryMeta + worker roundtrip 测试）
+- P0-B：adsorptionStore 单预览态（不污染 Scene/Undo）；RendererService previewGroup（raycast 禁用 + 导出四路径隐藏）；Apply=普通 molecule；ParamPanel 结构信息+吸附构型区块（registry 派生下拉、真传 distance、候选切换、未优化提示）；三失效挂点
+- 取向语义：adsorbateOrientAxis 拓扑轴（甲基−环心 / 链端）+ 欧拉 XYZ 复现（1e-3Å）
+- vitest 534 → 543 全绿
+
 ### T-2.15 ✅ [P2] 球棍 H 球过小修复（D-2026-09-19b）—— 完成 2026-09-19
 - 根因：下限 0.14 使 H=0.14 ≈ 键半径 0.13（比值 1.08）——H 成圆柱末端白帽子
 - 修复：MIN_ATOM_RADIUS 0.14→0.20、BOND_RADIUS 0.13→0.12 → H=0.20/C=0.319/bond=0.12（H/bond≈1.67）
@@ -456,7 +462,7 @@ T-2.1 / T-2.3 / T-9.1–T-9.2 可在 T-1.7 后立即并行
 | P2 | 22 | 内核增强 / 渲染 / 导出 / 记忆系统（含 T-2.10~T-2.12 莫来石/甲苯） |
 | P3 | 11 | 桌面端 / 交互 / 后续迭代 |
 | 已完成基线 | 2 | 技术验证（T-0.1 / T-0.2，回归基准，不计入工作量） |
-| **合计** | **53 条** | 待澄清问题 4 → **0**（已于 2026-09-05 全部决策闭环，见顶部决策表） |
+| **合计** | **54 条** | 待澄清问题 4 → **0**（已于 2026-09-05 全部决策闭环，见顶部决策表） |
 
 ---
 
