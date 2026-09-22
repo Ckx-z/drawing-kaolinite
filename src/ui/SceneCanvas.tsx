@@ -21,6 +21,7 @@ import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
 import { useAdsorptionStore, worldCandidateAtoms } from '../state/adsorptionStore';
 import { applySnapOnRelease, detectSnapOnDrag, getPendingSnap, modifierState, pendingClear, snapModifiers } from '../state/dragSnap';
+import { surfaceSiteKey } from '../core/builders';
 
 /** 叠加 canvas：随渲染画布同尺寸；rAF 重绘标注 + 图元（与渲染同步即可） */
 function AnnotationOverlay(): React.ReactElement {
@@ -125,6 +126,21 @@ export default function SceneCanvas() {
     // 其他组件（2026-09-13）→ 键长/键角测量拾取（2 点键长、第 3 点升级键角、Esc 清空）
     svc.onAtomClick = (compId, atom, index) => {
       const s = sceneStore.getState();
+      // 表面原子拾取模式（2026-09-22c Defects）：优先于测量——仅在显式开启时
+      if (s.atomPickMode && s.atomPickMode.componentId === compId && compId === s.atomPickMode.componentId) {
+        const geo = svc.getComponentGeometry(compId);
+        if (geo) {
+          const a = geo.atoms[index]!;
+          const zMax = Math.max(...geo.atoms.map((x) => x.z));
+          sceneStore.getState().setPickedAtom({
+            componentId: compId, atomIndex: index, el: a.el,
+            siteKey: surfaceSiteKey(a),
+            position: [a.x, a.y, a.z],
+            isTopLayer: a.z > zMax - 0.6 && a.el === 'O', // 表层 O 判定（0.6Å 窗口，同吸附位点）
+          });
+        }
+        return;
+      }
       const comp = s.components.find((c) => c.id === compId);
       if (!comp) return;
       if (comp.type !== 'packed_layers') {

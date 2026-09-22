@@ -13,7 +13,7 @@ import { getElement } from '../elements';
 import type { Atom, Bond } from '../geometry';
 import type { SlabResult } from './slab';
 
-export type AdsiteKind = 'top' | 'bridge' | 'hollow';
+export type AdsiteKind = 'top' | 'bridge' | 'hollow' | 'vacancy';
 export type OrientationKind = 'parallel' | 'tilted' | 'perpendicular' | 'methyl-down' | 'end-on';
 
 export interface AdsorbOptions {
@@ -50,7 +50,7 @@ const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[
 const norm = (a: V3) => Math.hypot(...a);
 
 /** 表面吸附位点（确定性）：top = 顶层原子；bridge = 顶层近邻对中点；hollow = 顶层三角质心 */
-export function surfaceSites(surf: SlabResult): Record<AdsiteKind, Array<{ x: number; y: number; z: number }>> {
+export function surfaceSites(surf: SlabResult & { vacancies?: Array<[number, number, number]> }): Record<AdsiteKind, Array<{ x: number; y: number; z: number }>> {
   const zMax = Math.max(...surf.atoms.map((a) => a.z));
   const top = surf.atoms.filter((a) => a.z > zMax - 0.6); // 真顶层（0.6Å 窗口，避免混入 0.78Å 深的次层）
   // 近邻阈值自适应：顶层最小近邻 × 1.35（固定 3.5Å 对 CeO₂(111) 的 3.83Å 近邻失效）
@@ -78,7 +78,11 @@ export function surfaceSites(surf: SlabResult): Record<AdsiteKind, Array<{ x: nu
           hollows.push({ x: (a.x + b.x + c.x) / 3, y: (a.y + b.y + c.y) / 3, z: Math.max(a.z, b.z, c.z) });
         }
       }
-  return { top: sorted(top.map((a) => ({ x: a.x, y: a.y, z: a.z }))), bridge: sorted(bridges), hollow: sorted(hollows) };
+  // Vacancy site：以被删 O 的原位置为吸附中心（仅缺陷表面存在；"以缺陷中心为初始
+  // 吸附位置"——不是最佳位点声明）。z 取当前表面顶层高度（原 O 曾在顶层）。
+  const zTop = zMax;
+  const vacancies = (surf.vacancies ?? []).map(([x, y]) => ({ x, y, z: zTop }));
+  return { top: sorted(top.map((a) => ({ x: a.x, y: a.y, z: a.z }))), bridge: sorted(bridges), hollow: sorted(hollows), vacancy: sorted(vacancies) };
 }
 
 /**

@@ -10,6 +10,8 @@ import type { Atom, Bond, GeometryData } from './geometry';
 import { centerAtoms } from './molecules/center';
 import { mineralOf } from './minerals';
 import { buildMillerSlab } from './surface/slab';
+import { computeBonds } from './crystal';
+import type { SurfaceDefect } from './schema';
 import type { CrystalSurfaceParams, MoleculeParams, PackedLayerParams, ParticleParams, SheetParams, TubeParams } from './types';
 
 /* 确定性伪随机（同一种子同一颗粒形，保证模块复现） */
@@ -284,6 +286,32 @@ export function buildParticle(p: ParticleParams): GeometryData {
  * 与高岭土层状 builder 严格分离（无 d001/卷曲/层间语义）；
  * surface/ 模块承担全部科学数学，本函数仅做接线。
  * ============================================================ */
+/** 表面原子稳定身份：元素 + 局部坐标量化 1e-4Å（同 params 重建恒同 key） */
+export function surfaceSiteKey(a: { el: string; x: number; y: number; z: number }): string {
+  const q = (v: number): string => (Math.round(v * 1e4) / 1e4).toFixed(4);
+  return `${a.el}|${q(a.x)}|${q(a.y)}|${q(a.z)}`;
+}
+
+/**
+ * 应用表面修饰（2026-09-22c Defects v1）：删除 siteKey 命中的 O → 键从剩余原子
+ * 重判（杜绝悬空 index）→ 返回 removed 计数。siteKey 失效（params 变后原位点
+ * 不存在）静默跳过；UI 层据 invalidDefects 提示。
+ */
+export function applySurfaceDefects(
+  g: { atoms: Atom[]; bonds: Bond[]; meta: { composition: Record<string, number> } },
+  defects: Array<{ siteKey: string; element: string }>,
+): { atoms: Atom[]; bonds: Bond[]; removed: number } {
+  if (!defects.length) return { atoms: g.atoms, bonds: g.bonds, removed: 0 };
+  const doomed = new Set(defects.map((d) => d.siteKey));
+  const atoms: Atom[] = [];
+  let removed = 0;
+  for (const a of g.atoms) {
+    if (a.el === 'O' && doomed.has(surfaceSiteKey(a))) removed++;
+    else atoms.push(a);
+  }
+  return { atoms, bonds: computeBonds(atoms), removed };
+}
+
 export function buildCrystalSurface(cifText: string, p: CrystalSurfaceParams): GeometryData {
   const slab = buildMillerSlab(cifText, {
     h: p.h,
@@ -294,23 +322,33 @@ export function buildCrystalSurface(cifText: string, p: CrystalSurfaceParams): G
     thickness: p.thickness,
     termination: p.termination ?? 0,
   });
+  // 表面缺陷（2026-09-22c）：siteKey 删除 → 重算键 → composition/meta 更新
+  const defects = (p as { defects?: SurfaceDefect[] }).defects ?? [];
+  const { atoms, bonds, removed } = applySurfaceDefects(slab, defects);
+  const composition = { ...slab.meta.composition };
+  if (removed) composition.O = Math.max(0, (composition.O ?? 0) - removed);
+
   // 科学元数据管线（2026-09-21）：slab.meta → GeometryData.meta（此前在此丢失）
   return {
-    atoms: slab.atoms,
-    bonds: slab.bonds,
+    atoms,
+    bonds,
     meta: {
-      sourceAssetId: `mineral:${p.mineral}`,
+      sourceAssetId: `mineral:${String(p.mineral ?? 'ceo2')}`,
       millerIndex: slab.meta.millerIndex,
       surfaceNormal: slab.meta.normal,
       surfaceVectorU: slab.meta.u,
       surfaceVectorV: slab.meta.v,
       termination: p.termination ?? 0,
       terminationCount: slab.meta.terminationCount,
-      composition: slab.meta.composition,
+      composition,
       geometrySource: 'generated',
       relaxed: false,
       optimized: false,
       optimizationMethod: null,
+      defectCount: defects.length,
+      defectTypes: defects.length ? ['oxygen-vacancy'] : ([] as string[]),
+      invalidDefects: Math.max(0, defects.length - removed),
+      vacancySites: defects.map((d) => d.originalPosition) as Array<[number, number, number]>,
     },
   };
 }

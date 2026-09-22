@@ -210,7 +210,19 @@ export const tubeComponentSchema = z.strictObject({
 });
 
 /* ---------- 晶面表面（PHASE B 2026-09-20：CIF → Miller slab 通用晶体表面） ---------- */
+/** 表面修饰操作（2026-09-22c Surface Defects v1）：存操作不存网格——确定性重建 */
+export const surfaceDefectSchema = z.strictObject({
+  type: z.literal('oxygen-vacancy'),
+  /** 稳定位点身份：元素 + 局部坐标量化（1e-4Å）——同 params 同 site 恒同 key */
+  siteKey: z.string().min(1),
+  element: z.literal('O'),
+  /** 被删 O 的局部坐标（UI 标记/Vacancy 吸附位点；非唯一身份） */
+  originalPosition: z.tuple([z.number(), z.number(), z.number()]),
+});
+export type SurfaceDefect = z.infer<typeof surfaceDefectSchema>;
+
 export const crystalSurfaceParamsSchema = z.strictObject({
+  defects: z.array(surfaceDefectSchema).default([]),
   mineral: z.enum(['kaolinite', 'dickite', 'nacrite', 'montmorillonite', 'illite', 'mullite', 'co3o4', 'ceo2']).default('ceo2'),
   /** Miller 指数（不全为零；000 在 builder 校验报错） */
   h: z.number().int().min(0).max(3),
@@ -428,7 +440,7 @@ export const DEFAULT_PARAMS = {
   molecule: { kind: 'H₂O', style: '球棍' },
   rubber_substrate: { Lx: 140, Ly: 90, thickness: 5 },
   packed_layers: { el: 'Si', n: 7, layers: 3, dist: 4, stacking: 'AB', mask: '' },
-  crystal_surface: { mineral: 'ceo2', h: 1, k: 1, l: 1, sizeX: 16, sizeY: 16, thickness: 10, termination: 0, style: '球棍' },
+  crystal_surface: { mineral: 'ceo2', h: 1, k: 1, l: 1, sizeX: 16, sizeY: 16, thickness: 10, termination: 0, style: '球棍', defects: [] },
 } as const;
 
 /** molecule 默认整体缩放 4（太小看不清），其余 1（demo DEFAULT_SCALE） */

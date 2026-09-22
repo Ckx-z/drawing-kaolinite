@@ -122,6 +122,14 @@ export interface SceneState {
   /** 载入场景（对象或 JSON 文本均可；经校验 + normalizeScene 补 id）并清空选择 */
   /** 返回 true = 已按场景快照恢复视角（调用方跳过 frameAll）；false = 旧场景，回退取景 */
   loadScene: (raw: unknown | string) => boolean;
+  /** 表面原子拾取模式（2026-09-22c Defects）：null=关（默认选组件）；开启后点击原子捕获 */
+  atomPickMode: null | { componentId: string };
+  /** 已拾取的表面原子（局部坐标/siteKey/元素/是否表层） */
+  pickedAtom: null | { componentId: string; atomIndex: number; el: string; siteKey: string; position: [number, number, number]; isTopLayer: boolean };
+  setAtomPickMode: (c: null | { componentId: string }) => void;
+  setPickedAtom: (a: SceneState['pickedAtom']) => void;
+  createOxygenVacancy: (componentId: string) => void;
+  removeDefect: (componentId: string, siteKey: string) => void;
   clear: () => void;
 
   /* ---------- 机理图图元层（T-11.1） ---------- */
@@ -172,6 +180,8 @@ export function createSceneStore(): SceneStore {
     componentSelectionIds: [],
     measurePick: [],
     measurements: [],
+    atomPickMode: null,
+    pickedAtom: null,
     palette: {},
     annotations: [],
     shapes: [],
@@ -512,6 +522,29 @@ export function createSceneStore(): SceneStore {
       return false;
     },
 
+    setAtomPickMode: (c) => set({ atomPickMode: c, pickedAtom: null }),
+    setPickedAtom: (a) => set({ pickedAtom: a }),
+    createOxygenVacancy: (componentId) => {
+      const st = get();
+      const pick = st.pickedAtom;
+      if (!pick || pick.componentId !== componentId) return;
+      if (pick.el !== 'O') throw new Error('请选择表面 O 原子（当前为 ' + pick.el + '）');
+      if (!pick.isTopLayer) throw new Error('深层 O 不能创建表面氧空位——请选择最外层 O');
+      const comp = st.components.find((c) => c.id === componentId);
+      if (!comp || comp.type !== 'crystal_surface') throw new Error('请先选中晶体表面组件');
+      const defects = [...((comp.params as { defects?: unknown[] }).defects ?? [])];
+      if (defects.some((d) => (d as { siteKey: string }).siteKey === pick.siteKey)) throw new Error('该位点已存在氧空位');
+      defects.push({ type: 'oxygen-vacancy', siteKey: pick.siteKey, element: 'O', originalPosition: pick.position });
+      st.updateParams(componentId, { defects } as never);
+      set({ pickedAtom: null, atomPickMode: null });
+    },
+    removeDefect: (componentId, siteKey) => {
+      const st = get();
+      const comp = st.components.find((c) => c.id === componentId);
+      if (!comp || comp.type !== 'crystal_surface') return;
+      const defects = ((comp.params as { defects?: Array<{ siteKey: string }> }).defects ?? []).filter((d) => d.siteKey !== siteKey);
+      st.updateParams(componentId, { defects } as never);
+    },
     clear: () =>
       set({ components: [], selectionId: null, annotations: [], shapes: [], shapeSelectionIds: [], tool: 'select' }),
 

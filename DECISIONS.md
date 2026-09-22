@@ -270,3 +270,18 @@
 **踩坑**：①d3 混用 WorldAtom 与三元组（.x undefined→NaN 比较恒 false，best 恒首项）——统一 c3 访问器；②平面基底质心法向退化——邻域平面拟合。
 
 **验证**：snap.test 6 条（盒交/体积、原子级重叠、贴表面接触带 1.9–4.5Å、法向≈+z、侧向最近点对齐、缩放一致、端到端 detect→apply→Alt 跳过→detach 恢复）；vitest 551 → 557。
+
+
+## D-2026-09-22c：Surface Defects v1——CeO₂(111) 表面氧空位（几何缺陷，未弛豫）
+
+**科学边界**：删除表面 O = **未弛豫几何缺陷**（relaxed=false/optimized=false；UI 明示"未弛豫缺陷结构"）。不移动周围原子伪装弛豫、不虚构 Ce³⁺/价态颜色、不做形成能/吸附能。Reference CIF/canonical 资产零修改。
+
+**架构**：
+- **siteKey 稳定身份** = `元素|量化坐标(1e-4Å)`——同 params 重建恒同 key（v1 简化，任务书§10 允许；限制：builder 排序变化不影响因坐标即身份）。
+- **数据模型** `params.defects[]`（surfaceDefectSchema：type/siteKey/element/originalPosition）——存操作不存网格，schema default [] 兼容旧 scene/模板；Cache 指纹含 params → 有/无缺陷天然不同 key（Gate 2 达成）。
+- **几何应用** `applySurfaceDefects`：siteKey 命中的 O 删除 → **键从剩余原子重判**（computeBonds，无悬空 index）→ composition O-1 → meta 带 defectCount/defectTypes/invalidDefects/vacancySites。siteKey 失效（params 变）静默跳过 + invalidDefects 计数（不模糊匹配最近 O）。
+- **拾取**：atomPickMode 显式开启（默认选组件不破坏）；复用 Alt 点击测量拾取通道（onAtomClick）；表层 O 判定 = z > zMax-0.6 且 el=O；选中反馈为拾取信息文本。
+- **创建校验**：非 O 拒绝（提示"请选择表面 O 原子"）、深层 O 拒绝、同 siteKey 重复拒绝；成功走 updateParams = 一条 Undo（Ctrl+Z 恢复 O）；removeDefect ×恢复。
+- **吸附集成（Gate 3）**：adsorptionStore.generate 改用 applySurfaceDefects 同一 siteKey 规则——画布少一个 O = 引擎少同一个 O（测试锁定）；**Vacancy site** = 被删 O 原位置为吸附中心（site 下拉仅缺陷表面出现，标注"初始位置"非最佳位点）。
+
+**验证**：defects.test 10 条（siteKey 确定性/原子-键-composition 联动/重复·非O·深层拒绝/invalidDefects/Worker 一致/Gate3+Vacancy 候选/Undo+序列化往返/旧数据兼容）；vitest 566 → 576。

@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import { buildMolecule } from '../core/builders';
 import { mineralOf } from '../core/minerals';
 import { buildMillerSlab } from '../core/surface/slab';
+import { applySurfaceDefects, surfaceSiteKey } from '../core/builders';
 import { eulerDegToMatrix, generateAdsorptionCandidates, matrixToEulerDeg, type AdsiteKind, type AdsorbCandidate } from '../core/surface/adsorb';
 import type { Transform } from '../core/types';
 import type { CrystalSurfaceParams } from '../core/types';
@@ -59,14 +60,20 @@ export const useAdsorptionStore = create<AdsorptionState>((set, get) => ({
   activeIndex: 0,
   generate: (compId, p) => {
     const { adsorbate, site, distance } = get();
-    const slab = buildMillerSlab(mineralOf(String(p.mineral ?? 'ceo2')).cifText, {
+    // 2026-09-22c（Gate 3）：吸附引擎使用 defected 几何——同一 siteKey 删除规则
+    // 与 buildCrystalSurface 完全一致（UI 有空位，算法读同一原子集）
+    const slab0 = buildMillerSlab(mineralOf(String(p.mineral ?? 'ceo2')).cifText, {
       h: p.h, k: p.k, l: p.l,
       sizeX: p.sizeX, sizeY: p.sizeY,
       thickness: p.thickness,
       termination: p.termination ?? 0,
     });
+    const defects = (p as { defects?: Array<{ siteKey: string; element: string; originalPosition: [number, number, number] }> }).defects ?? [];
+    const applied = applySurfaceDefects(slab0, defects);
+    void surfaceSiteKey;
+    const surf = { ...slab0, atoms: applied.atoms, bonds: applied.bonds, vacancies: defects.map((d) => d.originalPosition) };
     const mol = buildMolecule(adsorbate as never);
-    const candidates = generateAdsorptionCandidates(slab, mol, site, distance, adsorbate);
+    const candidates = generateAdsorptionCandidates(surf, mol, site, distance, adsorbate);
     set({ surface: snapshotOf(compId, p), candidates, activeIndex: 0 });
     return candidates;
   },

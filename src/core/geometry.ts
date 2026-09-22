@@ -38,6 +38,10 @@ export interface ScientificGeometryMeta {
   relaxed?: boolean;
   optimized?: boolean;
   optimizationMethod?: string | null;
+  defectCount?: number;
+  defectTypes?: string[];
+  invalidDefects?: number;
+  vacancySites?: Array<[number, number, number]>;
 }
 
 export interface GeometryData {

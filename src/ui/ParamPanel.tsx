@@ -751,6 +751,52 @@ function ScientificInfoSection({ comp }: { comp: { id: string; params: unknown }
   );
 }
 
+/** 表面缺陷（crystal_surface 专属，2026-09-22c）：氧空位 = 未弛豫几何缺陷 */
+function SurfaceDefectsSection({ comp }: { comp: { id: string; params: unknown } }): React.JSX.Element {
+  const pickMode = useStore(sceneStore, (s) => s.atomPickMode);
+  const picked = useStore(sceneStore, (s) => s.pickedAtom);
+  const defects = ((comp.params as { defects?: Array<{ siteKey: string }> }).defects ?? []);
+  const onCreate = (): void => {
+    try {
+      sceneStore.getState().createOxygenVacancy(comp.id); // 走 updateParams = 一条 Undo
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  };
+  return (
+    <>
+      <div className="subhead">表面缺陷</div>
+      <div className="ctl" style={{ display: 'grid', gap: 6, padding: '6px 8px', fontSize: 12 }}>
+        <button className="mini" onClick={() => sceneStore.getState().setAtomPickMode(pickMode ? null : { componentId: comp.id })}>
+          {pickMode ? '取消拾取' : '选择表面原子'}
+        </button>
+        {pickMode && <span style={{ opacity: 0.7 }}>点击画布表面原子拾取（表层 O 有效的空位创建）</span>}
+        {picked && picked.componentId === comp.id && (
+          <span>
+            已选：{picked.el} · {picked.isTopLayer ? '表面层 ✓' : '深层（仅表层 O 可建空位）'} · ({picked.position.map((v) => v.toFixed(2)).join(', ')}）
+          </span>
+        )}
+        <button className="mini" disabled={!picked || picked.componentId !== comp.id || picked.el !== 'O' || !picked.isTopLayer} onClick={onCreate}
+          title={picked?.el !== 'O' ? '请选择表面 O 原子' : !picked?.isTopLayer ? '深层 O 不能创建表面氧空位' : '删除该表面 O（未弛豫几何缺陷，Ctrl+Z 恢复）'}>
+          创建氧空位
+        </button>
+        {defects.length > 0 && (
+          <div>
+            已有缺陷：氧空位 ×{defects.length}
+            {defects.map((d) => (
+              <div key={d.siteKey} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ opacity: 0.6, fontSize: 11 }}>{d.siteKey.slice(0, 24)}…</span>
+                <button className="mini" style={{ fontSize: 11 }} onClick={() => sceneStore.getState().removeDefect(comp.id, d.siteKey)} title="移除此缺陷（恢复该 O）">×</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ fontSize: 11, opacity: 0.6 }}>未弛豫缺陷结构（不移动周围原子、无 Ce³⁺ 判定）</div>
+      </div>
+    </>
+  );
+}
+
 /** 吸附构型（crystal_surface 专属）：候选 = 未优化初始几何；预览不进场景，Apply 才成为正式组件 */
 function AdsorptionSection({ comp }: { comp: { id: string; params: unknown } }): React.JSX.Element {
   const st = useAdsorptionStore();
@@ -780,6 +826,7 @@ function AdsorptionSection({ comp }: { comp: { id: string; params: unknown } }):
             <option value="top">Top（顶位）</option>
             <option value="bridge">Bridge（桥位）</option>
             <option value="hollow">Hollow（空位）</option>
+            {((comp.params as { defects?: unknown[] }).defects ?? []).length > 0 && <option value="vacancy">Vacancy（缺陷中心 · 初始位置）</option>}
           </select>
         </label>
         <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12 }}>
@@ -875,7 +922,8 @@ export default function ParamPanel() {
       </h3>
       <ParamGroups type={selected.type} params={selected.params as Record<string, unknown>} compId={selected.id} />
       {selected.type === 'crystal_surface' && <ScientificInfoSection comp={selected} />}
-      {selected.type === 'crystal_surface' && <AdsorptionSection comp={selected} />}
+      {selected.type === 'crystal_surface' && <SurfaceDefectsSection comp={selected} />}
+          {selected.type === 'crystal_surface' && <AdsorptionSection comp={selected} />}
 
       <div className="subhead">吸 附</div>
       <SnapControls snap={snap} onChange={applySnap} />
