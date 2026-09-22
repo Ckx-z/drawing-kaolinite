@@ -172,6 +172,15 @@
 - 续（2026-09-17e 独立场景打开）：点击模板卡片 = moduleToSceneDocument 归一化 → sceneStore.loadScene 一次性替换（复用场景文件链路；四类条目统一 REPLACE 语义；清 selection/测量；一条完整撤销事务；无快照 legacy 才 frameAll）；修复 A→B 叠加 Bug；vitest 440 → 449
 - 续（2026-09-17b 真实缩略图）：新保存 = RendererService.snapshotTemplate（复用 snapshotWithOverlay：3D 当前帧 + 图元 + 标注叠加，150×110 jpeg 0.8 与组合模块卡片同规格，用保存时相机不取景）；纯 2D 模板（种子版式/纯图元）= shapeSceneThumb（包围盒拟合 + shapesToSVG 矢量，缺省 anchors 补 free）；占位图仅剩三类 fallback（含 3D 的旧模板/渲染服务不可用/图片解析失败 onError）+ generateMissingThumbnails 幂等回填；vitest 436 → 440
 
+### T-2.17 ✅ [P1] Surface/Adsorption v1 稳定化与冻结审计 —— 完成 2026-09-22b
+- Surface Transform Consistency：translation ✓ / rotation 主分支 ✓ / 深组合第二分支 KNOWN ISSUE（2026-09-21b 记录）
+- Substrate Type Detection：白名单制（类型定角色，体积仅显示；molecule-molecule 不互吸；大小不反转）
+- Snap Bypass：Alt/Shift 双键 + 状态栏低干扰提示「松手自动贴合…按住 Alt/Shift 自由放置」
+- Transform Benchmarks：STRUCTURE_BENCHMARK §五 Software Geometry Consistency（14 项）
+- 误触审计：远距/贴面/分子-分子/大小反转/旋转保持/穿插带/Undo/删目标/清空清理（dragSnapAudit.test 9 条）
+- 科学边界：Candidate Builder=「候选吸附初始构型（未优化）」；Drag Snap=「快速表面贴合」——文案与语义分离
+- vitest 557 → 566；评估结论：Surface/Adsorption v1 可冻结（除深组合欧拉一项，见报告）
+
 ### T-2.16 ✅ [P1] 产品闭环：Surface Metadata 管线 + 吸附工作流 UI —— 完成 2026-09-21
 - P0-A：meta:{} 丢失修复（ScientificGeometryMeta JSON-safe 联合 + builders 组装 + getGeometryMeta + worker roundtrip 测试）
 - P0-B：adsorptionStore 单预览态（不污染 Scene/Undo）；RendererService previewGroup（raycast 禁用 + 导出四路径隐藏）；Apply=普通 molecule；ParamPanel 结构信息+吸附构型区块（registry 派生下拉、真传 distance、候选切换、未优化提示）；三失效挂点
@@ -462,7 +471,7 @@ T-2.1 / T-2.3 / T-9.1–T-9.2 可在 T-1.7 后立即并行
 | P2 | 22 | 内核增强 / 渲染 / 导出 / 记忆系统（含 T-2.10~T-2.12 莫来石/甲苯） |
 | P3 | 11 | 桌面端 / 交互 / 后续迭代 |
 | 已完成基线 | 2 | 技术验证（T-0.1 / T-0.2，回归基准，不计入工作量） |
-| **合计** | **54 条** | 待澄清问题 4 → **0**（已于 2026-09-05 全部决策闭环，见顶部决策表） |
+| **合计** | **55 条** | 待澄清问题 4 → **0**（已于 2026-09-05 全部决策闭环，见顶部决策表） |
 
 ---
 

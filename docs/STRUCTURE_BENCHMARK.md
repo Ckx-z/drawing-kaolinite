@@ -44,3 +44,25 @@
 
 **CeO₂(111) slab（slab.test 8 条）**：u 最短重复矢量 = a√2 = 7.653Å（理论精确）；O/Ce ∈ [1.7,2.3]（厚度截断的真实端面化学计量）；z 厚度 ≤ thickness+0.6；无原子重复（min 间距 >0.5Å）；termination ≥2 候选且切换产生不同结构；逐位确定性。Co₃O₄(110)：键网存在、Co:O ∈ [0.9,1.8]。
 **Toluene@CeO₂(111)（adsorb.test 8 条）**：4 候选（parallel/tilted/perpendicular/methyl-down）确定性；parallel 环法向∥表面法向（<2°）；perpendicular 环立起（>80°）；distance 2.5 vs 4.5 最小距单调；distance 0.5 触发 clash 自动推出并解除。Propane@CeO₂(111)：三 site（top/bridge/hollow）全覆盖。**均不检查/不显示结合能（无能量计算）**。
+
+
+## 五、Software Geometry Consistency（软件坐标一致性——非晶体学基准）
+
+> 这些是**渲染/坐标管线一致性测试**，验证科学几何在 Scene Transform 作用下不漂移；
+> 不属于实验结构验证。
+
+| 项目 | 断言 | 实测 | 容差 | 状态 |
+|---|---|---|---|---|
+| Surface translation | world pos ≡ Ts + Rs·(s·Tm) | Case A/B 逐位一致 | 5e-7 | PASS |
+| Surface rotation (组合) | Rw 组合欧拉约定 | 修复后主分支正确；深组合第二分支待修 | — | PARTIAL（KNOWN ISSUE，2026-09-21b） |
+| Preview / Apply | 同 pose 数值一致 | 组件 transform ≡ worldCandidateTransform | 1e-6 | PASS |
+| Template roundtrip | transform 逐值复现 | save/load position/rotation/scale 保持 | 精确 | PASS |
+| Drag Snap · 贴附 | minAtomDistance ∈ [1.9, 4.5]Å | plane 基底 2.1–2.4Å | 带 | PASS |
+| Drag Snap · 旋转保持 | rotationBefore == rotationAfter | [25,-40,65]° 恒等 | 精确 | PASS |
+| Drag Snap · Undo | Ctrl+Z 恢复吸附前 transform | 一条 setTransform | 精确 | PASS |
+| Drag Snap · 基底角色 | molecule 永不为 substrate | 四类型白名单 / molecule-molecule 拒绝 | — | PASS |
+| Drag Snap · 大小不反转 | 大 molecule + 小基底 → 角色恒定 | scale 8 甲苯 vs 0.5 片层 | — | PASS |
+| Drag Snap · 远距不触 | 5Å 分离不触发 | [0,0,5] false | — | PASS |
+| Drag Snap · Alt/Shift bypass | null 返回 | 双键均 bypass | — | PASS |
+| Drag Snap · 曲面基底 | 管外壁法向指向管外 | 邻域拟合近似 ✓（管/球测试构型通过） | 数值 | PASS |
+| Drag Snap · 颗粒法向 | 表面外向 | 球形构型通过 | 数值 | PASS |

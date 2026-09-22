@@ -12,7 +12,6 @@ import {
   atomsOverlap,
   boxOf,
   boxesOverlap,
-  boxVolume,
   planSnap,
   worldAtoms,
   type SnapTransformInput,
@@ -36,6 +35,13 @@ export interface PendingSnap {
 
 let pending: PendingSnap | null = null;
 const records: AdsorptionRecord[] = [];
+
+/**
+ * 基底类型白名单（2026-09-22b 误触审计）：角色由组件类型决定，不由体积猜——
+ * molecule 永不作为基底（H₂O+Toluene 靠近不互吸）；大分子 vs 小晶体也不反转。
+ * 白名单覆盖科研作图真实贴附目标：晶体表面/片层/管/颗粒/基底/密排层。
+ */
+const SUBSTRATE_TYPES = new Set(['crystal_surface', 'kaolinite_sheet', 'halloysite_tube', 'nanoparticle', 'rubber_substrate', 'packed_layers']);
 
 /** 修饰键状态（SceneCanvas 键盘监听维护——Alt/Shift = 本轮跳过吸附） */
 export const snapModifiers = { alt: false, shift: false };
@@ -72,17 +78,14 @@ export function detectSnapOnDrag(adsorbateId: string): boolean {
   const molBox = boxOf(molWorld);
   for (const other of s.components) {
     if (other.id === adsorbateId) continue;
+    // 角色由类型白名单决定：目标必须是合法基底（molecule-molecule 永不互吸）
+    if (!SUBSTRATE_TYPES.has(other.type)) continue;
     const geo = svc.getComponentGeometry(other.id);
     if (!geo) continue;
     const w = worldAtoms(geo.atoms, other.transform);
     // 入口判定：盒交 或 原子级重叠任一即可（贴面时分子盒可能在基底盒外但原子已近距）
     if (!boxesOverlap(molBox, boxOf(w)) && !atomsOverlap(molWorld, w)) continue;
-    // 大小判定：体积大者为基底；同量级时任选其一为基底（另一必为 molecule）
-    const sub = boxVolume(boxOf(w)) >= boxVolume(molBox) ? { comp: other, atoms: w } : { comp: mol, atoms: molWorld };
-    const ads = sub.comp.id === other.id ? mol : other;
-    if (ads.type !== 'molecule') continue; // 吸附质必须是分子
-    if (!atomsOverlap(molWorld, w) && !boxesOverlap(molBox, boxOf(w))) continue;
-    pending = { adsorbateId: ads.id, substrateId: sub.comp.id, substrateName: sub.comp.name };
+    pending = { adsorbateId, substrateId: other.id, substrateName: other.name };
     return true;
   }
   return false;
