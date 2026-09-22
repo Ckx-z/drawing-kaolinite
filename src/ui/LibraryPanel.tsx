@@ -16,7 +16,7 @@ import { sceneStore } from '../state/sceneStore';
 import { SidebarTabs } from './primitives';
 import ModulePanel from './ModulePanel';
 import { filterLib, LIB } from './paramDefs';
-import { searchAssets, type SearchResult } from '../core/assets/assetSearch';
+import { createAssetComponent, searchAssets, type SearchResult } from '../core/assets/assetSearch';
 
 /** 科学资产搜索模式（2026-09-22d）：query 非空 → 具体资产卡（点击直加）；空 → 原分类浏览 */
 function AssetSearchResults({ query, onAdd }: { query: string; onAdd: (r: SearchResult) => void }) {
@@ -199,14 +199,20 @@ export default function LibraryPanel() {
             <AssetSearchResults
               query={libQuery}
               onAdd={(r) => {
-                // Direct Add：canonical id → 既有组件工厂（搜索不决定几何）
-                const id = sceneStore.getState().addComponent(r.componentType, {
-                  name: r.nameZh,
-                  params: r.params as never,
-                });
-                sceneStore.getState().select(id);
-                rendererRef.current?.frameComponent(id);
-                setLibQuery(''); // 添加后回浏览模式
+                // Direct Add（2026-09-22e 修复）：统一走 createAssetComponent 工厂
+                // ——搜索/Browse 共一入口；失败明确报错不静默
+                try {
+                  const spec = createAssetComponent(r.id);
+                  if (!spec) throw new Error(`未知资产：${r.id}`);
+                  const id = sceneStore.getState().addComponent(spec.componentType, {
+                    name: spec.name,
+                    params: spec.params as never,
+                  });
+                  sceneStore.getState().select(id);
+                  rendererRef.current?.frameComponent(id);
+                } catch (err) {
+                  alert(`无法添加该素材：${(err as Error).message}`);
+                }
               }}
             />
           ) : (

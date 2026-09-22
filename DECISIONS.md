@@ -296,3 +296,12 @@
 **UI**：LibraryPanel Browse/Search 双模式——空=原分类浏览（零破坏）；非空=具体资产卡（名称/英文·化学式/类型徽标/Quality 徽标）+ 结果计数 + no-result 提示（SMILES/化学式/MOL 引导）；点击 **Direct Add**（sceneStore.addComponent 走既有工厂——搜索只解析身份不决定几何）；placeholder 升级"搜索分子、晶体、化学式或素材…"。SMILES 输入框独立保留（语义不同）。
 
 **验证**：assetSearch.test 29 条（水/甲苯/丙烷/·OH 多别名同资产第一、莫来石/Co₃O₄/CeO₂ 双资产区分、排名序、id 去重、确定性、空/无结果、100% 覆盖率审计、id 唯一、Gate1 统计、几何不变量）；ui.dom 搜索断言更新；vitest 576 → 592。
+
+
+## D-2026-09-22e：Direct Add Bug 修复——搜索结果点击不添加
+
+**根因**：assetSearch.ts 矿物条目 `params: { mineral: key, d001: undefined }`——addComponent 的参数展开 `{...DEFAULT_PARAMS, ...opts.params}` 中 `d001: undefined` **覆盖掉默认值 7.4**，zod `z.number().min(2.5)` 拒绝 undefined → `componentSchema.parse()` 抛错 → onClick 无 catch → 组件从未入 store（点击静默失败）。分子条目 `{kind}` 无此问题（kind 不在 DEFAULT 覆盖冲突路径上，此前分子其实能添加——仅矿物全线失败）。
+
+**修复**：①矿物 params 用 `MINERAL_D001[key]`（registry d001Default 真值——单一事实源派生，不在搜索层第二份硬编码）；②新增统一 **createAssetComponent(assetId)** 工厂（assetId → {componentType, params, name}；invalid id 返回 null 明确失败不 fallback sheet）；③LibraryPanel onClick 走工厂 + try/catch（失败 alert"无法添加该素材"，不静默）；④全索引 smoke test（23 资产逐一 factory→addComponent→schema→自动选中）。
+
+**验证**：directAdd.test 11 条（Co₃O₄/莫来石 schema 通过+真值 d001、CeO₂ 双资产不同 Component、四分子 kind 正确无 formula fallback、别名几何一致、重复添加独立 ID、invalid null、全索引零缺口 smoke）；vitest 592 → 603。

@@ -9,6 +9,9 @@
  * 搜索只解析身份，绝不决定几何（create 工厂按 canonical id 走既有 builder）。
  */
 import { CANONICAL_ASSETS } from './registry';
+import { MINERALS } from '../minerals';
+
+const MINERAL_D001: Record<string, number> = Object.fromEntries(Object.values(MINERALS).map((m) => [m.key, m.d001Default]));
 import { normalizeSubscript } from '../molecules/registry';
 import { LIB } from '../../ui/paramDefs';
 import type { ComponentType } from '../types';
@@ -67,7 +70,7 @@ function buildIndex(): SearchableAsset[] {
         id: a.id,
         type: 'mineral',
         componentType: 'kaolinite_sheet',
-        params: { mineral: a.mineralKey, d001: undefined },
+        params: { mineral: a.mineralKey, d001: MINERAL_D001[a.mineralKey ?? ''] ?? 7.4 },
         nameZh: a.nameZh,
         nameEn: a.nameEn,
         aliases: a.aliases,
@@ -148,6 +151,22 @@ export function searchAssets(query: string): SearchResult[] {
 }
 
 /** 资产统计（Gate 1：按 canonical 计数，非 alias 数） */
+/**
+ * 统一资产工厂（2026-09-22e Direct Add 修复）：assetId → addComponent 参数。
+ * 搜索与浏览模式共用（不在 UI 硬编码资产构造规则）；返回 null = 无此资产。
+ */
+export function createAssetComponent(assetId: string): { componentType: ComponentType; params: Record<string, unknown>; name?: string } | null {
+  const a = ASSET_INDEX.find((x) => x.id === assetId);
+  if (!a) return null;
+  if (a.type === 'mineral') {
+    return { componentType: 'kaolinite_sheet', params: { mineral: a.params.mineral, d001: a.params.d001 }, name: a.nameZh };
+  }
+  if (a.type === 'molecule') {
+    return { componentType: 'molecule', params: { kind: a.params.kind }, name: a.nameZh };
+  }
+  return { componentType: a.componentType, params: {}, name: a.nameZh };
+}
+
 export function assetIndexStats(): { molecules: number; ions: number; minerals: number; basic: number; total: number } {
   const molecules = ASSET_INDEX.filter((a) => a.typeBadge === '分子').length;
   const ions = ASSET_INDEX.filter((a) => a.typeBadge === '离子').length;
