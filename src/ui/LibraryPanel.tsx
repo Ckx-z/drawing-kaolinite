@@ -3,7 +3,7 @@
  * 上：素材库（点击添加组件并取景）+ SMILES 分子导入；「模板」Tab = 我的模板
  * （ModulePanel：模块/组合/完整画面模板统一卡片，IndexedDB 持久化）。
  */
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState  } from 'react';
 import { useStore } from 'zustand';
 import { formulaTo3D, resolveImportPath } from '../core/molecules/formula';
 import { parseSdfOrMol } from '../core/molecules/mol';
@@ -16,6 +16,38 @@ import { sceneStore } from '../state/sceneStore';
 import { SidebarTabs } from './primitives';
 import ModulePanel from './ModulePanel';
 import { filterLib, LIB } from './paramDefs';
+import { searchAssets, type SearchResult } from '../core/assets/assetSearch';
+
+/** 科学资产搜索模式（2026-09-22d）：query 非空 → 具体资产卡（点击直加）；空 → 原分类浏览 */
+function AssetSearchResults({ query, onAdd }: { query: string; onAdd: (r: SearchResult) => void }) {
+  const results = useMemo(() => searchAssets(query), [query]);
+  if (!results.length) {
+    return (
+      <>
+        <p className="hint">未找到内置参考素材</p>
+        <p className="hint" style={{ opacity: 0.7 }}>可在下方输入框按 SMILES / 化学式 / MOL 文件导入，或换个关键词</p>
+      </>
+    );
+  }
+  return (
+    <>
+      <p className="hint" style={{ margin: '0 0 6px' }}>找到 {results.length} 个素材</p>
+      <div>
+        {results.map((r) => (
+          <div key={r.id} className="lib-card" onClick={() => onAdd(r)} title={`${r.description} · 点击直接添加`}>
+            <div className="t">
+              <span className="ic">{r.type === 'molecule' ? '✦' : r.type === 'mineral' ? '◈' : '▣'}</span>
+              {r.nameZh}
+            </div>
+            <div className="d">
+              {r.nameEn}{r.formula ? ` · ${r.formula}` : ''} · {r.typeBadge} · {r.quality}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
 
 export default function LibraryPanel() {
   useStore(sceneStore, () => null); // 订阅以随 store 更新（当前卡片为静态列表）
@@ -160,11 +192,26 @@ export default function LibraryPanel() {
           <input
             value={libQuery}
             onChange={(e) => setLibQuery(e.target.value)}
-            placeholder="搜索素材（名称 / 说明）…"
+            placeholder="搜索分子、晶体、化学式或素材…"
             style={{ width: '100%', marginBottom: 8 }}
           />
+          {libQuery.trim() ? (
+            <AssetSearchResults
+              query={libQuery}
+              onAdd={(r) => {
+                // Direct Add：canonical id → 既有组件工厂（搜索不决定几何）
+                const id = sceneStore.getState().addComponent(r.componentType, {
+                  name: r.nameZh,
+                  params: r.params as never,
+                });
+                sceneStore.getState().select(id);
+                rendererRef.current?.frameComponent(id);
+                setLibQuery(''); // 添加后回浏览模式
+              }}
+            />
+          ) : (
           <div>
-            {filterLib(LIB, libQuery).map((item) => (
+            {filterLib(LIB, '').map((item) => (
               <div
                 key={item.type}
                 className="lib-card"
@@ -178,8 +225,8 @@ export default function LibraryPanel() {
                 <div className="d">{item.en ?? item.desc}</div>
               </div>
             ))}
-            {!filterLib(LIB, libQuery).length && <p className="hint">无匹配素材</p>}
           </div>
+          )}
           <div
             style={{ marginTop: 10 }}
             onDragOver={(e) => e.preventDefault()}

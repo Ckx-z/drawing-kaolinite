@@ -102,13 +102,15 @@ describe('LibraryPanel Tabs 与搜索（Phase3；2026-09-17 统一模板库）',
     // 素材卡（两行式副标题）
     expect(texts('.lib-card .t').join('|')).toContain('埃洛石纳米管');
     expect(texts('.lib-card .d').join('|')).toContain('Halloysite Nanotube');
-    // 搜索
-    const search = qa('input').find((i) => (i as HTMLInputElement).placeholder?.includes('搜索素材')) as HTMLInputElement;
+    // 搜索（2026-09-22d：升级为科学资产搜索——具体资产直出）
+    const search = qa('input').find((i) => (i as HTMLInputElement).placeholder?.includes('搜索分子')) as HTMLInputElement;
     expect(search).toBeTruthy();
     setInput(search, 'halloysite');
-    expect(qa('.lib-card')).toHaveLength(1);
+    expect(host.textContent).toContain('纳米管'); // 管资产命中（名称含 halloysite/nanotube）
+    setInput(search, '甲苯');
+    expect(host.textContent).toContain('Toluene'); // 具体分子直出（非"小分子"大类）
     setInput(search, 'zzz');
-    expect(host.textContent).toContain('无匹配素材');
+    expect(host.textContent).toContain('未找到内置参考素材');
   });
 
   it('切到模板 Tab：ModulePanel 挂载（我的模板 + 种子模板注入统一库）', async () => {

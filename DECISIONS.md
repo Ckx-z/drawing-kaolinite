@@ -285,3 +285,14 @@
 - **吸附集成（Gate 3）**：adsorptionStore.generate 改用 applySurfaceDefects 同一 siteKey 规则——画布少一个 O = 引擎少同一个 O（测试锁定）；**Vacancy site** = 被删 O 原位置为吸附中心（site 下拉仅缺陷表面出现，标注"初始位置"非最佳位点）。
 
 **验证**：defects.test 10 条（siteKey 确定性/原子-键-composition 联动/重复·非O·深层拒绝/invalidDefects/Worker 一致/Gate3+Vacancy 候选/Undo+序列化往返/旧数据兼容）；vitest 566 → 576。
+
+
+## D-2026-09-22d：Scientific Asset Search——素材搜索从"分类过滤器"到"资产检索器"
+
+**根因**：原"搜索素材"= filterLib(LIB)（paramDefs 分类卡筛选）——搜"甲苯"只出"小分子/离子"大类；具体分子/矿物需去下方导入框走 findMineral/resolveMoleculeQuery 双路径。
+
+**架构**：`core/assets/assetSearch.ts` 纯函数层（零 React/Scene 依赖）——①**索引派生不复制**：分子/离子/矿物 ← CANONICAL_ASSETS（17 条），基础素材（表面/片层/管/颗粒/基底/密排）← LIB + 类型级 quality 标注；分子 formula 从 kind 归一派生（C₇H₈→C7H8）、kind 本身入 aliases（·OH 覆盖率缺口修复）。②归一复用 registry.normalizeSubscript（Unicode 下标→ASCII，零第二套转换器）。③**排名**：id exact 100 / 名称·formula exact 95 / alias exact 90 / 前缀 80·75 / tag 60 / contains 50·40——文本匹配大小写不敏感、化学式精确走科学归一（CO≠Co 历史规则不破坏）。④canonical id 去重 + score 降序 + id 字典序（确定性）。⑤**CeO₂ 双资产**：Reference Crystal（mineral:ceo2）与 Schematic 纳米颗粒（basic:nanoparticle）并存可区分。
+
+**UI**：LibraryPanel Browse/Search 双模式——空=原分类浏览（零破坏）；非空=具体资产卡（名称/英文·化学式/类型徽标/Quality 徽标）+ 结果计数 + no-result 提示（SMILES/化学式/MOL 引导）；点击 **Direct Add**（sceneStore.addComponent 走既有工厂——搜索只解析身份不决定几何）；placeholder 升级"搜索分子、晶体、化学式或素材…"。SMILES 输入框独立保留（语义不同）。
+
+**验证**：assetSearch.test 29 条（水/甲苯/丙烷/·OH 多别名同资产第一、莫来石/Co₃O₄/CeO₂ 双资产区分、排名序、id 去重、确定性、空/无结果、100% 覆盖率审计、id 唯一、Gate1 统计、几何不变量）；ui.dom 搜索断言更新；vitest 576 → 592。

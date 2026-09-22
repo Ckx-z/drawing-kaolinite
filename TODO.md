@@ -172,6 +172,13 @@
 - 续（2026-09-17e 独立场景打开）：点击模板卡片 = moduleToSceneDocument 归一化 → sceneStore.loadScene 一次性替换（复用场景文件链路；四类条目统一 REPLACE 语义；清 selection/测量；一条完整撤销事务；无快照 legacy 才 frameAll）；修复 A→B 叠加 Bug；vitest 440 → 449
 - 续（2026-09-17b 真实缩略图）：新保存 = RendererService.snapshotTemplate（复用 snapshotWithOverlay：3D 当前帧 + 图元 + 标注叠加，150×110 jpeg 0.8 与组合模块卡片同规格，用保存时相机不取景）；纯 2D 模板（种子版式/纯图元）= shapeSceneThumb（包围盒拟合 + shapesToSVG 矢量，缺省 anchors 补 free）；占位图仅剩三类 fallback（含 3D 的旧模板/渲染服务不可用/图片解析失败 onError）+ generateMissingThumbnails 幂等回填；vitest 436 → 440
 
+### T-2.19 ✅ [P1] Scientific Asset Search —— 完成 2026-09-22d
+- assetSearch.ts 纯函数层：索引派生（CANONICAL_ASSETS+LIB 零复制；分子 formula 从 kind 派生；·OH 别名补齐——覆盖率缺口修复）
+- 归一复用 normalizeSubscript；排名 exact>alias>prefix>contains；id 去重+确定性排序
+- CeO₂ 双资产区分（Reference Crystal / Schematic Particle）
+- LibraryPanel Browse/Search 双模式：具体资产卡（名称/式/类型/Quality）+计数+no-result fallback；Direct Add 走既有组件工厂
+- vitest 576 → 592（assetSearch.test 29 条 + ui.dom 断言升级）
+
 ### T-2.18 ✅ [P1] Surface Defects v1：CeO₂(111) 氧空位 —— 完成 2026-09-22c
 - siteKey 稳定身份（元素+坐标量化 1e-4）；params.defects[] 存操作不存网格（default [] 兼容旧数据；cache 天然区分）
 - applySurfaceDefects：O 删除→键重判→composition/meta 联动；非 O/深层/重复拒绝；invalidDefects 失效计数
@@ -478,7 +485,7 @@ T-2.1 / T-2.3 / T-9.1–T-9.2 可在 T-1.7 后立即并行
 | P2 | 22 | 内核增强 / 渲染 / 导出 / 记忆系统（含 T-2.10~T-2.12 莫来石/甲苯） |
 | P3 | 11 | 桌面端 / 交互 / 后续迭代 |
 | 已完成基线 | 2 | 技术验证（T-0.1 / T-0.2，回归基准，不计入工作量） |
-| **合计** | **56 条** | 待澄清问题 4 → **0**（已于 2026-09-05 全部决策闭环，见顶部决策表） |
+| **合计** | **57 条** | 待澄清问题 4 → **0**（已于 2026-09-05 全部决策闭环，见顶部决策表） |
 
 ---
 

@@ -41,6 +41,8 @@ const QUERY_ALIASES: Record<string, MoleculeKind> = {
   丙烷: 'C₃H₈', propane: 'C₃H₈', C3H8: 'C₃H₈',
   // 阳离子（2026-09-20 canonical registry）：kind 本身与中文名直达
   'Ca²⁺': 'Ca²⁺', 钙离子: 'Ca²⁺', 'Ce³⁺': 'Ce³⁺', 铈离子: 'Ce³⁺',
+  // 羟基自由基（2026-09-22d：有几何但无 query alias 的覆盖率缺口）
+  '·OH': '·OH (羟基自由基)', OH: '·OH (羟基自由基)', 'oh radical': '·OH (羟基自由基)', 'hydroxyl radical': '·OH (羟基自由基)', 羟基自由基: '·OH (羟基自由基)',
 };
 
 /** 查询归一：下标归一；纯字母词归小写；含数字混合大小写保持原样（Co2 ≠ CO₂） */
