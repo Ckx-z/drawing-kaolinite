@@ -259,3 +259,14 @@
 **修复（复用 renderStyle，零新字段体系）**：moleculeParamsSchema + `style: renderStyle.default('球棍')`（旧场景/模板 default 补全兼容）；DEFAULT_PARAMS.molecule 注入；两处渲染判定改为统一读 `params.style ?? '球棍'`（molecule 与晶体同款）；paramDefs molecule 增「显示模型」（球棍模型/空间填充模型，无 when——type==='molecule' 即显示，与来源无关）。纯渲染表达：GeometryData 恒含 bonds（空间填充仅渲染隐藏），原子坐标/键连接/测量/Component ID/transform/selection 零影响；批量统一风格现对 molecule 同样生效（sceneStore 旧"跳过 molecule"断言随之更新）。切换走 params→rebuildComponent（缓存指纹含 style 致几何缓存 miss，但构象确定性重建毫秒级；几何不变量测试锁定切换前后 atoms/bonds 逐位相同）。
 
 **验证**：moleculeStyle.test 6 条（default/切换/控件无 when/几何不变量/scene roundtrip+旧数据/SMILES·化学式·MOL 三来源统一注入）；vitest 545→551（+6）；串行全量全绿（strictCell 并行偶发 flake 为环境调度，单独三连过、与本改动无关）。
+
+
+## D-2026-09-22：拖拽吸附——小分子与基底重叠时自动贴附表面
+
+**架构（复用不另起）**：`core/surface/snap.ts` 纯几何内核（无 THREE/store 依赖）——世界原子（Euler XYZ 同 Renderer 约定）/包围盒相交+原子级重叠双层判定（贴面时分子盒可在基底盒外但原子已近距，入口须"盒交或原子重叠任一"）/大小判定（体积大者为基底、拖拽方为吸附质候选）；吸附点=距分子质心最近基底原子；**法向=吸附点邻域（≤3.5Å）拟合平面法向（协方差最小特征向量，符号朝分子来向）**——凸体质心法向在薄片上退化为面内方向故弃用；放置=保持用户朝向（朝向表达权）+质心贴表面点+法向 vdW 接触推出+clash 步进（≥0.7×vdW 和，不穿透）。
+
+**交互**：`state/dragSnap.ts`——gizmo 拖拽中 rAF 轮询仅检测+基底高亮（setHover 既有描边）不移动（性能约束：吸附变换只在释放执行）；松手 onTransformChange 拦截 → applySnapOnRelease 返回吸附 transform → **一次 setTransform = 一条 Undo（即"解除吸附"恢复路径）**；Alt/Shift 按住跳过（自由放置）；AdsorptionRecord 内存态（before/after/表面点/法向，不进 scene 文档——几何可重演，schema 零升级）；detachLastSnap 提供显式解除。
+
+**踩坑**：①d3 混用 WorldAtom 与三元组（.x undefined→NaN 比较恒 false，best 恒首项）——统一 c3 访问器；②平面基底质心法向退化——邻域平面拟合。
+
+**验证**：snap.test 6 条（盒交/体积、原子级重叠、贴表面接触带 1.9–4.5Å、法向≈+z、侧向最近点对齐、缩放一致、端到端 detect→apply→Alt 跳过→detach 恢复）；vitest 551 → 557。
