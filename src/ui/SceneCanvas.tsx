@@ -20,7 +20,6 @@ import { bindRenderer } from '../state/rendererBinding';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
 import { useAdsorptionStore, worldCandidateAtoms } from '../state/adsorptionStore';
-import { applySnapOnRelease, detectSnapOnDrag, getPendingSnap, modifierState, pendingClear, snapModifiers } from '../state/dragSnap';
 import { surfaceSiteKey } from '../core/builders';
 
 /** 叠加 canvas：随渲染画布同尺寸；rAF 重绘标注 + 图元（与渲染同步即可） */
@@ -170,11 +169,7 @@ export default function SceneCanvas() {
     };
     svc.onTransformChange = (id) => {
       const t = svc.getComponentTransform(id);
-      if (!t) return;
-      // 拖拽吸附（2026-09-22）：松手时若与基底重叠且未按 Alt/Shift → 吸附 transform
-      // （一次 setTransform = 一条 Undo，即"解除吸附"恢复路径）
-      const snapped = applySnapOnRelease(id, t as never);
-      sceneStore.getState().setTransform(id, (snapped as never) ?? t);
+      if (t) sceneStore.getState().setTransform(id, t);
     };
     const unbind = bindRenderer(sceneStore, svc);
     // 吸附候选预览（2026-09-21）：UI 态 → 渲染层命令式同步（不进 sceneStore/Undo）
@@ -221,30 +216,6 @@ export default function SceneCanvas() {
     const dom = svc.renderer.domElement;
     dom.addEventListener('pointermove', onMove);
     dom.addEventListener('pointerleave', onLeave);
-    // 拖拽吸附检测（2026-09-22）：gizmo 拖拽中 rAF 轮询——仅设置提示态与基底高亮，
-    // 不移动分子（吸附变换在释放执行）；Alt/Shift 修饰键状态同处维护
-    const onKeyMods = (e: KeyboardEvent): void => {
-      modifierState.alt = e.altKey;
-      modifierState.shift = e.shiftKey;
-    };
-    window.addEventListener('keydown', onKeyMods);
-    window.addEventListener('keyup', onKeyMods);
-    const dragDetectLoop = (): void => {
-      if (rendererRef.current === svc) {
-        snapModifiers.alt = modifierState.alt;
-        snapModifiers.shift = modifierState.shift;
-        const dragging = (svc as unknown as { tc: { dragging: boolean } }).tc?.dragging;
-        const selId = svc.getSelectedId();
-        if (dragging && selId) detectSnapOnDrag(selId);
-        else if (getPendingSnap()) { pendingClear(); }
-        // 高亮：将吸附目标设为 hover 态（既有描边反馈）
-        const pend = getPendingSnap();
-        if (pend) svc.setHover(pend.substrateId);
-      }
-      snapRaf = requestAnimationFrame(dragDetectLoop);
-    };
-    let snapRaf = requestAnimationFrame(dragDetectLoop);
-
     // T-11.2 图元交互：capture 阶段挂在 3D canvas 上（命中即拦截，空白透传 3D）
     const disposeShapes = createShapeInteraction(dom);
     // 图层面板悬停 → 渲染外壳（双向联动的另一半；面板自身样式由 hoverStore 驱动）
@@ -286,9 +257,6 @@ export default function SceneCanvas() {
       dom.removeEventListener('pointermove', onMove);
       dom.removeEventListener('pointerleave', onLeave);
       rendererRef.current = null;
-      cancelAnimationFrame(snapRaf);
-      window.removeEventListener('keydown', onKeyMods);
-      window.removeEventListener('keyup', onKeyMods);
       svc.dispose();
     };
   }, []);
