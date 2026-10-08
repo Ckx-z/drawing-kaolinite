@@ -41,7 +41,7 @@ describe('矿物名称匹配（中文搜索识别）', () => {
   it('mineralOf 未知键回退高岭石（旧场景兼容）', () => {
     expect(mineralOf(undefined).key).toBe('kaolinite');
     expect(mineralOf('no-such').key).toBe('kaolinite');
-    expect(MINERAL_KEYS).toHaveLength(8); // 2026-09-17 +莫来石；2026-09-18 +Co₃O₄/CeO₂
+    expect(MINERAL_KEYS).toHaveLength(9); // …09-18 +Co₃O₄/CeO₂；2026-09-24 +水滑石
   });
 });
 
@@ -94,7 +94,7 @@ describe('八矿物片层生成（严格 CIF 管线）', () => {
     expect(groupByLayer(g.atoms)).toHaveLength(1);
     // 元素集合与 CIF 展开一致（无编造元素）
     const els = new Set(g.atoms.map((a) => a.el));
-    for (const el of els) expect(['Al', 'Si', 'O', 'H', 'K', 'Ca', 'Co', 'Ce']).toContain(el);
+    for (const el of els) expect(['Al', 'Si', 'O', 'H', 'K', 'Ca', 'Co', 'Ce', 'Mg', 'C']).toContain(el);
   });
 
   it('蒙脱石含间层 Ca、伊利石含层间 K（CIF 位点原样呈现）', () => {

@@ -63,6 +63,13 @@ const MINERAL_PROVENANCE: Partial<Record<MineralKey, GeometryProvenance>> = {
   },
   co3o4: { sourceDatabase: 'COD', sourceId: '9005888', citation: 'Liu & Prewitt, PCM 17:168', method: 'X-ray refinement' },
   ceo2: { sourceDatabase: 'COD', sourceId: '9009008', method: 'X-ray refinement' },
+  hydrotalcite: {
+    sourceDatabase: 'ICSD',
+    sourceId: '86655',
+    citation: 'Costantino & Maffettini, Eur. J. Inorg. Chem. 1998',
+    method: 'X-ray refinement (powder)',
+    geometryVersion: 1,
+  },
 };
 
 /* ---------- 分子 provenance ---------- */

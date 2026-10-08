@@ -1,0 +1,110 @@
+
+#(C) 2017 by FIZ Karlsruhe - Leibniz Institute for Information Infrastructure.  All rights reserved.
+data_86655-ICSD
+_database_code_ICSD 86655
+_audit_creation_date 2000-07-15
+_chemical_name_systematic
+'Magnesium aluminium hydroxide carbonate hydrate (0.67/0.33/2/0.17/0.48)'
+_chemical_formula_structural '(Mg0.67 Al0.33 (O H)2) (C O3)0.165 (H2 O)0.48'
+_chemical_formula_sum 'C0.165 H2.96 Al0.33 Mg0.67 O2.975'
+_chemical_name_structure_type Hydrotalcite
+_exptl_crystal_density_diffrn 2.12
+_publ_section_title
+
+;
+New synthetic routes to hydrotalcite-like compounds characterisation and
+properties of the obtained materials
+;
+loop_
+_citation_id
+_citation_journal_full
+_citation_year
+_citation_journal_volume
+_citation_page_first
+_citation_page_last
+_citation_journal_id_ASTM
+primary 'European Journal of Inorganic Chemistry  (online)' 1998 1998 1439 1446
+EJICFO
+loop_
+_publ_author_name
+'Costantino, U.'
+'Marmottini, F.'
+'Nocchetti, M.'
+'Vivani, R.'
+_cell_length_a 3.04535(9)
+_cell_length_b 3.04535(9)
+_cell_length_c 22.7010(13)
+_cell_angle_alpha 90.
+_cell_angle_beta 90.
+_cell_angle_gamma 120.
+_cell_volume 182.33
+_cell_formula_units_Z 3
+_symmetry_space_group_name_H-M 'R -3 m H'
+_symmetry_Int_Tables_number 166
+_refine_ls_R_factor_all 0.056
+loop_
+_symmetry_equiv_pos_site_id
+_symmetry_equiv_pos_as_xyz
+1 'x-y, -y, -z'
+2 '-x, -x+y, -z'
+3 'y, x, -z'
+4 'x-y, x, -z'
+5 'y, -x+y, -z'
+6 '-x, -y, -z'
+7 '-x+y, y, z'
+8 'x, x-y, z'
+9 '-y, -x, z'
+10 '-x+y, -x, z'
+11 '-y, x-y, z'
+12 'x, y, z'
+13 'x-y+2/3, -y+1/3, -z+1/3'
+14 '-x+2/3, -x+y+1/3, -z+1/3'
+15 'y+2/3, x+1/3, -z+1/3'
+16 'x-y+2/3, x+1/3, -z+1/3'
+17 'y+2/3, -x+y+1/3, -z+1/3'
+18 '-x+2/3, -y+1/3, -z+1/3'
+19 '-x+y+2/3, y+1/3, z+1/3'
+20 'x+2/3, x-y+1/3, z+1/3'
+21 '-y+2/3, -x+1/3, z+1/3'
+22 '-x+y+2/3, -x+1/3, z+1/3'
+23 '-y+2/3, x-y+1/3, z+1/3'
+24 'x+2/3, y+1/3, z+1/3'
+25 'x-y+1/3, -y+2/3, -z+2/3'
+26 '-x+1/3, -x+y+2/3, -z+2/3'
+27 'y+1/3, x+2/3, -z+2/3'
+28 'x-y+1/3, x+2/3, -z+2/3'
+29 'y+1/3, -x+y+2/3, -z+2/3'
+30 '-x+1/3, -y+2/3, -z+2/3'
+31 '-x+y+1/3, y+2/3, z+2/3'
+32 'x+1/3, x-y+2/3, z+2/3'
+33 '-y+1/3, -x+2/3, z+2/3'
+34 '-x+y+1/3, -x+2/3, z+2/3'
+35 '-y+1/3, x-y+2/3, z+2/3'
+36 'x+1/3, y+2/3, z+2/3'
+loop_
+_atom_type_symbol
+_atom_type_oxidation_number
+Mg2+ 2
+Al3+ 3
+O2- -2
+C4+ 4
+H1+ 1
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_symmetry_multiplicity
+_atom_site_Wyckoff_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_B_iso_or_equiv
+_atom_site_occupancy
+_atom_site_attached_hydrogens
+Mg1 Mg2+ 3 a 0 0 0 0.0137(6) 0.67 0
+Al1 Al3+ 3 a 0 0 0 0.0137(6) 0.33 0
+O1 O2- 6 c 0 0 0.37631(10) 0.0266(9) 1. 0
+O2 O2- 18 h 0.1075(10) 0.8925(10) 0.50034(48) 0.0198(22) 0.167 0
+C1 C4+ 6 c 0.3333 0.6667 0.5003(5) 0.053(11) 0.083 0
+H1 H1+ 6 c 0 0 0.4220(17) 0.082(13) 1. 0
+H2 H1+ 6 c 0.3333 0.6667 0.5006(5) 0.082(13) 0.5 0
+#End of TTdata_86655-ICSD

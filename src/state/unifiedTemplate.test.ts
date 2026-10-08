@@ -377,7 +377,7 @@ describe('导入导出兼容（Test 12/13）', () => {
   it('Test 12：旧 kaolin-modules/v1 备份 → 新 importer 全量可导', async () => {
     const text = JSON.stringify({ format: MODULES_FORMAT, exportedAt: new Date().toISOString(), modules: SEED_MODULES.modules });
     const { imported, skipped } = await importModules(text);
-    expect(imported).toBe(SEED_MODULES.modules.length);
+    expect(imported).toBe(SEED_MODULES.modules.length); // 数量以 seed 文件为准（M2~M14=15）
     expect(skipped).toBe(0);
   });
 

@@ -24,6 +24,7 @@ import montmorilloniteCif from '../../data/Al2Si4O12Ca0.5-Montmorillonite.cif?ra
 import nacriteCif from '../../data/Al2Si2O9H4-Nacrite.cif?raw';
 import kaoliniteCif from '../../data/kaolinite.cif?raw';
 import mulliteCif from '../../data/mullite.cif?raw';
+import hydrotalciteCif from '../../data/hydrotalcite.cif?raw';
 import co3o4Cif from '../../data/co3o4.cif?raw';
 import ceo2Cif from '../../data/ceo2.cif?raw';
 
@@ -35,7 +36,8 @@ export type MineralKey =
   | 'illite'
   | 'mullite'
   | 'co3o4'
-  | 'ceo2';
+  | 'ceo2'
+  | 'hydrotalcite';
 
 export interface MineralDef {
   key: MineralKey;
@@ -63,6 +65,12 @@ export interface MineralDef {
    * 与英文名变体（ceria/cobalt oxide 等）经此直达。
    */
   aliases?: readonly string[];
+  /**
+   * 允许卷管（管组件下拉过滤，2026-09-24 水滑石决策）：layered=true 但天然
+   * 无管状变体（不同于高岭石→埃洛石同质多型）→ 显式排除；缺省 = layered。
+   * 与 layered 独立：水滑石 layered=true + tubable=false。
+   */
+  tubable?: boolean;
 }
 
 export const MINERALS: Record<MineralKey, MineralDef> = {
@@ -136,6 +144,23 @@ export const MINERALS: Record<MineralKey, MineralDef> = {
     layered: false,
     aliases: ['co3o4', 'co₃o₄', 'cobalt oxide', 'tricobalt tetroxide', 'cobalt spinel'],
   },
+  // 水滑石（2026-09-24，第九矿物）：LDH 层状双氢氧化物 3R 多型
+  // （ICSD 86655 / Costantino & Maffettini 1998 Eur. J. Inorg. Chem.，R-3m No.166，
+  // a=3.0454 c=22.701 γ=120；c = 3×d₀₀₁=7.567）。层板 Mg/Al 无序共占 3a 位
+  // （occ 0.67/0.33，双位点全显示同莫来石先例）；层间 CO₃²⁻（部分占位 0.167/0.083）
+  // + H₂O/羟基 H。**layered=true（真层状氢氧化物）但天然无管状变体——管组件排除**
+  hydrotalcite: {
+    key: 'hydrotalcite',
+    zh: ['水滑石'],
+    en: 'Hydrotalcite',
+    formula: 'C0.165H2.96Al0.33Mg0.67O2.975',
+    cifText: hydrotalciteCif,
+    d001Default: 7.567, // = c/3（3R 多型：一个堆叠周期 = c/3）
+    interlayer: ['C', 'H'], // 层间物种：CO₃ 的 C + 水/羟基 H（经 showInterlayer 过滤）
+    aliases: ['hydrotalcite', 'ldh', 'layered double hydroxide', '层状双氢氧化物', 'mg6al2', 'mgal-co3', 'mgal'],
+    layered: true, // 真层状氢氧化物：层间开关/堆叠语义可用
+    tubable: false, // 天然无管状变体（不同于高岭石→埃洛石）→ 管组件排除
+  },
   ceo2: {
     key: 'ceo2',
     zh: ['二氧化铈'],
@@ -171,7 +196,9 @@ export function findMineral(input: string): MineralDef | null {
   const hasZh = /[\u4e00-\u9fff]/.test(q);
   for (const def of Object.values(MINERALS)) {
     if (hasZh) {
+      // 中文：zh 包含匹配 + aliases 包含匹配（2026-09-24 水滑石：层状双氢氧化物/LDH 等别名跨语种可达）
       if (def.zh.some((z) => z.includes(q))) return def;
+      if (def.aliases?.some((a) => a.toLowerCase().includes(q))) return def;
     } else {
       if (def.en.toLowerCase() === q || (q.length >= 4 && def.en.toLowerCase().startsWith(q))) {
         return def;

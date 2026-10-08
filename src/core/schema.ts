@@ -72,15 +72,15 @@ export const sheetParamsSchema = z.strictObject({
    * 层间平移 = c 轴周期（高岭石 7.4；双层晶胞矿物 14.7~20.1，2026-09-12 上限放宽；
    * 2026-09-17 下限放宽到 2.5：莫来石 c≈2.89——非层状骨架矿物，此值 = 沿 c 堆叠周期）
    */
-  d001: z.number().min(2.5).max(25),
+  d001: z.number().min(2.5).max(25), // 下限 2.5（2026-09-17 莫来石 c=2.89 依赖；水滑石 7.567 亦合法）
   shape: z.enum(['矩形', '六角']),
   style: renderStyle,
   edgeH: z.boolean(),
   // T-2.7：晶学严格模式（保留 β/γ 夹角的真实三斜投影）；默认示意正交化（D03）
   strictCell: z.boolean().default(false),
-  /** 矿物种类（2026-09-12 五选一；2026-09-17 +莫来石；2026-09-18 +Co₃O₄/CeO₂ = 八选一）；缺省高岭石（旧场景兼容） */
+  /** 矿物种类（2026-09-12 五选一；09-17 +莫来石；09-18 +Co₃O₄/CeO₂；09-24 +水滑石 = 九选一）；缺省高岭石（旧场景兼容） */
   mineral: z
-    .enum(['kaolinite', 'dickite', 'nacrite', 'montmorillonite', 'illite', 'mullite', 'co3o4', 'ceo2'])
+    .enum(['kaolinite', 'dickite', 'nacrite', 'montmorillonite', 'illite', 'mullite', 'co3o4', 'ceo2', 'hydrotalcite'])
     .default('kaolinite'),
   // 单原子模式（2026-09-08）：全部原子统一为 singleEl（简化示意）；
   // singleLayers（2026-09-10）：single 下只显示前 N 层（builder clamp 到 layers）
@@ -104,7 +104,11 @@ export const tubeParamsSchema = z.strictObject({
   // T-2.6：卷曲方向（'a' 基线 / 'b' 真实轴向美感）与端口噪声幅度（0 = 关）
   curlAxis: z.enum(['a', 'b']).default('a'),
   portNoise: z.number().min(0).max(2).default(0),
-  /** 矿物种类（2026-09-12）：卷曲用 CIF 来源（埃洛石=高岭石层，可换其他矿物层做示意） */
+  /**
+   * 矿物种类（管组件专用白名单，2026-09-24 水滑石决策）：**仅层状且可卷管**——
+   * 水滑石 layered=true 但天然无管状变体（tubable=false）显式排除；
+   * 莫来石/Co₃O₄/CeO₂ 非层状（layered=false）排除。九选一中只有五层状可卷。
+   */
   mineral: z.enum(['kaolinite', 'dickite', 'nacrite', 'montmorillonite', 'illite']).default('kaolinite'),
   // 单原子模式（2026-09-08）；singleLayers（2026-09-10）：single 下只卷前 N 壁
   atomMode,
@@ -223,7 +227,7 @@ export type SurfaceDefect = z.infer<typeof surfaceDefectSchema>;
 
 export const crystalSurfaceParamsSchema = z.strictObject({
   defects: z.array(surfaceDefectSchema).default([]),
-  mineral: z.enum(['kaolinite', 'dickite', 'nacrite', 'montmorillonite', 'illite', 'mullite', 'co3o4', 'ceo2']).default('ceo2'),
+  mineral: z.enum(['kaolinite', 'dickite', 'nacrite', 'montmorillonite', 'illite', 'mullite', 'co3o4', 'ceo2', 'hydrotalcite']).default('ceo2'),
   /** Miller 指数（不全为零；000 在 builder 校验报错） */
   h: z.number().int().min(0).max(3),
   k: z.number().int().min(0).max(3),

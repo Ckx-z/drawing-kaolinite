@@ -66,3 +66,15 @@
 | Drag Snap · Alt/Shift bypass | null 返回 | 双键均 bypass | — | PASS |
 | Drag Snap · 曲面基底 | 管外壁法向指向管外 | 邻域拟合近似 ✓（管/球测试构型通过） | 数值 | PASS |
 | Drag Snap · 颗粒法向 | 表面外向 | 球形构型通过 | 数值 | PASS |
+
+
+## 六、水滑石（第九矿物）几何基准
+
+| 项 | 值 |
+|---|---|
+| Reference | ICSD 86655（Costantino & Maffettini 1998 Eur. J. Inorg. Chem.），R-3m No.166，36 symop |
+| 晶胞 | a=3.0454 c=22.7010 γ=120°，Z=3；d₀₀₁ = c/3 = 7.567 Å（3R 多型） |
+| 位点 | 层板 Mg/Al 无序共占 3a（occ 0.67/0.33 双位点全显示）；层间 CO₃²⁻（部分占位 0.167/0.083）+ H₂O/羟基 |
+| 展开原子 | 56 原子/晶胞（Mg3 Al3 O24 C10 H16） |
+| relaxed / optimized | false / false（几何缺陷与弛豫不在此层） |
+| 已知限制 | siteKey=坐标量化身份（v1）；Mg/Al 无序不做有序化假设；层间 CO₃/H₂O 占位全显示（同莫来石先例） |

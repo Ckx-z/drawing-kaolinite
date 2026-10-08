@@ -99,6 +99,11 @@ export function parseCIF(text: string): ParsedCIF {
         if (!t || t.startsWith('_') || /^loop_/i.test(t) || /^data_/i.test(t) || t.startsWith(';')) break;
         // 按空白切分，尊重引号
         const vals = t.match(/'[^']*'|"[^"]*"|\S+/g) ?? [];
+        // 行首 tag 防御（2026-09-24 水滑石 ICSD 86655 修复）：quote 后循环数据块
+        // 紧跟 _tag 行（如 _publ_author_name 后直接 _cell_length_a）——CIF 规范里
+        // 该 loop 实际无数据行，tag 行是新条目不是数据；此前被 stripQuote 吞成
+        // 单值数据导致后续 loop 全部错位（symops 丢失）
+        if (vals.length && /^_[A-Za-z0-9_-]+$/.test(vals[0]!)) break;
         rows.push(vals.map(stripQuote));
         i++;
       }
@@ -123,8 +128,12 @@ export function parseCIF(text: string): ParsedCIF {
             occ: Number.isNaN(occ) ? 1 : occ,
           });
         }
-      } else if (tags.includes('_space_group_symop_operation_xyz')) {
-        const iop = tags.indexOf('_space_group_symop_operation_xyz');
+      } else if (tags.includes('_space_group_symop_operation_xyz') || tags.includes('_symmetry_equiv_pos_as_xyz')) {
+        // 两种 loop 形式（2026-09-24 水滑石 ICSD 86655：后者为 ICSD 常见变体，
+        // 此前仅认前者导致 R-3m 36 个对称操作全部丢失）
+        const iop = tags.indexOf('_space_group_symop_operation_xyz') >= 0
+          ? tags.indexOf('_space_group_symop_operation_xyz')
+          : tags.indexOf('_symmetry_equiv_pos_as_xyz');
         for (const r of rows) if (r[iop]) symops.push(stripQuote(r[iop]));
       }
       continue;
@@ -429,6 +438,9 @@ export function computeBonds(atoms: Atom[], tol?: number): Bond[] {
             const d2 = ddx * ddx + ddy * ddy + ddz * ddz;
             if (d2 < 1e-4) continue; // 同点原子对（莫来石 Al2/Si2 分裂位）不是化学键，避免零长键圆柱
             const cut = ea.cov + eb.cov + TOL;
+            // 无序分裂位伪键守卫（2026-09-24 水滑石 O2 18h occ0.167）：同元素 <0.6Å
+            // 的近距对是同一晶体学无序组的两个分裂描述，不是真实化学键
+            if (a.el === b.el && d2 < 0.36) continue;
             if (d2 < cut * cut) bonds.push([i, j]);
           }
         }

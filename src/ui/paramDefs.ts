@@ -66,8 +66,8 @@ export function groupParams(defs: readonly ParamDef[]): Array<{ name: ParamGroup
 /** 矿物下拉选项（显示"中文名 英文名"；2026-09-17 +莫来石 = 六矿物） */
 const MINERAL_OPTIONS = MINERAL_KEYS.map((k) => ({ value: k, label: `${MINERALS[k].zh[0]} ${MINERALS[k].en}` }));
 
-/** 管组件用：仅层状矿物（莫来石 layered=false 骨架结构不可卷管，2026-09-17） */
-const LAYERED_MINERAL_OPTIONS = MINERAL_KEYS.filter((k) => MINERALS[k].layered !== false).map((k) => ({
+/** 管组件用：层状且可卷管（莫来石/Co₃O₄/CeO₂ layered=false；水滑石 tubable=false 天然无管状变体——2026-09-24） */
+const LAYERED_MINERAL_OPTIONS = MINERAL_KEYS.filter((k) => MINERALS[k].layered !== false && MINERALS[k].tubable !== false).map((k) => ({
   value: k,
   label: `${MINERALS[k].zh[0]} ${MINERALS[k].en}`,
 }));

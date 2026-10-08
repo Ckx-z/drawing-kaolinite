@@ -19,7 +19,7 @@ const dist = (a: { x: number; y: number; z: number }, b: { x: number; y: number;
 
 describe('Registry（Canonical Asset）', () => {
   it('全部 canonical 资产具备 id/geometrySource/quality；矿物带 provenance（除已知 illite 限制）', () => {
-    expect(CANONICAL_ASSETS.length).toBe(17); // 8 矿物 + 9 分子
+    expect(CANONICAL_ASSETS.length).toBe(18); // 9 矿物 + 9 分子（2026-09-24 +水滑石）
     for (const a of CANONICAL_ASSETS) {
       expect(a.id).toMatch(/^(mineral|molecule):/);
       expect(['reference', 'imported', 'generated', 'schematic', 'optimized', 'external']).toContain(a.geometrySource);

@@ -601,6 +601,68 @@
       "thumb": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22110%22%3E%3Crect%20width%3D%22150%22%20height%3D%22110%22%20fill%3D%22%2523F4F5F7%22%2F%3E%3Cline%20x1%3D%2245%22%20y1%3D%2255%22%20x2%3D%22105%22%20y2%3D%2255%22%20stroke%3D%22%2523555%22%20stroke-width%3D%223%22%2F%3E%3Ccircle%20cx%3D%2245%22%20cy%3D%2255%22%20r%3D%229%22%20fill%3D%22%25233a3a3a%22%2F%3E%3Ccircle%20cx%3D%2275%22%20cy%3D%2255%22%20r%3D%229%22%20fill%3D%22%25233a3a3a%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%2255%22%20r%3D%229%22%20fill%3D%22%25233a3a3a%22%2F%3E%3Ccircle%20cx%3D%2235%22%20cy%3D%2238%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%2255%22%20cy%3D%2238%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%2235%22%20cy%3D%2272%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%2275%22%20cy%3D%2236%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%2275%22%20cy%3D%2274%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%2238%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%2272%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%2230%22%20r%3D%224%22%20fill%3D%22%2523a8a8a8%22%2F%3E%3C%2Fsvg%3E",
       "createdAt": "2026-09-19T02:00:00.000Z",
       "moduleVersion": 1
+    },
+    {
+      "type": "kaolinite_sheet",
+      "params": {
+        "Lx": 30,
+        "Ly": 30,
+        "layers": 1,
+        "d001": 7.567,
+        "shape": "矩形",
+        "style": "球棍",
+        "edgeH": false,
+        "mineral": "hydrotalcite"
+      },
+      "id": "m1789100000001",
+      "name": "M15 水滑石单层薄片 LDH",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": 1
+      },
+      "thumb": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22110%22%3E%3Crect%20width%3D%22150%22%20height%3D%22110%22%20fill%3D%22%23F4F5F7%22%2F%3E%3Cg%20stroke%3D%22%23889999%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M20%2060%20L50%2040%20L95%2040%20L125%2060%20L95%2082%20L50%2082%20Z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M20%2082%20L50%20102%20L95%20102%20L125%2082%22%20fill%3D%22none%22%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2235%22%20cy%3D%2250%22%20r%3D%227%22%20fill%3D%22%238fce8f%22%2F%3E%3Ccircle%20cx%3D%2280%22%20cy%3D%2242%22%20r%3D%227%22%20fill%3D%22%238fce8f%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%2262%22%20r%3D%227%22%20fill%3D%22%238fce8f%22%2F%3E%3Ccircle%20cx%3D%2265%22%20cy%3D%2282%22%20r%3D%227%22%20fill%3D%22%238fce8f%22%2F%3E%3Ccircle%20cx%3D%2270%22%20cy%3D%2230%22%20r%3D%225%22%20fill%3D%22%23e05548%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%2248%22%20r%3D%225%22%20fill%3D%22%23e05548%22%2F%3E%3C%2Fsvg%3E",
+      "createdAt": "2026-09-24T14:00:00.000Z",
+      "moduleVersion": 1
+    },
+    {
+      "type": "kaolinite_sheet",
+      "params": {
+        "Lx": 30,
+        "Ly": 30,
+        "layers": 3,
+        "d001": 7.567,
+        "shape": "矩形",
+        "style": "球棍",
+        "edgeH": false,
+        "mineral": "hydrotalcite"
+      },
+      "id": "m1789100000002",
+      "name": "M16 水滑石三层堆叠（3R）",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": 1
+      },
+      "thumb": "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22110%22%3E%3Crect%20width%3D%22150%22%20height%3D%22110%22%20fill%3D%22%23F4F5F7%22%2F%3E%3Cg%20stroke%3D%22%23889999%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M20%2060%20L50%2040%20L95%2040%20L125%2060%20L95%2082%20L50%2082%20Z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M20%2082%20L50%20102%20L95%20102%20L125%2082%22%20fill%3D%22none%22%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2235%22%20cy%3D%2250%22%20r%3D%227%22%20fill%3D%22%238fce8f%22%2F%3E%3Ccircle%20cx%3D%2280%22%20cy%3D%2242%22%20r%3D%227%22%20fill%3D%22%238fce8f%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%2262%22%20r%3D%227%22%20fill%3D%22%238fce8f%22%2F%3E%3Ccircle%20cx%3D%2265%22%20cy%3D%2282%22%20r%3D%227%22%20fill%3D%22%238fce8f%22%2F%3E%3Ccircle%20cx%3D%2270%22%20cy%3D%2230%22%20r%3D%225%22%20fill%3D%22%23e05548%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%2248%22%20r%3D%225%22%20fill%3D%22%23e05548%22%2F%3E%3C%2Fsvg%3E",
+      "createdAt": "2026-09-24T14:00:00.000Z",
+      "moduleVersion": 1
     }
   ],
   "note": "种子模块库全量备份：M2~M8 共 9 条（浏览器实测入库后导出；模块面板「导入」即可整套恢复/分发）"

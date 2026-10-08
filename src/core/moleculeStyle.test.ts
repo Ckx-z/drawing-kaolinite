@@ -44,13 +44,13 @@ describe('统一 style 参数', () => {
   it('Scene 序列化/反序列化：style 保持；旧 scene 缺 style 正常加载默认球棍', () => {
     const id = sceneStore.getState().addComponent('molecule', { params: { kind: 'C₇H₈', style: '空间填充' } });
     const doc = sceneDocumentSchema.parse(JSON.parse(JSON.stringify(sceneStore.getState().toSceneDocument())));
-    expect((doc.components.find((c) => 'params' in c && (c.params as { kind?: string }).kind === 'C₇H₈')?.params as { style?: string }).style).toBe('空间填充');
+    expect((doc.components.find((c: { params: unknown; type?: string }) => 'params' in c && (c.params as { kind?: string }).kind === 'C₇H₈')?.params as { style?: string }).style).toBe('空间填充');
     // 旧 scene（手动剥离 style 字段模拟历史数据）
     const legacy = JSON.parse(JSON.stringify(doc));
     for (const c of legacy.components) if ((c.params as { kind?: string }).kind) delete c.params.style;
     sceneStore.getState().removeComponent(id);
     expect(() => sceneStore.getState().loadScene(legacy)).not.toThrow();
-    const back = sceneStore.getState().components.find((c) => c.type === 'molecule');
+    const back = sceneStore.getState().components.find((c: { params: unknown; type?: string }) => c.type === 'molecule');
     expect((back?.params as { style?: string }).style).toBe('球棍');
     for (const c of [...sceneStore.getState().components]) sceneStore.getState().removeComponent(c.id);
   });

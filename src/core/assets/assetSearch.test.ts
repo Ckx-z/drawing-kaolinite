@@ -114,7 +114,7 @@ describe('覆盖率与审计（任务书 75-77）', () => {
     const st = assetIndexStats();
     expect(st.molecules).toBeGreaterThanOrEqual(5);
     expect(st.ions).toBe(2);
-    expect(st.minerals).toBe(8);
+    expect(st.minerals).toBe(9);
     expect(st.basic).toBeGreaterThanOrEqual(6);
     expect(st.total).toBe(ASSET_INDEX.length);
   });
