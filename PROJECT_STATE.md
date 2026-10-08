@@ -11,7 +11,7 @@
 
 - **任务形态**：科研绘图工具（非结构查看器、非模拟软件）
 - **技术路线**：Web 前端（TypeScript + React 19 + Three.js/WebGL2）+ Tauri v2 桌面端（macOS 已交付，D01/D10）
-- **核心卖点**：模块库沉淀 —— 官方种子模块 15 条 + 自存模块/模板持续积累，新学生一键复用
+- **核心卖点**：模块库沉淀 —— 官方种子模块 17 条 + 自存模块/模板持续积累，新学生一键复用
 - **当前形态**：**生产工程（`src/`）为主体并已发布 v0.2.0**（`demo/` 仅为历史技术验证基线）
 
 ---
@@ -96,8 +96,8 @@
 | 晶学严格模式 | `src/core/crystal.ts` | T-2.7：sheetParams.strictCell 开关——真实三斜投影（全投影+层间沿 c 轴堆叠，层片倾斜）；Si–O 键长与 CIF 距离矩阵偏差 <0.5%；默认示意正交化（D03 后路落地） |
 | 模块库 | `src/state/moduleLibrary.ts` + `src/ui/ModulePanel.tsx` | T-2.3：Dexie 4 IndexedDB + 内存缓存 + localStorage 迁移 + 导入导出；T-3.2：filterModules 检索/类型筛选/收藏排序 + toggleFavorite（favorite 字段向后兼容） |
 | 撤销/重做 | `src/state/history.ts` + `commands.ts` | T-2.1：attachHistory 实例包装（UI 零改动）；全量快照命令 + 800ms 合并窗口；栈深可配（默认 100）；Ctrl/Cmd+Z、+Shift/Y（App.tsx）；sceneStore 单例已挂接（sceneHistory） |
-| 素材模块 | 模块库内 12 个条目 | 官方种子模块 15 条（M2 片层、M3 管、M4 颗粒 S/M/L、M5 基底、M6 组合、M7 多壁管、M8 复合场景、M9/M10 莫来石、M11 甲苯、M12 Co₃O₄、M13 CeO₂、M14 丙烷）——M1 为历史样图不计入 seed-modules 条目 |
-| 种子模块库 | `data/seed-modules.json` | kaolin-modules/v1 全量备份（M2~M14 共 15 条含缩略图）；模块面板「导入」即可整套恢复/分发 |
+| 素材模块 | 模块库内 17 个条目 | 官方种子模块 17 条（M2 片层、M3 管、M4 颗粒 S/M/L、M5 基底、M6 组合、M7 多壁管、M8 复合场景、M9/M10 莫来石、M11 甲苯、M12 Co₃O₄、M13 CeO₂、M14 丙烷、M15/M16 水滑石）——M1 为历史样图不计入 seed-modules 条目 |
+| 种子模块库 | `data/seed-modules.json` | kaolin-modules/v1 全量备份（M2~M16 共 17 条含缩略图）；模块面板「导入」即可整套恢复/分发 |
 | 三维 Demo | `demo/index.html` | 双击可用；生产版功能对照基准 |
 | CIF 种子库 | `data/*.cif` | 高岭石/地开石/珍珠石/蒙脱石/伊利石/莫来石/Co₃O₄（COD 9005888）/CeO₂（COD 9009008） |
 | 决策日志 | `DECISIONS.md` | D01–D10（D10：桌面端 Worker 内联 + 异步挂起必须可回退） |
