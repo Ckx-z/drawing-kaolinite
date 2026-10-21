@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Kaolin-Assets v0.4 UI 提案 · 第二版</title>
+<style>
+:root{
+  --bg:#101318; --panel:#191e25; --panel2:#212831; --panel3:#2a323d;
+  --line:#2c333d; --line-soft:#242b34;
+  --txt:#d3dae2; --dim:#8792a0; --faint:#5c6673;
+  --acc:#e08a4e; --acc-deep:#c9743c; --acc-soft:rgba(224,138,78,.14); --acc-line:rgba(224,138,78,.45);
+  --blue:#4a9eff; --blue-soft:rgba(74,158,255,.14);
+  --ok:#5fbf8a; --r:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:13px/1.55 'Segoe UI',system-ui,'PingFang SC','Microsoft YaHei',sans-serif;background:#0a0c0f;color:var(--txt);padding:22px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.pt{font-size:15px;font-weight:600;color:#e8edf3;display:flex;align-items:center;gap:10px}
+.pt em{font-style:normal;font-weight:400;color:var(--dim);font-size:12px}
+.pt .tag{font-size:10.5px;color:var(--acc);background:var(--acc-soft);border:1px solid var(--acc-line);border-radius:999px;padding:1px 10px}
+.vs{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel)}
+.vs button{padding:6px 18px;background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:12.5px}
+.vs button.on{background:var(--acc-soft);color:var(--acc);font-weight:600}
+.frame{width:1320px;box-shadow:0 16px 48px rgba(0,0,0,.55);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+
+/* ============ 应用壳 ============ */
+.app{display:flex;flex-direction:column;height:820px;background:var(--bg)}
+
+/* ---- 顶栏：分区重组 ---- */
+.topbar{display:flex;align-items:center;gap:0;min-height:48px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.brand{display:flex;align-items:center;gap:8px;padding-right:14px}
+.brand .lg{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#e08a4e,#c96b32);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700}
+.brand .bt{font-weight:700;color:#e8edf3;font-size:13.5px}
+.brand .bv{font-size:10px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:0 7px}
+.tb-zone{display:flex;align-items:center;gap:3px;padding:0 12px;border-left:1px solid var(--line-soft);height:30px}
+.tb{height:27px;min-width:27px;padding:0 9px;display:inline-flex;align-items:center;gap:5px;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--dim);font-size:12px;cursor:pointer;white-space:nowrap}
+.tb:hover{background:var(--panel2);color:var(--txt)}
+.tb:disabled{opacity:.35;cursor:default}
+.tb.danger{color:#e5735f}
+.tb.danger:hover{background:rgba(229,115,95,.12)}
+.tb.primary{background:var(--acc-soft);border-color:var(--acc-line);color:var(--acc);font-weight:600}
+.tb.primary:hover{background:rgba(224,138,78,.22)}
+.tb .ic{font-size:13px;line-height:1}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:2px;gap:2px}
+.seg button{height:24px;padding:0 11px;border:none;border-radius:5px;background:transparent;color:var(--dim);font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.seg button.on{background:var(--acc);color:#16181c;font-weight:700}
+.tb-spacer{flex:1}
+
+/* ---- 布局 ---- */
+.layout{flex:1;display:grid;grid-template-columns:52px 224px 1fr 304px;min-height:0}
+
+/* ---- 图标导航栏 ---- */
+.rail{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:10px 0 8px;gap:2px}
+.rbtn{width:44px;padding:5px 0 4px;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--faint);cursor:pointer;position:relative}
+.rbtn .ic{font-size:16px;line-height:1.1}
+.rbtn .tx{font-size:9.5px;transform:scale(.92)}
+.rbtn:hover{color:var(--dim);background:var(--panel2)}
+.rbtn.on{color:var(--acc);background:var(--acc-soft)}
+.rbtn.on::before{content:'';position:absolute;left:-4px;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--acc)}
+.rgap{flex:1}
+.rail .cnt-dot{position:absolute;top:2px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--blue)}
+
+/* ---- 二级面板 ---- */
+.side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.shead{padding:11px 13px 7px;display:flex;align-items:center;justify-content:space-between}
+.shead .t{font-weight:700;color:#e8edf3;font-size:13px}
+.badge{font-size:10.5px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+.searchwrap{margin:0 13px 9px;position:relative}
+.searchwrap .si{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:12px}
+.searchwrap input{width:100%;padding:6px 10px 6px 27px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--txt);outline:none;font-size:12px}
+.searchwrap input:focus{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc-soft)}
+.chips{display:flex;flex-wrap:wrap;gap:5px;padding:0 13px 10px;border-bottom:1px solid var(--line-soft)}
+.chip{padding:2.5px 11px;border-radius:999px;border:1px solid var(--line);color:var(--dim);font-size:11.5px;cursor:pointer;background:var(--panel2)}
+.chip:hover{color:var(--txt)}
+.chip.on{background:var(--acc-soft);border-color:var(--acc-line);color:var(--acc);font-weight:600}
+.cards{flex:1;overflow:auto;padding:11px 13px;display:grid;grid-template-columns:1fr 1fr;gap:9px;align-content:start}
+.card{border:1px solid var(--line);border-radius:9px;background:var(--panel2);overflow:hidden;cursor:pointer;position:relative;transition:border-color .15s}
+.card:hover{border-color:var(--acc)}
+.card .thumb{height:66px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#1b212a,#151a21)}
+.card .meta{padding:6px 9px 7px}
+.card .nm{font-size:12px;color:var(--txt);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .fm{font-size:10.5px;color:var(--dim);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .add{position:absolute;top:6px;right:6px;font-size:10px;background:var(--acc);color:#16181c;border-radius:5px;padding:1.5px 7px;font-weight:700;opacity:0;transition:.15s}
+.card:hover .add{opacity:1}
+.smiles{border-top:1px solid var(--line-soft);padding:9px 13px;display:flex;gap:6px;align-items:center}
+.smiles .k{font-size:11px;color:var(--dim);white-space:nowrap}
+.smiles input{flex:1;min-width:0;padding:5px 9px;background:var(--bg);border:1px solid var(--line);border-radius:6px;color:var(--txt);font-size:11.5px;outline:none}
+.smiles button{padding:5px 10px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--dim);font-size:11.5px;cursor:pointer}
+.smiles button:hover{border-color:var(--acc);color:var(--acc)}
+
+/* 模板卡（视图C） */
+.tcard{border:1px solid var(--line);border-radius:9px;background:var(--panel2);overflow:hidden;cursor:pointer;position:relative}
+.tcard:hover{border-color:var(--acc)}
+.tcard .tthumb{height:88px;background:linear-gradient(180deg,#1b212a,#141920);display:flex;align-items:center;justify-content:center;position:relative}
+.tcard .tmeta{padding:6px 9px 7px}
+.tcard .use{position:absolute;top:6px;right:6px;font-size:10px;background:var(--acc);color:#16181c;border-radius:5px;padding:1.5px 7px;font-weight:700;opacity:0}
+.tcard:hover .use{opacity:1}
+
+/* ---- 画布 ---- */
+.cvwrap{position:relative;background:#0e1116;min-width:0;display:flex;flex-direction:column}
+.cv{flex:1;position:relative;overflow:hidden}
+.badge-mode{position:absolute;left:12px;top:12px;display:flex;gap:6px;z-index:5}
+.pill{background:rgba(25,30,37,.88);border:1px solid var(--line);border-radius:7px;padding:3px 10px;font-size:11px;color:var(--dim);backdrop-filter:blur(3px)}
+.pill.hl{color:var(--txt);border-color:var(--line)}
+.stat-hud{position:absolute;left:12px;bottom:12px;display:flex;gap:6px;z-index:5}
+.ruler-top{height:20px;background:var(--panel);border-bottom:1px solid var(--line);position:relative;display:none;overflow:hidden}
+.ruler-left{width:20px;background:var(--panel);border-right:1px solid var(--line);position:absolute;left:0;top:20px;bottom:0;display:none;overflow:hidden}
+.ruler-corner{position:absolute;left:0;top:0;width:20px;height:20px;background:var(--panel3);border-bottom:1px solid var(--line);border-right:1px solid var(--line);z-index:2;display:none}
+.ruler-top i{position:absolute;bottom:0;width:1px;height:4px;background:var(--faint)}
+.ruler-top i.maj{height:8px;background:var(--dim)}
+.ruler-top b{position:absolute;bottom:7px;font-size:8px;color:var(--faint);font-weight:400;transform:translateX(3px)}
+.ruler-left i{position:absolute;right:0;height:1px;width:4px;background:var(--faint)}
+.ruler-left i.maj{width:8px;background:var(--dim)}
+.ruler-left b{position:absolute;left:7px;font-size:8px;color:var(--faint);font-weight:400;transform:translateY(3px)}
+.zoom{position:absolute;right:12px;bottom:12px;display:none;align-items:center;gap:1px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px 5px;z-index:6}
+.zoom button{width:22px;height:22px;border:none;background:transparent;color:var(--dim);border-radius:5px;cursor:pointer;font-size:13px}
+.zoom button:hover{background:var(--panel2);color:var(--txt)}
+.zoom .zv{min-width:42px;text-align:center;font-size:12px;color:var(--txt)}
+.alignbar{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:none;align-items:center;gap:1px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:4px 7px;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:6}
+.alignbar button{min-width:27px;height:25px;border:none;background:transparent;color:var(--dim);border-radius:6px;cursor:pointer;font-size:12.5px}
+.alignbar button:hover{background:var(--panel3);color:var(--txt)}
+.alignbar .sep{width:1px;height:14px;background:var(--line);margin:0 4px}
+.alignbar .lbl{font-size:10.5px;color:var(--acc);padding:0 5px;font-weight:600}
+
+/* 画布内浮层：选中组件信息 chip */
+.sel-chip{position:absolute;z-index:5;background:rgba(233,238,244,.96);color:#22262c;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.4);display:flex;align-items:center;gap:7px}
+.sel-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--acc)}
+.sel-chip small{font-weight:400;color:#6a7482}
+.dist-note{position:absolute;z-index:5;font-size:10.5px;color:var(--acc);background:rgba(224,138,78,.12);border:1px solid var(--acc-line);border-radius:6px;padding:1px 7px}
+
+/* 2D 图元 */
+.g2-rect{position:absolute;border:1.6px solid #a9b6c6;border-radius:5px;background:rgba(169,182,198,.07)}
+.g2-rect.hl{border-color:var(--acc);background:rgba(224,138,78,.08)}
+.g2-arrow{position:absolute;height:1.8px;background:#cdd6e0;transform-origin:0 50%}
+.g2-arrow::after{content:'';position:absolute;right:-1px;top:-3.6px;border:4px solid transparent;border-left:7px solid #cdd6e0}
+.g2-text{position:absolute;color:#e0e7ef;font-size:12px;white-space:nowrap}
+.g2-sub{position:absolute;color:#93a2b4;font-size:11px;white-space:nowrap}
+.marquee{position:absolute;border:1.5px dashed var(--blue);border-radius:4px}
+
+/* ---- 右栏 ---- */
+.pr{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;overflow:auto}
+.pr::-webkit-scrollbar{width:8px}
+.pr::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.pr-head{padding:11px 14px 8px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line-soft)}
+.pr-head .t{font-weight:700;color:#e8edf3;font-size:13px;flex:1}
+.type-chip{font-size:10px;color:var(--blue);background:var(--blue-soft);border:1px solid rgba(74,158,255,.4);border-radius:5px;padding:1px 7px}
+.acc-g{border-bottom:1px solid var(--line-soft)}
+.acc-g .h{display:flex;align-items:center;gap:7px;padding:8px 14px;cursor:pointer;color:var(--txt);font-size:12.5px;font-weight:600}
+.acc-g .h .tri{color:var(--faint);font-size:9px;transition:.15s}
+.acc-g.open .h .tri{transform:rotate(90deg);color:var(--acc)}
+.acc-g .c{padding:0 14px 11px;display:none}
+.acc-g.open .c{display:block}
+.kv{display:flex;align-items:center;justify-content:space-between;padding:3.5px 0;font-size:12px}
+.kv .k{color:var(--dim)}
+.kv .v{color:var(--txt)}
+.kv .v.o{color:var(--acc);font-weight:600}
+.srow{display:flex;align-items:center;gap:8px;padding:4px 0}
+.srow .sk{color:var(--dim);font-size:12px;width:58px;flex:none}
+.srow .sv{flex:1;font-size:12px;color:var(--txt)}
+.mini-range{flex:1;-webkit-appearance:none;height:3px;background:var(--line);border-radius:2px;outline:none}
+.mini-range::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--acc);cursor:pointer}
+.sci{margin:10px 14px;border:1px solid var(--acc-line);border-radius:10px;background:linear-gradient(180deg,rgba(224,138,78,.09),rgba(224,138,78,.04));padding:9px 11px 10px}
+.sci .st{font-size:12px;font-weight:700;color:var(--acc);display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.sci .st .cert{margin-left:auto;font-size:9.5px;background:var(--acc-soft);border:1px solid var(--acc-line);border-radius:999px;padding:0 7px;font-weight:600}
+.srow2{display:flex;justify-content:space-between;font-size:11.5px;padding:2.5px 0}
+.srow2 .k{color:var(--dim)}
+.srow2 .v{color:var(--txt)}
+.srow2 .v.o{color:var(--acc);font-weight:600}
+.gbtn{display:block;width:calc(100% - 28px);margin:6px 14px;padding:6px 10px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;color:var(--txt);font-size:12px;cursor:pointer;text-align:center}
+.gbtn:hover{border-color:var(--acc);color:var(--acc)}
+.gbtn.acc{border-color:var(--acc-line);color:var(--acc);font-weight:600;background:var(--acc-soft)}
+.cands{display:flex;gap:6px;margin:4px 14px 8px}
+.cand{flex:1;height:52px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer}
+.cand .cs{font-size:9.5px;color:var(--dim)}
+.cand .cd{font-size:10.5px;color:var(--txt);font-weight:600}
+.cand.on{border-color:var(--acc);background:var(--acc-soft)}
+.cand.on .cd{color:var(--acc)}
+.note{padding:7px 14px 10px;font-size:10.5px;color:var(--faint);line-height:1.5}
+.lyr-h{margin-top:2px;padding:9px 14px 6px;font-weight:700;color:#e8edf3;font-size:12.5px;border-top:1px solid var(--line-soft);display:flex;justify-content:space-between;align-items:center}
+.lyr-h .badge{font-weight:400}
+.lyr{display:flex;align-items:center;gap:8px;margin:0 10px 4px;padding:6px 9px;border-radius:7px;font-size:12px;cursor:pointer;border:1px solid transparent}
+.lyr:hover{background:var(--panel2)}
+.lyr.on{background:var(--acc-soft);border-color:var(--acc-line)}
+.lyr .ic{font-size:13px}
+.lyr .nm{flex:1;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lyr .ct{font-size:10px;color:var(--faint)}
+.lyr .eye{color:var(--dim);cursor:pointer;font-size:12px}
+.lyr.dim2 .ic,.lyr.dim2 .nm{opacity:.38}
+.statusbar{flex:none;display:flex;justify-content:space-between;align-items:center;padding:5px 14px;background:var(--panel);border-top:1px solid var(--line);font-size:11.5px;color:var(--dim)}
+.statusbar .l{display:flex;gap:14px}
+.statusbar .ok{color:var(--ok)}
+
+/* 标注 */
+.co{position:absolute;z-index:9;width:23px;height:23px;border-radius:50%;background:var(--acc);color:#16181c;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(224,138,78,.28);cursor:default;font-family:inherit}
+.legend{width:1320px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.li{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:var(--dim);display:flex;gap:9px;align-items:flex-start}
+.li .n{flex:none;width:20px;height:20px;border-radius:50%;background:var(--acc);color:#16181c;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.li b{color:var(--txt);display:block;font-size:12px;margin-bottom:2px}
+</style>
+</head>
+<body>
+
+<div class="pt">Kaolin-Assets · v0.4 UI 提案 <span class="tag">第二版</span><em>顶栏分区重组 · 画布科学标注 · 吸附候选可视化 · 新增模板库视图</em></div>
+
+<div class="vs">
+  <button id="vA" class="on" onclick="setView('A')">① 3D 浏览态</button>
+  <button id="vB" onclick="setView('B')">② 2D 示意图态</button>
+  <button id="vC" onclick="setView('C')">③ 模板库</button>
+</div>
+
+<div class="frame"><div class="app">
+
+  <!-- ================= 顶栏（分区重组） ================= -->
+  <header class="topbar">
+    <div class="brand"><div class="lg">◈</div><span class="bt">Kaolin-Assets</span><span class="bv">v0.4</span></div>
+
+    <div class="tb-zone"><button class="tb" title="保存场景 ⌘S"><span class="ic">💾</span>保存</button><button class="tb" title="打开场景"><span class="ic">📂</span>打开</button><button class="tb danger" title="清空画布（不可撤销）"><span class="ic">🧹</span>清空</button></div>
+
+    <div class="tb-zone"><button class="tb" title="撤销 ⌘Z">↶</button><button class="tb" title="重做 ⇧⌘Z">↷</button></div>
+
+    <div class="tb-zone" id="zoneDraw">
+      <div class="seg">
+        <button class="on">↖ 选择</button><button>▭ 矩形</button><button>◯ 圆</button><button>→ 箭头</button><button>Ｔ 文字</button>
+      </div>
+    </div>
+
+    <div class="tb-zone">
+      <div class="seg" id="segMode">
+        <button class="on" id="m3d">🧊 3D 混合</button>
+        <button id="m2d">✏️ 示意图</button>
+      </div>
+    </div>
+
+    <div class="tb-zone"><button class="tb">等距</button><button class="tb">正视</button><button class="tb">俯视</button></div>
+
+    <div class="tb-spacer"></div>
+    <div class="tb-zone"><button class="tb">🧩 存为模板</button></div>
+    <div class="tb-zone" style="border:none;padding-right:2px"><button class="tb primary">📥 导出 PNG ▾</button></div>
+  </header>
+
+  <main class="layout">
+    <!-- ① 图标导航 -->
+    <nav class="rail" style="position:relative">
+      <div class="rbtn on" id="railAssets" onclick="rail('assets')"><span class="ic">🗂</span><span class="tx">素材</span></div>
+      <div class="rbtn" id="railSearch" onclick="rail('search')" style="position:relative"><span class="ic">🔍</span><span class="tx">搜索</span><span class="cnt-dot" title="搜索中"></span></div>
+      <div class="rbtn" id="railTpl" onclick="rail('tpl')"><span class="ic">🧩</span><span class="tx">模板</span></div>
+      <div class="rbtn" onclick="rail('layer')"><span class="ic">≡</span><span class="tx">图层</span></div>
+      <div class="rgap"></div>
+      <div class="rbtn" title="快捷键速查 ?"><span class="ic">⌨</span><span class="tx">?</span></div>
+      <div class="co" style="position:absolute;left:46px;top:6px">1</div>
+    </nav>
+
+    <!-- ② 二级面板 -->
+    <aside class="side">
+      <!-- 素材面板 -->
+      <div id="paneAssets">
+        <div class="shead"><span class="t">素材库</span><span class="badge">18 资产 · 离线</span></div>
+        <div class="searchwrap"><span class="si">🔍</span><input id="q" placeholder="晶体 / 分子 / 化学式 / 中文别名…" value="表面"></div>
+        <div class="chips" id="chips">
+          <span class="chip">全部</span>
+          <span class="chip on">晶体表面</span>
+          <span class="chip">层状矿物</span>
+          <span class="chip">管状变体</span>
+          <span class="chip">分子</span>
+          <span class="chip">纳米颗粒</span>
+        </div>
+        <div class="cards">
+          <div class="card"><div class="thumb"><svg width="92" height="54" viewBox="0 0 92 54"><path d="M8 32 L28 17 L84 17 L64 32 Z" fill="#39434f" stroke="#5b6b7e"/><path d="M8 32 L64 32 L64 46 L8 46 Z" fill="#242d38" stroke="#5b6b7e"/><g fill="#e08a4e"><circle cx="26" cy="28" r="3.4"/><circle cx="42" cy="28" r="3.4"/><circle cx="58" cy="28" r="3.4"/></g><g fill="#9db4d0"><circle cx="34" cy="39" r="3.4"/><circle cx="50" cy="39" r="3.4"/></g><circle cx="42" cy="28" r="4.6" fill="none" stroke="#e5735f" stroke-dasharray="2.5 2"/><text x="47" y="21" font-size="7" fill="#e5735f">Vac</text></svg></div><div class="meta"><div class="nm">CeO₂ (111) 表面</div><div class="fm">slab · 3 层 · 1 氧空位</div></div><span class="add">＋直加</span></div>
+          <div class="card"><div class="thumb"><svg width="92" height="54" viewBox="0 0 92 54"><rect x="14" y="13" width="64" height="28" rx="3" fill="none" stroke="#5b6b7e"/><path d="M14 27 h64" stroke="#5b6b7e"/><circle cx="28" cy="20" r="2.8" fill="#e08a4e"/><circle cx="44" cy="20" r="2.8" fill="#9db4d0"/><circle cx="60" cy="20" r="2.8" fill="#e08a4e"/><circle cx="28" cy="34" r="2.8" fill="#9db4d0"/><circle cx="44" cy="34" r="2.8" fill="#e08a4e"/><circle cx="60" cy="34" r="2.8" fill="#9db4d0"/></svg></div><div class="meta"><div class="nm">TiO₂ (101) 表面</div><div class="fm">锐钛矿 slab · 2 层</div></div><span class="add">＋直加</span></div>
+          <div class="card"><div class="thumb"><svg width="92" height="54" viewBox="0 0 92 54"><ellipse cx="46" cy="42" rx="28" ry="5" fill="rgba(0,0,0,.4)"/><path d="M20 38 Q22 11 46 9 Q70 11 72 38" fill="none" stroke="#5b6b7e"/><path d="M16 38 Q18 7 46 5 Q74 7 76 38" fill="#1d242e" stroke="#5b6b7e"/><path d="M24 38 Q26 13 46 11 Q66 13 68 38 Z" fill="rgba(224,138,78,.15)" stroke="#e08a4e" stroke-width=".9"/></svg></div><div class="meta"><div class="nm">埃洛石管</div><div class="fm">管状 · 内外径可调</div></div><span class="add">＋直加</span></div>
+          <div class="card"><div class="thumb"><svg width="92" height="54" viewBox="0 0 92 54"><path d="M12 18 L32 7 L80 7 L60 18 Z" fill="#39434f" stroke="#5b6b7e"/><path d="M12 18 L60 18 L60 31 L12 31 Z" fill="#242d38" stroke="#5b6b7e"/><path d="M12 31 L32 20 L80 20 L60 31 Z" fill="#39434f" stroke="#5b6b7e"/><path d="M12 31 L60 31 L60 44 L12 44 Z" fill="#242d38" stroke="#5b6b7e"/></svg></div><div class="meta"><div class="nm">高岭石片层</div><div class="fm">Al₂Si₂O₅(OH)₄ · d₀₀₁ 7.2Å</div></div><span class="add">＋直加</span></div>
+          <div class="card"><div class="thumb"><svg width="92" height="54" viewBox="0 0 92 54"><circle cx="46" cy="27" r="9" fill="#6a7d94"/><circle cx="46" cy="27" r="15" fill="none" stroke="#5b6b7e" stroke-dasharray="3 3"/><circle cx="29" cy="20" r="3.7" fill="#e08a4e"/><circle cx="63" cy="20" r="3.7" fill="#e08a4e"/><circle cx="29" cy="34" r="3.7" fill="#9db4d0"/><circle cx="63" cy="34" r="3.7" fill="#9db4d0"/></svg></div><div class="meta"><div class="nm">水滑石 LDH</div><div class="fm">Mg-Al 层板 · CO₃²⁻ 层间</div></div><span class="add">＋直加</span></div>
+          <div class="card"><div class="thumb"><svg width="92" height="54" viewBox="0 0 92 54"><circle cx="46" cy="27" r="8" fill="#e08a4e"/><circle cx="33" cy="34" r="4.6" fill="#9db4d0"/><circle cx="59" cy="34" r="4.6" fill="#9db4d0"/><circle cx="37" cy="16" r="4.6" fill="#9db4d0"/><circle cx="55" cy="16" r="4.6" fill="#9db4d0"/><g stroke="#71839a" stroke-width="1.4"><line x1="46" y1="27" x2="33" y2="34"/><line x1="46" y1="27" x2="59" y2="34"/><line x1="46" y1="27" x2="37" y2="16"/><line x1="46" y1="27" x2="55" y2="16"/></g></svg></div><div class="meta"><div class="nm">甲苯 C₇H₈</div><div class="fm">分子 · 球棍 / 填充</div></div><span class="add">＋直加</span></div>
+        </div>
+        <div class="smiles"><span class="k">SMILES</span><input placeholder="CCc1ccccc1" ><button>导入</button></div>
+      </div>
+
+      <!-- 模板面板（视图C） -->
+      <div id="paneTpl" style="display:none;flex:1;flex-direction:column;min-height:0">
+        <div class="shead"><span class="t">模板库</span><span class="badge">17 模板</span></div>
+        <div class="chips">
+          <span class="chip on">全部</span><span class="chip">机理示意</span><span class="chip">界面反应</span><span class="chip">对比组合</span><span class="chip">期刊封面</span>
+        </div>
+        <div class="cards" style="grid-template-columns:1fr">
+          <div class="tcard"><div class="tthumb"><svg width="180" height="72" viewBox="0 0 180 72"><rect x="10" y="26" width="42" height="24" rx="3" fill="none" stroke="#71839a"/><path d="M62 38 h34" stroke="#cdd6e0" stroke-width="1.4"/><path d="M92 34 l6 4 -6 4" fill="none" stroke="#cdd6e0" stroke-width="1.4"/><rect x="104" y="22" width="46" height="30" rx="3" fill="rgba(224,138,78,.12)" stroke="#e08a4e"/><text x="20" y="42" font-size="8" fill="#c9d1d9">片层</text><text x="112" y="40" font-size="8" fill="#e08a4e">复合</text></svg></div><div class="tmeta"><div class="nm">埃洛石@CeO₂ 复合材料</div><div class="fm">机理示意 · 2026-10-08 · 8 组件</div></div><span class="use">使用</span></div>
+          <div class="tcard"><div class="tthumb"><svg width="180" height="72" viewBox="0 0 180 72"><path d="M20 50 L52 34 L96 38 L64 54 Z" fill="#39434f" stroke="#5b6b7e"/><circle cx="120" cy="30" r="7" fill="#e08a4e"/><circle cx="108" cy="38" r="4" fill="#9db4d0"/><circle cx="132" cy="38" r="4" fill="#9db4d0"/><path d="M70 44 Q94 36 108 34" stroke="#e08a4e" stroke-dasharray="3 3" fill="none"/></svg></div><div class="tmeta"><div class="nm">表面吸附构型示意</div><div class="fm">界面反应 · 2026-10-05 · 5 组件</div></div><span class="use">使用</span></div>
+          <div class="tcard"><div class="tthumb"><svg width="180" height="72" viewBox="0 0 180 72"><path d="M14 20 L44 8 L92 8 L62 20 Z" fill="#39434f" stroke="#5b6b7e"/><path d="M14 20 L62 20 L62 34 L14 34 Z" fill="#242d38" stroke="#5b6b7e"/><path d="M96 20 L126 8 L174 8 L144 20 Z" fill="#453a30" stroke="#8a6a4a"/><path d="M96 20 L144 20 L144 34 L96 34 Z" fill="#2e2820" stroke="#8a6a4a"/><text x="22" y="52" font-size="8" fill="#8792a0">d₀₀₁ = 7.2 Å</text><text x="104" y="52" font-size="8" fill="#8792a0">d₀₀₁ = 9.4 Å</text></svg></div><div class="tmeta"><div class="nm">高岭石/蒙脱石 层间距对比</div><div class="fm">对比组合 · 2026-09-30 · 6 组件</div></div><span class="use">使用</span></div>
+          <div class="tcard"><div class="tthumb"><svg width="180" height="72" viewBox="0 0 180 72"><rect width="180" height="72" rx="6" fill="none"/><circle cx="90" cy="36" r="26" fill="none" stroke="rgba(224,138,78,.5)" stroke-dasharray="4 4"/><path d="M64 50 L84 30 L104 34 L96 46 Z" fill="#39434f" stroke="#5b6b7e"/><circle cx="118" cy="24" r="5" fill="#e08a4e"/><text x="56" y="14" font-size="7" fill="#8792a0">Kaolin-Assets</text></svg></div><div class="tmeta"><div class="nm">期刊封面 · 卷曲纳米管</div><div class="fm">期刊封面 · 2026-09-28 · 3 组件</div></div><span class="use">使用</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ③ 画布 -->
+    <section class="cvwrap">
+      <div class="ruler-corner" id="rCorner"></div>
+      <div class="ruler-top" id="rTop"></div>
+      <div class="cv">
+        <div class="ruler-left" id="rLeft"></div>
+
+        <!-- 3D 视口 -->
+        <div id="vp3d" style="position:absolute;inset:0">
+          <svg width="100%" height="100%" viewBox="0 0 920 700" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0">
+            <defs>
+              <linearGradient id="tube" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#454f5c"/><stop offset=".5" stop-color="#232a33"/><stop offset="1" stop-color="#161b22"/>
+              </linearGradient>
+              <linearGradient id="faceA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#414c5a"/><stop offset="1" stop-color="#2a323d"/></linearGradient>
+              <radialGradient id="hero" cx=".48" cy=".42" r=".55">
+                <stop offset="0" stop-color="rgba(224,138,78,.13)"/><stop offset="1" stop-color="rgba(224,138,78,0)"/>
+              </radialGradient>
+            </defs>
+            <ellipse cx="460" cy="360" rx="360" ry="205" fill="url(#hero)"/>
+            <!-- 地面 -->
+            <path d="M110 520 L460 604 L810 520 L460 436 Z" fill="#12171e"/>
+            <g stroke="#1b232d" stroke-width="1">
+              <path d="M198 496 L522 496 M272 472 L596 472 M346 448 L668 448 M420 424 L740 424"/>
+              <path d="M240 528 L360 452 M330 546 L450 470 M430 564 L550 488 M530 546 L650 470 M620 528 L740 452"/>
+            </g>
+            <!-- CeO2 slab -->
+            <g>
+              <ellipse cx="690" cy="352" rx="118" ry="17" fill="rgba(0,0,0,.42)"/>
+              <path d="M575 318 L695 258 L835 283 L715 343 Z" fill="url(#faceA)" stroke="#5b6b7e"/>
+              <path d="M575 318 L715 343 L715 356 L575 331 Z" fill="#232a33" stroke="#5b6b7e"/>
+              <g fill="#e08a4e"><circle cx="612" cy="303" r="5.2"/><circle cx="668" cy="281" r="5.2"/><circle cx="726" cy="300" r="5.2"/><circle cx="782" cy="286" r="5.2"/></g>
+              <g fill="#9db4d0"><circle cx="640" cy="318" r="5.2"/><circle cx="698" cy="296" r="5.2"/><circle cx="756" cy="314" r="5.2"/></g>
+              <circle cx="726" cy="300" r="8.5" fill="none" stroke="#e5735f" stroke-dasharray="3 2.5"/>
+            </g>
+            <!-- 吸附分子 + 距离标注 -->
+            <g>
+              <circle cx="718" cy="238" r="7.5" fill="#e08a4e"/>
+              <circle cx="700" cy="251" r="4.8" fill="#9db4d0"/><circle cx="736" cy="251" r="4.8" fill="#9db4d0"/>
+              <line x1="718" y1="238" x2="726" y2="300" stroke="#e08a4e" stroke-width="1" stroke-dasharray="4 3.5" opacity=".85"/>
+            </g>
+            <!-- 高岭石片层堆 -->
+            <g>
+              <ellipse cx="290" cy="422" rx="128" ry="17" fill="rgba(0,0,0,.36)"/>
+              <path d="M158 348 L268 290 L428 306 L318 364 Z" fill="url(#faceA)" stroke="#5b6b7e"/>
+              <path d="M158 348 L318 364 L318 378 L158 362 Z" fill="#242d38" stroke="#5b6b7e"/>
+              <path d="M318 364 L428 306 L428 320 L318 378 Z" fill="#2c3644" stroke="#5b6b7e"/>
+              <path d="M158 362 L318 378 L318 392 L158 376 Z" fill="#242d38" stroke="#5b6b7e"/>
+              <path d="M318 378 L428 320 L428 334 L318 392 Z" fill="#2c3644" stroke="#5b6b7e"/>
+            </g>
+            <!-- 埃洛石管 -->
+            <g>
+              <ellipse cx="290" cy="255" rx="128" ry="15" fill="rgba(0,0,0,.22)"/>
+              <path d="M352 218 L572 168 L572 216 L352 266 Z" fill="url(#tube)" stroke="#5b6b7e"/>
+              <ellipse cx="572" cy="192" rx="9" ry="24" fill="#12161c" stroke="#5b6b7e"/>
+              <ellipse cx="352" cy="242" rx="9" ry="24" fill="#39434f" stroke="#5b6b7e"/>
+              <ellipse cx="352" cy="242" rx="4.6" ry="12.5" fill="#0d1014"/>
+              <path d="M366 214 L560 166" stroke="rgba(224,138,78,.65)" stroke-width="1.4" fill="none"/>
+            </g>
+          </svg>
+          <div class="badge-mode"><span class="pill hl" id="modePill">🧊 3D 混合</span><span class="pill" id="stylePill">渲染档 PBR</span></div>
+          <div class="stat-hud"><span class="pill">6 组件 · 4,821 原子</span><span class="pill">接触阴影 ✓</span></div>
+          <!-- 选中信息浮层 + 吸附距离标注（科学感） -->
+          <div class="sel-chip" style="right:56px;top:150px"><span class="dot"></span>CeO₂ (111) 表面<small>· 248 原子 · O-终止</small></div>
+          <div class="dist-note" style="right:44px;top:216px">d = 2.4 Å · top 位</div>
+          <div class="co" style="left:104px;top:36px">2</div>
+        </div>
+
+        <!-- 2D 视口 -->
+        <div id="vp2d" style="position:absolute;inset:0;background:#141920;display:none;
+             background-image:radial-gradient(rgba(255,255,255,.045) 1px,transparent 1px);background-size:22px 22px">
+          <div class="alignbar" id="alignbar">
+            <span class="lbl">已选 2 图元</span><span class="sep"></span>
+            <button title="左对齐">⇤</button><button title="水平居中">↥</button><button title="右对齐">⇥</button><span class="sep"></span>
+            <button title="水平分布">⇹</button><button title="垂直分布">⇳</button><span class="sep"></span>
+            <button title="水平翻转">⇋</button><button title="下标">A₂</button><button title="上标">m²</button><span class="sep"></span>
+            <button title="编组">⋃ 成组</button>
+          </div>
+          <div class="g2-rect" style="left:190px;top:168px;width:158px;height:100px"></div>
+          <div class="g2-text" style="left:206px;top:186px">高岭石片层</div>
+          <div class="g2-sub" style="left:206px;top:208px">Al₂Si₂O₅(OH)₄</div>
+          <div class="g2-arrow" style="left:366px;top:216px;width:96px;transform:rotate(-7deg)"></div>
+          <div class="g2-text" style="left:372px;top:180px;color:var(--acc)">煅烧 550 °C</div>
+          <div class="g2-rect hl" style="left:480px;top:150px;width:158px;height:114px"></div>
+          <div class="g2-text" style="left:500px;top:174px">偏高岭石</div>
+          <div class="g2-sub" style="left:500px;top:196px">活性 Si–Al 骨架</div>
+          <div class="g2-arrow" style="left:654px;top:200px;width:84px;transform:rotate(6deg)"></div>
+          <div class="g2-sub" style="left:660px;top:170px">卷曲成管</div>
+          <ellipse cx="0" cy="0" style="display:none"></ellipse>
+          <svg width="120" height="70" style="position:absolute;left:752px;top:150px" viewBox="0 0 120 70"><path d="M18 56 Q20 12 60 8 Q100 12 102 56" fill="#1d242e" stroke="#71839a"/><path d="M24 56 Q26 16 60 13 Q94 16 96 56 Z" fill="rgba(224,138,78,.14)" stroke="#e08a4e"/></svg>
+          <div class="g2-sub" style="left:776px;top:226px">埃洛石管</div>
+          <div class="marquee" style="left:178px;top:136px;width:482px;height:142px"></div>
+          <div class="badge-mode"><span class="pill hl" id="modePill2">✏️ 2D 示意图</span><span class="pill">网格 22px</span></div>
+          <div class="stat-hud"><span class="pill">5 组件 · 8 图元 · 2 编组</span></div>
+          <div class="co" style="left:50%;margin-left:-180px;top:56px">3</div>
+        </div>
+
+        <div class="zoom" id="zoom">
+          <button>−</button><span class="zv">100%</span><button>＋</button><button title="适应画布">⤢</button>
+        </div>
+        <div class="co" id="co4" style="right:170px;bottom:16px;display:none">4</div>
+      </div>
+    </section>
+
+    <!-- ④ 右栏 -->
+    <aside class="pr">
+      <div class="pr-head"><span class="t" id="prTitle">参数 · CeO₂ (111) 表面</span><span class="type-chip">晶体表面</span></div>
+
+      <div class="acc-g open">
+        <div class="h"><span class="tri">▶</span>基础参数</div>
+        <div class="c">
+          <div class="srow"><span class="sk">晶面</span><input class="sv" style="border:none;background:transparent;color:var(--txt);outline:none" value="(1 1 1)"></div>
+          <div class="srow"><span class="sk">超胞</span><span class="sv" style="display:flex;align-items:center;gap:8px"><input type="range" class="mini-range" min="1" max="8" value="4"><span style="width:14px">4</span><input type="range" class="mini-range" min="1" max="8" value="4"><span style="width:14px">4</span></span></div>
+          <div class="srow"><span class="sk">真空层</span><span class="sv" style="display:flex;align-items:center;gap:8px"><input type="range" class="mini-range" min="5" max="30" value="15"><span style="width:38px">15 Å</span></span></div>
+        </div>
+      </div>
+      <div class="acc-g">
+        <div class="h"><span class="tri">▶</span>外形与显示</div>
+      </div>
+
+      <div class="sci">
+        <div class="st">★ 结构信息<span class="cert">CIF 直驱 ✓</span></div>
+        <div class="srow2"><span class="k">材料</span><span class="v">CeO₂ 二氧化铈（萤石型）</span></div>
+        <div class="srow2"><span class="k">空间群</span><span class="v">Fm-3m (No. 225)</span></div>
+        <div class="srow2"><span class="k">Termination</span><span class="v">O-终止 · 第 1 层</span></div>
+        <div class="srow2"><span class="k">表面弛豫</span><span class="v">否（未优化几何）</span></div>
+        <div class="srow2"><span class="k">数据出处</span><span class="v o">ICSD #COD-9009009</span></div>
+      </div>
+
+      <div class="acc-g open">
+        <div class="h"><span class="tri">▶</span>表面缺陷</div>
+        <div class="c">
+          <div class="kv"><span class="k">氧空位 ×1</span><span class="v o">site O-1 · Ce³⁺ 邻位</span></div>
+        </div>
+      </div>
+      <button class="gbtn">＋ 画布拾取原子创建空位</button>
+
+      <div class="acc-g open">
+        <div class="h"><span class="tri">▶</span>吸附构型 · 甲苯 C₇H₈</div>
+        <div class="c" style="padding-bottom:4px">
+          <div class="cands">
+            <div class="cand"><span class="cs">top</span><span class="cd">2.4 Å</span></div>
+            <div class="cand on"><span class="cs">bridge</span><span class="cd">2.1 Å</span></div>
+            <div class="cand"><span class="cs">hollow</span><span class="cd">2.7 Å</span></div>
+            <div class="cand"><span class="cs">平行</span><span class="cd">3.5 Å</span></div>
+          </div>
+          <div class="kv"><span class="k">碰撞检测</span><span class="v" style="color:var(--ok)">✓ 无重叠原子</span></div>
+          <div class="co" style="position:static;width:20px;height:20px;font-size:10.5px;margin:2px 0 2px auto">5</div>
+        </div>
+      </div>
+      <button class="gbtn acc">应用此构型 → 场景</button>
+      <div class="note">候选为未优化初始构型，不代表最低能构型；应用后成为可编辑组件。</div>
+
+      <div class="lyr-h">图层<span class="badge">6 组件</span></div>
+      <div class="lyr on"><span class="ic">🧊</span><span class="nm">CeO₂ (111) 表面</span><span class="ct">248 原子</span><span class="eye">👁</span></div>
+      <div class="lyr"><span class="ic">🧊</span><span class="nm">甲苯（吸附候选）</span><span class="ct">15</span><span class="eye">👁</span></div>
+      <div class="lyr"><span class="ic">🧊</span><span class="nm">高岭石片层 ×2</span><span class="ct">192</span><span class="eye">👁</span></div>
+      <div class="lyr"><span class="ic">🧊</span><span class="nm">埃洛石管</span><span class="ct">86</span><span class="eye">👁</span></div>
+      <div class="lyr dim2"><span class="ic">✏️</span><span class="nm">箭头「煅烧 550°C」</span><span class="ct">图元</span><span class="eye">🚫</span></div>
+      <div class="lyr"><span class="ic">✏️</span><span class="nm">文字标注 ×3</span><span class="ct">图元</span><span class="eye">👁</span></div>
+    </aside>
+  </main>
+
+  <footer class="statusbar">
+    <div class="l"><span id="stMode">3D 混合模式 · 拖拽旋转视角 · 空格平移 · 滚轮缩放</span><span class="ok">● 自动保存 12 秒前</span></div>
+    <div class="l"><span>Kaolin-Assets v0.4 提案二版</span></div>
+  </footer>
+</div></div>
+
+<div class="legend">
+  <div class="li"><span class="n">1</span><div><b>图标导航 + 分区顶栏</b>左栏 5 模式（素材/搜索/模板/图层/帮助）；顶栏按「文件 · 历史 · 绘制 · 模式 · 视角」分区，去掉 v1 的拥挤感</div></div>
+  <div class="li"><span class="n">2</span><div><b>画布科学标注</b>选中组件浮层（原子数/终止面）+ 吸附距离标注「d = 2.4 Å · top 位」——科研工具的身份感，科图编辑器没有</div></div>
+  <div class="li"><span class="n">3</span><div><b>选中态对齐工具条（2D）</b>对齐/分布/翻转/上下标/成组，含编组入口；仅示意图模式 + 选中 ≥2 图元时出现</div></div>
+  <div class="li"><span class="n">4</span><div><b>标尺 + 缩放指示（2D）</b>像素标尺带角块、右下角 − 100% ＋ 适应 常驻控件</div></div>
+  <div class="li"><span class="n">5</span><div><b>吸附候选可视化</b>四个候选（top/bridge/hollow/平行）卡片式切换，显示距离与碰撞状态——替代 v1 的纯文字行</div></div>
+  <div class="li"><span class="n">★</span><div><b>科学属性面板（保留强化）</b>结构信息带「CIF 直驱 ✓」徽标；模板库视图（③）展示参数化模板卡——活模板，科图的是死位图</div></div>
+</div>
+
+<script>
+const rt=document.getElementById('rTop'),rl=document.getElementById('rLeft');
+for(let x=0;x<=900;x+=10){const i=document.createElement('i');i.style.left=(20+x)+'px';if(x%50===0){i.className='maj';const b=document.createElement('b');b.style.left=(20+x)+'px';b.textContent=x;rt.appendChild(b);}rt.appendChild(i);}
+for(let y=0;y<=660;y+=10){const i=document.createElement('i');i.style.top=y+'px';if(y%50===0){i.className='maj';const b=document.createElement('b');b.style.top=y+'px';b.textContent=y;rl.appendChild(b);}rl.appendChild(i);}
+
+function setView(v){
+  const A=v==='A',B=v==='B',C=v==='C';
+  document.getElementById('vA').classList.toggle('on',A);
+  document.getElementById('vB').classList.toggle('on',B);
+  document.getElementById('vC').classList.toggle('on',C);
+  document.getElementById('vp3d').style.display=(A||C)?'block':'none';
+  document.getElementById('vp2d').style.display=B?'block':'none';
+  rt.style.display=B?'block':'none';rl.style.display=B?'block':'none';
+  document.getElementById('rCorner').style.display=B?'block':'none';
+  document.getElementById('zoom').style.display=B?'flex':'none';
+  document.getElementById('co4').style.display=B?'flex':'none';
+  document.getElementById('alignbar').style.display=B?'flex':'none';
+  // 模板视图：左栏切到模板面板、rail 高亮模板
+  document.getElementById('paneAssets').style.display=C?'none':'flex';
+  document.getElementById('paneTpl').style.display=C?'flex':'none';
+  document.getElementById('railAssets').classList.toggle('on',!C);
+  document.getElementById('railTpl').classList.toggle('on',C);
+  // 2D 时顶栏模式分段反转 + 状态栏文案
+  document.getElementById('m2d').classList.toggle('on',B);
+  document.getElementById('m3d').classList.toggle('on',!B);
+  document.getElementById('stMode').textContent=B?'示意图模式 · 空格拖拽平移 · 滚轮缩放 · 方向键微调图元':'3D 混合模式 · 拖拽旋转视角 · 空格平移 · 滚轮缩放';
+}
+function rail(m){ if(m==='tpl'){setView('C');} else if(m==='assets'){document.getElementById('paneAssets').style.display='flex';document.getElementById('paneTpl').style.display='none';document.getElementById('railAssets').classList.add('on');document.getElementById('railTpl').classList.remove('on');if(location.hash==='#C')setView('A');} }
+</script>
+</body>
+</html>
