@@ -305,3 +305,17 @@
 **修复**：①矿物 params 用 `MINERAL_D001[key]`（registry d001Default 真值——单一事实源派生，不在搜索层第二份硬编码）；②新增统一 **createAssetComponent(assetId)** 工厂（assetId → {componentType, params, name}；invalid id 返回 null 明确失败不 fallback sheet）；③LibraryPanel onClick 走工厂 + try/catch（失败 alert"无法添加该素材"，不静默）；④全索引 smoke test（23 资产逐一 factory→addComponent→schema→自动选中）。
 
 **验证**：directAdd.test 11 条（Co₃O₄/莫来石 schema 通过+真值 d001、CeO₂ 双资产不同 Component、四分子 kind 正确无 formula fallback、别名几何一致、重复添加独立 ID、invalid null、全索引零缺口 smoke）；vitest 592 → 603。
+
+## D11 — 拖拽吸附恢复接线（2026-10-22）
+
+**背景**：2026-09-24 用户要求撤销"分子靠近自动吸附"（commit 709bddb，保留引擎仅撤 UI 接线）；《V2 交互升级任务书》第三部分 3.5 明确要求恢复该工作流并给出语义边界。
+
+**决策**：按任务书恢复，但改进实现——rAF 常驻轮询改为 `tc.objectChange` 事件驱动（10Hz 节流）；引擎（`dragSnap.ts`/`snap.ts`）与 9 条误触审计测试零改动。**语义红线**：拖拽贴合 = 快速几何贴合（质心贴面 + vdW 推出 + clash 防穿透），**不是**能量优化/稳定吸附/第一性原理结论；与吸附候选（结构规则生成的初始构型）在 UI 文案上明确区分。Alt/Shift 自由放置约定保留。
+
+**影响**：`SceneCanvas.tsx`（重接线）/`App.tsx`（状态提示）；无 schema/场景文档变更（AdsorptionRecord 仍为内存态）。
+
+## D12 — 项目目录处于 iCloud 桌面同步范围（2026-10-22，待用户决策）
+
+**现象**：node_modules（经 WeChat 传输带 quarantine 标记）被 iCloud 数据驱逐为占位文件，按需下载依赖网络——eslint/构建间歇性 ETIMEDOUT 卡死（实测首读 190ms/文件，物化后 0.15ms）。
+
+**处置**：临时修复 = 清 quarantine + 全量物化（68MB）。**长期方案需用户选择**：移出 iCloud 同步 / 迁移项目目录 / 关闭桌面同步优化。未擅自迁移用户数据。

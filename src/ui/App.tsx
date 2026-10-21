@@ -17,12 +17,21 @@ import { clearAutosave, installAutosave, readAutosave } from '../state/autosave'
 import type { SceneDocument } from '../core/types';
 import { loadPresetScene } from './preset';
 import { statusHint } from './statusHints';
+import { getPendingSnap } from '../state/dragSnap';
+import { handleEscapeDuringDrag } from './dragPlace';
 import SceneCanvas from './SceneCanvas';
+import ViewportToolbar from './ViewportToolbar';
 import { SHORTCUTS, cheatsheetEntries, handleShortcut, type ShortcutHost } from './shortcuts';
 import TopBar from './TopBar';
 
 /** 上下文状态提示（2026-09-16）：订阅 tool/mode/选择态，复用 statusHint 纯函数 */
 function StatusHint() {
+  // 拖拽吸附提示（V2 恢复接线）：pending 为模块态非 zustand——500ms 轮询低干扰提示
+  const [snapHint, setSnapHint] = useState('');
+  useEffect(() => {
+    const t = setInterval(() => setSnapHint(getPendingSnap()?.substrateName ?? ''), 500);
+    return () => clearInterval(t);
+  }, []);
   const tool = useStore(sceneStore, (s) => s.tool);
   const mode = useStore(sceneStore, (s) => s.mode);
   const hasSel = useStore(
@@ -30,7 +39,13 @@ function StatusHint() {
     (s) => Boolean(s.selectionId) || s.shapeSelectionIds.length > 0,
   );
   const multiN = useStore(sceneStore, (s) => s.componentSelectionIds.length);
-  return <span>{statusHint({ tool, mode, hasSelection: hasSel, multiCount: multiN })}</span>;
+  return (
+    <span>
+      {snapHint
+        ? `松手自动贴合「${snapHint}」表面 · 按住 Alt/Shift 自由放置（Esc 取消拖动，Ctrl+Z 可撤销）`
+        : statusHint({ tool, mode, hasSelection: hasSel, multiCount: multiN })}
+    </span>
+  );
 }
 
 export default function App() {
@@ -72,6 +87,13 @@ export default function App() {
       history: sceneHistory,
       toggleCheatSheet: () => setCheat((v) => !v),
       setShapeTool: (tool) => sceneStore.getState().setTool(tool),
+      // V2 交互升级：G/E/S gizmo 模式与 F/Shift+F 取景（写会话态，渲染层由 SceneCanvas 订阅同步）
+      setGizmoMode: (m) => sceneStore.getState().setGizmoMode(m),
+      focusSelected: () => {
+        const id = sceneStore.getState().selectionId;
+        if (id) rendererRef.current?.frameComponent(id);
+      },
+      frameAll: () => rendererRef.current?.frameAll(),
     };
 
     // 方向键平移视角：按住连续、松开停止（rAF 帧循环，帧率无关的速度感）
@@ -105,6 +127,11 @@ export default function App() {
         }
         arrows.add(e.key.toLowerCase());
         if (!panRaf) panRaf = requestAnimationFrame(panLoop);
+        return;
+      }
+      // V2：素材拖放会话中的 Esc = 取消拖放（优先于清空选择的通用 Escape）
+      if (e.key === 'Escape' && handleEscapeDuringDrag()) {
+        e.preventDefault();
         return;
       }
       // T-11.2：图元选中时 Delete 优先删图元
@@ -166,6 +193,7 @@ export default function App() {
         <LibraryPanel />
         <section className="canvas">
           <SceneCanvas />
+          <ViewportToolbar />
           <div className="canvas-badge">{mode === 'diagram' ? '✏️ 2D 示意图' : '🧊 3D 混合'}</div>
           {/* 右侧参数面板折叠/展开（保留功能） */}
           <button

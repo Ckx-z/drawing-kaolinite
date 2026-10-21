@@ -621,3 +621,15 @@ sessions:
       - src/core/molecules/formula.ts（计量语义）/ formula.test.ts（+3）
       - src/core/molecules/smiles.ts（白名单派生+电荷写法）/ smiles.test.ts（+1）
       - DATA_DICT.md §九
+  - id: "2026-10-22-52"
+    date: "2026-10-22"
+    title: "V2 交互升级：素材拖放 + 画布悬浮工具栏 + 拖拽吸附恢复 + P0 双缺陷修复；科图网产品调研"
+    summary: "任务书《科研三维编辑器交互升级 V2》：M0 审计 21 项（BUG×2：原子拾取桶内索引当全局号→多元素晶体测量/氧空位错位；导出五路径泄漏吸附预览+导出后预览永久隐藏）；P0 全修（indexOf 反查全局号+atomPickNoAlt、beginOffscreen 会话快照恢复、Esc=tc.reset+objectChange 复活）；P1 新增 ViewportToolbar（G/E/S/F，scale 档仅中央手柄=等比红线）+ dragPlace 拖放会话机（缓存预建半透明预览、射线表面/工作平面放置点、取消全路径安全、seq 作废、consumeDraggedFlag 抑制尾随点击）+ DragSnap 事件驱动恢复（引擎/审计零改动）；M3 闭环测试（检索→拖放→吸附不穿透不变量→逐条 Undo→模板 roundtrip）。619→632 tests 全绿，tsc/build 绿。附：科图网调研报告（docs/research/）与 v0.4 UI 效果图两版（docs/ui-mockups/）。环境：发现 iCloud 桌面同步驱逐 node_modules（eslint ETIMEDOUT 根因），临时物化+清隔离标记，长期方案待用户决策（D12）。"
+    files:
+      - src/render/RendererService.ts（原子索引修复/previewGroups 统一/setGizmoMode scale/放置预览四 API/pickPlacementPoint/previewGeometry）
+      - src/ui/SceneCanvas.tsx（Esc 取消+objectChange 吸附检测+gizmoMode/measureMode 同步）
+      - src/state/sceneStore.ts（gizmoMode/measureMode 会话态）
+      - src/ui/ViewportToolbar.tsx（新）/ src/ui/dragPlace.ts（新）
+      - src/ui/App.tsx / ParamPanel.tsx / LibraryPanel.tsx / shortcuts.ts / index.css
+      - src/render/atomPickIndex.test.ts（新4）/ src/ui/dragPlace.test.ts（新5）/ src/ui/interactionClosure.test.ts（新4）
+      - docs/research/SCIVIS_ASSESSMENT.md + 截图6 / docs/ui-mockups/（v0.4 效果图两版）

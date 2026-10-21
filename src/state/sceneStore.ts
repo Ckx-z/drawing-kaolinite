@@ -160,6 +160,12 @@ export interface SceneState {
   /** 画布形态（T-11.6）：mixed = 3D 混合（默认）；diagram = 纯 2D 示意图（3D 隐藏 + 视口 pan/zoom）。视图状态不持久化 */
   mode: 'mixed' | 'diagram';
   setMode: (mode: 'mixed' | 'diagram') => void;
+  /** gizmo 模式（V2 交互升级，会话态）：ViewportToolbar G/E/S 与 ParamPanel 共享的单一事实源；渲染层由 SceneCanvas 订阅同步 */
+  gizmoMode: 'translate' | 'rotate' | 'scale';
+  setGizmoMode: (mode: SceneState['gizmoMode']) => void;
+  /** 测量模式（V2 交互升级，会话态）：开启后点击原子直接进入测量拾取（无需按住 Alt） */
+  measureMode: boolean;
+  setMeasureMode: (on: boolean) => void;
   /** 模板库版本号（T-11.8）：存/删模板后 bump，驱动模板分区刷新（视图信号，不持久化） */
   templateSeq: number;
   bumpTemplates: () => void;
@@ -191,6 +197,10 @@ export function createSceneStore(): SceneStore {
     templateSeq: 0,
 
     setMode: (mode) => set({ mode }),
+    gizmoMode: 'translate',
+    setGizmoMode: (mode) => set({ gizmoMode: mode }),
+    measureMode: false,
+    setMeasureMode: (on) => set({ measureMode: on }),
     bumpTemplates: () => set((s) => ({ templateSeq: s.templateSeq + 1 })),
 
     setPalette: (p) => set({ palette: p }),
@@ -498,6 +508,8 @@ export function createSceneStore(): SceneStore {
         shapes: (doc.shapes ?? []).map((s) => shapeSchema.parse(s)), // T-11.1：补默认字段
         shapeSelectionIds: [],
         tool: 'select',
+        gizmoMode: 'translate', // 会话态随场景整体替换复位（与 tool 同批）
+        measureMode: false,
         // 测量拾取是会话态（不进场景文档）：场景整体替换时旧原子引用指向已删组件，一并清空
         //（2026-09-17 场景文件与模板打开共用此链路）
         measurements: [],

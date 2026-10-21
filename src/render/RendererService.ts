@@ -112,7 +112,14 @@ export class RendererService {
   private records = new Map<string, ComponentRecord>();
   /** 吸附候选预览组（2026-09-21）：挂在主 scene 但 raycast 全禁用、导出路径统一隐藏——不参与拾取/LayerPanel/Template/Export */
   private adsorptionPreviewGroup: THREE.Group | null = null;
-  private previewVisBeforeExport = false;
+  /** 素材拖放位置预览组（V2 交互升级）：同上隔离——不进 store/Undo/模板/拾取/导出 */
+  private placementPreviewGroup: THREE.Group | null = null;
+  /** 全部临时预览组（导出统一隐藏的单一清单；新增预览组必须加入此处） */
+  private get previewGroups(): Array<THREE.Group | null> {
+    return [this.adsorptionPreviewGroup, this.placementPreviewGroup];
+  }
+  /** 测量模式（V2 ViewportToolbar）：true 时无需按 Alt，点击原子即走 onAtomClick 拾取 */
+  atomPickNoAlt = false;
 
   /** 组件的首个原子实例网格（Alt+点击原子等 UI 拾取用；无原子型返回 null） */
   atomMeshOf(compId: string): { userData: { atoms: Atom[] } } | null {
@@ -495,9 +502,13 @@ export class RendererService {
     return this.selectedId;
   }
 
-  /** gizmo 模式切换（ParamPanel 移动/旋转按钮） */
-  setGizmoMode(mode: 'translate' | 'rotate'): void {
+  /** gizmo 模式切换（ViewportToolbar G/E/S 与 ParamPanel 共用）；scale 档仅保留中央手柄 = 等比缩放（schema 统一 scale 红线） */
+  setGizmoMode(mode: 'translate' | 'rotate' | 'scale'): void {
     this.tc.setMode(mode);
+    const perAxis = mode !== 'scale';
+    this.tc.showX = perAxis;
+    this.tc.showY = perAxis;
+    this.tc.showZ = perAxis;
   }
 
   /** 读取组件当前变换（gizmo 拖动后由状态层回写 store） */
@@ -648,6 +659,83 @@ export class RendererService {
     this.adsorptionPreviewGroup = g;
   }
 
+  /* ---------- 素材拖放位置预览（V2 交互升级：P1 直接操作工作流） ---------- */
+
+  /** 用组件同款引擎预构建几何（内容寻址缓存命中即免重算；不产生场景组件、不进 Undo） */
+  previewGeometry(req: GeometryRequest): Promise<GeometryData | null> {
+    return this.engine.build(req).catch(() => null);
+  }
+
+  /** 构建拖放预览（半透明、raycast 全禁用；不进 records → 天然不参与拾取/取景/统计/导出）。scale = 落地组件的默认缩放（分子 4 等），保证预览尺寸 ≡ 放置后 */
+  setPlacementPreview(atoms: Atom[], bonds: import('../core/geometry').Bond[], scale = 1): void {
+    this.clearPlacementPreview();
+    const g = new THREE.Group();
+    g.userData.placementPreview = true;
+    addAtoms(g, atoms, true); // 预览恒球棍（与吸附候选预览同约定：原子可辨）
+    addBonds(g, atoms, bonds, BALL_STICK_BOND_RADIUS);
+    g.scale.setScalar(scale);
+    g.traverse((o) => {
+      o.raycast = () => undefined;
+      const mesh = o as THREE.Mesh;
+      if (mesh.material) {
+        const m = (mesh.material as THREE.Material).clone();
+        m.transparent = true;
+        m.opacity = 0.5;
+        mesh.material = m;
+      }
+    });
+    g.visible = false; // 首次 movePlacementPreview 命中画布后再显示
+    this.scene.add(g);
+    this.placementPreviewGroup = g;
+  }
+
+  movePlacementPreview(worldPos: [number, number, number]): void {
+    const g = this.placementPreviewGroup;
+    if (!g) return;
+    g.position.set(worldPos[0], worldPos[1], worldPos[2]);
+    g.visible = true;
+  }
+
+  /** 隐藏预览本体（指针拖出画布区间；拖拽会话继续） */
+  hidePlacementPreview(): void {
+    if (this.placementPreviewGroup) this.placementPreviewGroup.visible = false;
+  }
+
+  clearPlacementPreview(): void {
+    if (!this.placementPreviewGroup) return;
+    this.scene.remove(this.placementPreviewGroup);
+    this.placementPreviewGroup.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.geometry) mesh.geometry.dispose();
+    });
+    this.placementPreviewGroup = null;
+  }
+
+  /**
+   * 拖放置换点：优先命中最近可见组件表面（直接落在已有结构上，与"拖近即贴合"工作流衔接）；
+   * 未命中 → 与视线垂直、过 orbit.target 的工作平面交点（可预测回退，不把所有模型丢向世界原点）。
+   */
+  pickPlacementPoint(clientX: number, clientY: number): [number, number, number] | null {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1,
+    );
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(ndc, this.camera);
+    const targets = [...this.records.values()]
+      .filter((r) => r.group.visible && r.comp.visible)
+      .map((r) => r.group);
+    if (targets.length) {
+      const hits = raycaster.intersectObjects(targets, true);
+      if (hits.length) return [hits[0].point.x, hits[0].point.y, hits[0].point.z];
+    }
+    const normal = this.camera.getWorldDirection(new THREE.Vector3()).negate();
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(normal, this.orbit.target);
+    const pt = new THREE.Vector3();
+    return raycaster.ray.intersectPlane(plane, pt) ? [pt.x, pt.y, pt.z] : null;
+  }
+
   clearAdsorptionPreview(): void {
     if (!this.adsorptionPreviewGroup) return;
     this.scene.remove(this.adsorptionPreviewGroup);
@@ -658,14 +746,16 @@ export class RendererService {
     this.adsorptionPreviewGroup = null;
   }
 
-  /** 导出快照期间隐藏预览（PNG/TIFF/PDF/模板缩略图不含未 Apply 候选，任务书四十六） */
+  /** 导出快照期间隐藏全部预览组（吸附候选/拖放置换预览；PNG/TIFF/PDF/模板缩略图不含临时态） */
   private withPreviewHidden<T>(fn: () => T): T {
-    const vis = this.adsorptionPreviewGroup?.visible ?? false;
-    if (this.adsorptionPreviewGroup) this.adsorptionPreviewGroup.visible = false;
+    const prev = this.previewGroups.map((g) => (g ? g.visible : null));
+    for (const g of this.previewGroups) if (g) g.visible = false;
     try {
       return fn();
     } finally {
-      if (this.adsorptionPreviewGroup) this.adsorptionPreviewGroup.visible = vis;
+      this.previewGroups.forEach((g, i) => {
+        if (g && prev[i] !== null) g.visible = prev[i] as boolean;
+      });
     }
   }
 
@@ -833,6 +923,7 @@ export class RendererService {
     this.renderer.domElement.removeEventListener('pointerup', this.onUp);
     this.orbit.dispose();
     this.tc.dispose();
+    this.clearPlacementPreview();
     for (const rec of this.records.values()) this.clearGroup(rec.group);
     this.records.clear();
     this.renderer.dispose();
@@ -1171,30 +1262,40 @@ export class RendererService {
 
   /* ---------- 内部实现 ---------- */
 
-  /** 离屏渲染会话：改尺寸/透明底渲染一帧，返回现场供 endOffscreen 恢复（PNG/TIFF 共用） */
+  /**
+   * 离屏渲染会话：改尺寸/透明底渲染一帧，返回现场供 endOffscreen 恢复（PNG/TIFF 共用）。
+   * P0 修复（V2 交互升级）：会话内统一隐藏全部预览组——此前 exportPNG/TIFF/PDF 走本
+   * 会话而未隐藏吸附候选（未 Apply 分子会进正式导出），且结束后按从未赋值的
+   * previewVisBeforeExport(false) 恢复，导致首次导出后画布预览被永久隐藏。
+   */
   private beginOffscreen(
     w: number,
     h: number,
     alpha: boolean,
-  ): { prevSize: THREE.Vector2; prevPR: number; prevBg: THREE.Color | THREE.Texture | null } {
+  ): { prevSize: THREE.Vector2; prevPR: number; prevBg: THREE.Color | THREE.Texture | null; prevPreviewVis: Array<boolean | null> } {
     const prevSize = this.renderer.getSize(new THREE.Vector2());
     const prevPR = this.renderer.getPixelRatio();
     const prevBg = this.scene.background;
+    const prevPreviewVis = this.previewGroups.map((g) => (g ? g.visible : null));
+    for (const g of this.previewGroups) if (g) g.visible = false;
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     if (alpha) this.scene.background = null;
     this.renderer.render(this.scene, this.camera);
-    return { prevSize, prevPR, prevBg };
+    return { prevSize, prevPR, prevBg, prevPreviewVis };
   }
 
   private endOffscreen(st: {
     prevSize: THREE.Vector2;
     prevPR: number;
     prevBg: THREE.Color | THREE.Texture | null;
+    prevPreviewVis: Array<boolean | null>;
   }): void {
-    if (this.adsorptionPreviewGroup) this.adsorptionPreviewGroup.visible = this.previewVisBeforeExport;
+    this.previewGroups.forEach((g, i) => {
+      if (g && st.prevPreviewVis[i] !== null) g.visible = st.prevPreviewVis[i] as boolean;
+    });
     this.scene.background = st.prevBg;
     this.renderer.setPixelRatio(st.prevPR);
     this.renderer.setSize(st.prevSize.x, st.prevSize.y, false);
@@ -1413,10 +1514,18 @@ export class RendererService {
       while (o && !o.userData.componentId) o = o.parent;
       const compId = (o?.userData.componentId as string | undefined) ?? null;
       // Alt+点击原子（2026-09-12）：instanceId → 该桶原子（密排层切换"参与堆叠"等）
-      if (e.altKey && hit.instanceId !== undefined && hit.object.userData.matKind === 'atom') {
+      if ((e.altKey || this.atomPickNoAlt) && hit.instanceId !== undefined && hit.object.userData.matKind === 'atom') {
         const bucket = hit.object.userData.atoms as Atom[] | undefined;
         const atom = bucket?.[hit.instanceId];
-        if (compId && atom) this.onAtomClick?.(compId, atom, hit.instanceId ?? 0);
+        if (compId && atom) {
+          // P0 修复（V2 交互升级）：instanceId 是"元素桶内"索引而非全局原子索引——
+          // 多元素晶体（如 CeO₂/Mg-Al LDH）此前会把桶内号当全局号传给测量/氧空位，
+          // 解析到错误原子。桶数组元素与 data.atoms 为同一引用（instanced.addAtoms），
+          // 按引用 indexOf 反查全局号（仅点击时一次 O(n)，无感）。
+          const rec = this.records.get(compId);
+          const globalIndex = rec?.data ? rec.data.atoms.indexOf(atom) : -1;
+          if (globalIndex >= 0) this.onAtomClick?.(compId, atom, globalIndex);
+        }
         return; // 不触发选中切换（编辑意图）
       }
       this.onSelect?.(compId, e.shiftKey);

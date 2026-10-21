@@ -17,8 +17,57 @@ import { SidebarTabs } from './primitives';
 import ModulePanel from './ModulePanel';
 import { filterLib, LIB } from './paramDefs';
 import { createAssetComponent, searchAssets, type SearchResult } from '../core/assets/assetSearch';
+import {
+  beginSpecDrag,
+  cancelAssetDrag,
+  consumeDraggedFlag,
+  finishAssetDrag,
+  updateAssetDrag,
+  type DragSpec,
+} from './dragPlace';
 
 /** 科学资产搜索模式（2026-09-22d）：query 非空 → 具体资产卡（点击直加）；空 → 原分类浏览 */
+/**
+ * 资产卡拖放会话（V2 交互升级）：pointerdown 记起点，位移 >4px 进入拖放
+ * （半透明预览跟随，几何仅构建一次）；画布内松手放置、画布外/pointercancel 取消。
+ * 未移动即松手 = 普通点击（Direct Add 原路径不变；拖放结束后由 consumeDraggedFlag 抑制尾随点击）。
+ */
+function wireCardDrag(
+  e: React.PointerEvent,
+  resolveSpec: () => DragSpec | null,
+): void {
+  if (e.button !== 0) return;
+  const startX = e.clientX;
+  const startY = e.clientY;
+  let dragging = false;
+  const onMove = (ev: PointerEvent): void => {
+    if (!dragging) {
+      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) <= 4) return;
+      dragging = true;
+      const spec = resolveSpec();
+      if (spec) beginSpecDrag(spec);
+      return;
+    }
+    updateAssetDrag(ev.clientX, ev.clientY);
+  };
+  const cleanup = (): void => {
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onCancel);
+  };
+  const onUp = (): void => {
+    cleanup();
+    if (dragging) void finishAssetDrag(); // 画布内 → 放置（一条 Undo）；否则内部静默取消
+  };
+  const onCancel = (): void => {
+    cleanup();
+    if (dragging) cancelAssetDrag();
+  };
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onCancel);
+}
+
 function AssetSearchResults({ query, onAdd }: { query: string; onAdd: (r: SearchResult) => void }) {
   const results = useMemo(() => searchAssets(query), [query]);
   if (!results.length) {
@@ -34,7 +83,16 @@ function AssetSearchResults({ query, onAdd }: { query: string; onAdd: (r: Search
       <p className="hint" style={{ margin: '0 0 6px' }}>找到 {results.length} 个素材</p>
       <div>
         {results.map((r) => (
-          <div key={r.id} className="lib-card" onClick={() => onAdd(r)} title={`${r.description} · 点击直接添加`}>
+          <div
+            key={r.id}
+            className="lib-card"
+            onPointerDown={(e) => wireCardDrag(e, () => createAssetComponent(r.id))}
+            onClick={() => {
+              if (consumeDraggedFlag()) return; // 刚结束拖放放置：抑制尾随点击的重复添加
+              onAdd(r);
+            }}
+            title={`${r.description} · 点击直接添加，或按住拖入画布放置`}
+          >
             <div className="t">
               <span className="ic">{r.type === 'molecule' ? '✦' : r.type === 'mineral' ? '◈' : '▣'}</span>
               {r.nameZh}
@@ -221,8 +279,12 @@ export default function LibraryPanel() {
               <div
                 key={item.type}
                 className="lib-card"
-                onClick={() => add(item.type)}
-                title={item.desc}
+                onPointerDown={(e) => wireCardDrag(e, () => ({ componentType: item.type, params: {} }))}
+                onClick={() => {
+                  if (consumeDraggedFlag()) return;
+                  add(item.type);
+                }}
+                title={`${item.desc} · 点击直接添加，或按住拖入画布放置`}
               >
                 <div className="t">
                   <span className="ic">{item.icon}</span>
@@ -272,7 +334,7 @@ export default function LibraryPanel() {
             {smilesMsg && <p className="hint">{smilesMsg}</p>}
           </div>
           <h3 style={{ marginTop: 16 }}>提示</h3>
-          <p className="hint">点击卡片添加组件；点击画布选中；Delete 删除、Esc 取消选中；SMILES / 化学式（如 Si、H2O）输入后回车导入。</p>
+          <p className="hint">点击卡片直接添加，或按住卡片拖入画布在指针处放置（Esc 取消）；点击画布选中；Delete 删除、Esc 取消选中；SMILES / 化学式（如 Si、H2O）输入后回车导入。</p>
         </>
       )}
       {tab === 'templates' && <ModulePanel />}

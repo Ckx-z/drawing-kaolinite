@@ -501,3 +501,16 @@ T-2.1 / T-2.3 / T-9.1–T-9.2 可在 T-1.7 后立即并行
 - [x] **T-11.6 [P1] 纯 2D 示意图模式**（1d）顶栏模式切换；隐藏 3D + view pan/zoom 无限画布 + 格点背景；导出复用 ✅ 2026-09-10
 - [x] **T-11.7 [P1] 自动对齐吸附**（1d）网格吸附开关 + 边缘/中心对齐参考线（阈值 6px 洋红线；可与 T-7.3 共用算法） ✅ 2026-09-10
 - [x] **T-11.8 [P1] 机理图模板库**（1d，吸收 T-9.8）模板=场景子集（components?+shapes+annotations）；种子 4 版式（界面反应/三步流程/循环/对比）；Dexie 自存模板 ✅ 2026-09-10
+
+## V2 交互升级（2026-10-22 交付；任务书《科研三维编辑器交互升级 V2》）
+
+- [x] **V2-M0 基线审计**（21 项差距表：2 BUG / 1 IMPROVE / 4 MISSING / DragSnap 接线被撤）✅ 2026-10-22
+- [x] **V2-P0 原子拾取全局索引修复**（handleUp 桶内→全局；atomPickIndex.test 4 条）✅
+- [x] **V2-P0 导出预览统一隐藏**（beginOffscreen 会话快照恢复；删死字段；五导出路径）✅
+- [x] **V2-P0 Esc 取消 gizmo 拖拽**（tc.reset + dragCancelled + objectChange 复活）✅
+- [x] **V2-P1 画布悬浮工具栏**（ViewportToolbar + gizmoMode/measureMode 会话态 + G/E/S/F）✅
+- [x] **V2-P1 素材拖放三维画布**（dragPlace 会话机 + RendererService 放置预览/拾取点 + 双卡接线）✅
+- [x] **V2-P1 拖拽吸附恢复接线**（objectChange 事件驱动 + 状态栏提示；引擎/审计测试零改动）✅
+- [x] **V2-M3 闭环测试**（检索→拖放→变换→吸附→Undo→模板 roundtrip，interactionClosure.test）✅
+- [ ] **V2-实机验收 + tauri build 重打包**（浏览器/打包版走查 + 16k 原子帧率体感）⬜
+- [ ] **V2-P2 备选**（视角罗盘/正交相机/双击聚焦/原子信息卡——按需启动）⬜

@@ -35,6 +35,10 @@ export interface ShortcutHost {
   toggleCheatSheet: () => void;
   /** T-11：切换图元工具（工具快捷键 V/R/O/A/L/T） */
   setShapeTool?: (tool: SceneState['tool']) => void;
+  /** V2 交互升级：gizmo 模式（G/E/S）与取景（F / Shift+F）快捷键宿主 */
+  setGizmoMode?: (mode: 'translate' | 'rotate' | 'scale') => void;
+  focusSelected?: () => void;
+  frameAll?: () => void;
 }
 
 /* ---------- 剪贴板（模块级双槽：组件 / 图元） ---------- */
@@ -199,6 +203,13 @@ export const SHORTCUTS: ShortcutDef[] = [
   { key: 'a', mod: 'none', label: '绘制箭头', run: ({ host }) => host.setShapeTool?.('arrow') },
   { key: 'l', mod: 'none', label: '绘制连线', run: ({ host }) => host.setShapeTool?.('line') },
   { key: 't', mod: 'none', label: '绘制文本', run: ({ host }) => host.setShapeTool?.('text') },
+  // V2 交互升级：gizmo 模式（G/E/S）与取景（F/Shift+F）。R 已被矩形工具占用，
+  // 移动沿用 Blender 的 G；缩放仅中央手柄 = 等比（schema 统一 scale 红线）
+  { key: 'g', mod: 'none', needsSelection: true, label: '移动 gizmo', run: ({ host }) => host.setGizmoMode?.('translate') },
+  { key: 'e', mod: 'none', needsSelection: true, label: '旋转 gizmo', run: ({ host }) => host.setGizmoMode?.('rotate') },
+  { key: 's', mod: 'none', needsSelection: true, label: '等比缩放 gizmo', run: ({ host }) => host.setGizmoMode?.('scale') },
+  { key: 'f', mod: 'none', needsSelection: true, label: '聚焦选中组件', run: ({ host }) => host.focusSelected?.() },
+  { key: 'f', mod: 'none', shift: true, label: '适配全场景', run: ({ host }) => host.frameAll?.() },
 ];
 
 /** 去重显示（delete/backspace 与 y/z 重做合并展示用） */

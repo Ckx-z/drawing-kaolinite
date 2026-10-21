@@ -861,7 +861,8 @@ export default function ParamPanel() {
   const selected = useStore(sceneStore, (s) => s.components.find((c) => c.id === s.selectionId) ?? null);
   const multiIds = useStore(sceneStore, (s) => s.componentSelectionIds);
   const hasShapeSel = useStore(sceneStore, (s) => s.shapeSelectionIds.length > 0);
-  const [gizmoMode, setGizmoMode] = useState<'translate' | 'rotate'>('translate');
+  // V2 交互升级：gizmo 模式改订阅 store 会话态（与画布悬浮工具栏/快捷键 G/E/S 单源同步）
+  const gizmoMode = useStore(sceneStore, (s) => s.gizmoMode);
   // T-7.3 吸附（视图态；gizmo 平移网格/旋转步进）。
   // 必须在所有 early return 之前——条件 Hook 会让 React 在 hasShapeSel 翻转时
   // 抛 "Rendered more hooks" 并卸载整棵应用树（2026-09-12 打包版黑屏根因）
@@ -944,11 +945,14 @@ export default function ParamPanel() {
       </div>
 
       <div className="btnrow" style={{ marginTop: 10 }}>
-        <button className={`mini${gizmoMode === 'translate' ? ' on' : ''}`} onClick={() => { setGizmoMode('translate'); rendererRef.current?.setGizmoMode('translate'); }}>
+        <button className={`mini${gizmoMode === 'translate' ? ' on' : ''}`} onClick={() => sceneStore.getState().setGizmoMode('translate')} title="移动 gizmo（快捷键 G）">
           移动
         </button>
-        <button className={`mini${gizmoMode === 'rotate' ? ' on' : ''}`} onClick={() => { setGizmoMode('rotate'); rendererRef.current?.setGizmoMode('rotate'); }}>
+        <button className={`mini${gizmoMode === 'rotate' ? ' on' : ''}`} onClick={() => sceneStore.getState().setGizmoMode('rotate')} title="旋转 gizmo（快捷键 E）">
           旋转
+        </button>
+        <button className={`mini${gizmoMode === 'scale' ? ' on' : ''}`} onClick={() => sceneStore.getState().setGizmoMode('scale')} title="等比缩放 gizmo（快捷键 S；仅中央手柄，统一 scale 红线）">
+          缩放
         </button>
         <button className="mini" onClick={() => rendererRef.current?.frameComponent(selected.id)}>
           适配视角
