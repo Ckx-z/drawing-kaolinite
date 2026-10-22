@@ -24,3 +24,4 @@ __pycache__/
 # 浏览器下载测试产物不入库
 kaolin-scene.json
 *-scene-export.json
+tsconfig.tsbuildinfo

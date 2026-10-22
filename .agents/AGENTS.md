@@ -1,6 +1,6 @@
 # Kaolin-Assets（高岭土机理图绘制软件）— AI 协作规范
 
-> 项目路径：本机工作副本（如 `/Users/<user>/Desktop/高岭土demo - 副本`）
+> 项目路径：`/Users/zuoqingyu/Projects/高岭土demo - 副本`（2026-10-22 迁出 iCloud 桌面同步，D12）
 > 远程仓库：`github.com/Ckx-z/drawing-kaolinite`（master 主开发线；推送需本机代理或直连可用）
 > 本文件由 AI 工具自动加载，任何 AI 实例进入本项目时必读。
 > 设计借鉴 `C:/Users/ckx/Desktop/全新机器学习实验` 的记忆体系（仅思想，未复制代码）。

@@ -318,4 +318,6 @@
 
 **现象**：node_modules（经 WeChat 传输带 quarantine 标记）被 iCloud 数据驱逐为占位文件，按需下载依赖网络——eslint/构建间歇性 ETIMEDOUT 卡死（实测首读 190ms/文件，物化后 0.15ms）。
 
-**处置**：临时修复 = 清 quarantine + 全量物化（68MB）。**长期方案需用户选择**：移出 iCloud 同步 / 迁移项目目录 / 关闭桌面同步优化。未擅自迁移用户数据。
+**处置**：临时修复 = 清 quarantine + 全量物化（68MB）。
+
+**落地（2026-10-22 用户拍板「移出同步范围」）**：项目已迁移至 **`/Users/zuoqingyu/Projects/高岭土demo - 副本`**（非 iCloud 目录）。过程记录：直接 `mv` 被 fileproviderd 拦截阻塞（rename 卡死、fileproviderd 85% CPU）→ 改「物化 300 个残余占位文件（315s）→ cp -R 复制 → 验证（20939 文件零差异 + git 完整 + 632 tests 5.5s 全绿）→ 删除桌面源」；删除后桌面已无该项目。注意：全系统所有指向旧桌面路径的引用（终端 cwd/快捷方式/编辑器最近项目）需各自重开一次。
