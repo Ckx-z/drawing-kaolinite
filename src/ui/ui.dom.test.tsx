@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * UI 重构 DOM 级验收（2026-09-16，Phase5）：真实渲染 TopBar / LibraryPanel /
+ * UI 重构 DOM 级验收（2026-09-16，Phase5）：真实渲染 TopBar / ModelPanel /
  * ParamPanel（纯 DOM 组件，SceneCanvas 的 WebGL 不参与），断言信息架构
  * 落地：顶栏六区与收纳、左栏 Tabs 与搜索、参数分组 Accordion、NumberSlider。
  */
@@ -10,7 +10,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import 'fake-indexeddb/auto';
 import { createSceneStore, sceneStore } from '../state/sceneStore';
 import TopBar from './TopBar';
-import LibraryPanel from './LibraryPanel';
+import ModelPanel from './ModelPanel';
+import { resetModelFavorites } from '../state/modelFavorites';
 import ModulePanel from './ModulePanel';
 import ParamPanel from './ParamPanel';
 
@@ -39,6 +40,7 @@ const setInput = (el: HTMLInputElement, v: string): void => {
 };
 
 beforeEach(() => {
+  resetModelFavorites();
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
@@ -51,27 +53,44 @@ afterEach(() => {
   for (const c of [...s.components]) sceneStore.getState().removeComponent(c.id);
 });
 
-describe('TopBar 信息架构（Phase1）', () => {
-  it('六区分层：工程/撤销重做/工具/模式 seg/视图/保存为模板/导出；一级无导出六按钮与旧存为三按钮', () => {
+describe('TopBar 信息架构（UI 重构 2026-10-22：图标+Tooltip 六按钮）', () => {
+  it('核心六按钮严格按 导入→保存→后退→前进→清空→全屏 排序（图标 + data-tip 深色 Tooltip）', () => {
     render(<TopBar />);
-    // 分段控件存在且 3D 段激活
+    const tips = qa('.topbar .tbi').map((b) => b.getAttribute('data-tip'));
+    expect(tips).toEqual(['导入', '保存', '后退', '前进', '清空', '全屏']);
+    // Tooltip 文案属性存在（CSS :hover/:focus-visible 显示，DOM 层锁定文案）
+    for (const b of qa('.topbar .tbi')) expect(b.getAttribute('data-tip')!.length).toBeGreaterThan(0);
+  });
+
+  it('后退/前进随历史栈禁用；点击后退真实回退（非空按钮）', () => {
+    sceneStore.getState().addComponent('kaolinite_sheet');
+    render(<TopBar />);
+    const undoBtn = qa('.topbar .tbi').find((b) => b.getAttribute('data-tip') === '后退') as HTMLButtonElement;
+    const redoBtn = qa('.topbar .tbi').find((b) => b.getAttribute('data-tip') === '前进') as HTMLButtonElement;
+    expect(undoBtn.disabled).toBe(false);
+    expect(redoBtn.disabled).toBe(true);
+    click(undoBtn);
+    expect(sceneStore.getState().components).toHaveLength(0);
+    expect(redoBtn.disabled).toBe(false);
+  });
+
+  it('其余功能组保留：分段模式/视角三钮/示例场景/保存为模板/视图与导出下拉', () => {
+    render(<TopBar />);
     const segOn = q('.seg-btn.on');
     expect(segOn?.textContent).toContain('3D 混合');
     expect(texts('.seg-btn')).toHaveLength(2);
-    // 高频视角常驻
     expect(texts('.topbar .tb-group button')).toEqual(expect.arrayContaining(['等距', '正视', '俯视']));
-    // 统一保存入口（2026-09-17）：一级「保存为模板」按钮存在；「清空场景」常驻一级（2026-09-17b 自打开下拉移出）
     const flat = texts('.topbar > .tb-group > button, .topbar .seg-btn').join('|');
     expect(flat).toContain('保存为模板');
-    expect(flat).toContain('清空场景');
-    // 收纳验证：一级按钮不再有 6 导出/旧存为两入口/保存为…下拉/dpi select/透明底/渲染档/接触阴影/水平吸附/示例场景（仍在打开下拉内）
-    for (const gone of ['导出 TIFF', '导出 PDF', '导出 SVG', '导出分层 PNG', '导出动画 GIF', '存为模块', '存组合', '保存为…', '水平吸附', '示例场景']) {
+    for (const gone of ['导出 TIFF', '导出 PDF', '导出 SVG', '导出分层 PNG', '导出动画 GIF', '存为模块', '存组合', '保存为…']) {
       expect(flat).not.toContain(gone);
     }
-    // 下拉容器在（打开/视图/导出——保存为…下拉已随统一入口移除）
-    expect(qa('.dd-root').length).toBeGreaterThanOrEqual(3);
-    // 主动作按钮：导出 PNG（最近格式默认）
+    // 下拉容器（视图/导出）；主动作按钮 = 导出 PNG；示例场景收纳于视图下拉
+    expect(qa('.dd-root').length).toBeGreaterThanOrEqual(2);
     expect(texts('.dd-root > button').join('|')).toContain('导出 PNG');
+    const viewBtn = qa('.dd-root > button').find((b) => b.textContent?.includes('视图'))!;
+    click(viewBtn);
+    expect(q('.dd-menu')!.textContent).toContain('示例场景');
   });
 
   it('导出下拉：打开后六格式 + 设置区（dpi/透明底/像素尺寸）', () => {
@@ -82,50 +101,76 @@ describe('TopBar 信息架构（Phase1）', () => {
     const menu = q('.dd-menu')!;
     const items = [...menu.querySelectorAll('.dd-item')].map((e) => e.textContent?.trim() ?? '');
     for (const fmt of ['PNG 位图', 'TIFF（期刊）', 'PDF', 'SVG 矢量', '分层 PNG', '动画 GIF']) expect(items).toContain(fmt);
-    expect(menu.querySelector('select')).toBeTruthy(); // dpi
+    expect(menu.querySelector('select')).toBeTruthy();
     expect(menu.textContent).toContain('dpi');
-  });
-
-  it('撤销/重做按钮存在且随历史栈禁用', () => {
-    render(<TopBar />);
-    const flat = texts('.topbar .tb-group button').join('|');
-    expect(flat).toContain('↶ 后退');
-    expect(flat).toContain('↷ 前进');
   });
 });
 
-describe('LibraryPanel Tabs 与搜索（Phase3；2026-09-17 统一模板库）', () => {
-  it('两 Tab（素材|模板）且素材 Tab 默认激活；搜索过滤生效', () => {
-    render(<LibraryPanel />);
-    expect(texts('.side-tab')).toEqual(['素材', '模板']);
-    expect(q('.side-tab.on')?.textContent).toBe('素材');
-    // 素材卡（两行式副标题）
-    expect(texts('.lib-card .t').join('|')).toContain('埃洛石纳米管');
-    expect(texts('.lib-card .d').join('|')).toContain('Halloysite Nanotube');
-    // 搜索（2026-09-22d：升级为科学资产搜索——具体资产直出）
-    const search = qa('input').find((i) => (i as HTMLInputElement).placeholder?.includes('搜索分子')) as HTMLInputElement;
+describe('ModelPanel（UI 重构 2026-10-22：分类+搜索一行 / 两列卡片 / 收藏）', () => {
+  it('全量素材数据驱动渲染：分类选项来自真实 typeBadge；默认含基础组件与具体分子卡', () => {
+    render(<ModelPanel mode="all" />);
+    const opts = qa('.mp-cat option').map((o) => o.textContent?.trim() ?? '');
+    expect(opts[0]).toBe('全部');
+    expect(opts).toContain('分子');
+    expect(opts).toContain('模块库');
+    // 两列网格卡片：24 素材卡（ASSET_INDEX 全量），名称含基础组件与具体分子
+    const names = texts('.mp-card .mp-name').join('|');
+    expect(names).toContain('埃洛石纳米管');
+    expect(names).toContain('甲苯');
+    expect(qa('.mp-card').length).toBeGreaterThanOrEqual(24);
+    // 搜索框 placeholder + 搜索图标
+    const search = qa('input').find((i) => (i as HTMLInputElement).placeholder === '请输入关键字搜索') as HTMLInputElement;
     expect(search).toBeTruthy();
-    setInput(search, 'halloysite');
-    expect(host.textContent).toContain('纳米管'); // 管资产命中（名称含 halloysite/nanotube）
+    expect(q('.mp-search-ic')).toBeTruthy();
+  });
+
+  it('搜索过滤：甲苯直出；无匹配 → 简洁空状态', () => {
+    render(<ModelPanel mode="all" />);
+    const search = qa('input').find((i) => (i as HTMLInputElement).placeholder === '请输入关键字搜索') as HTMLInputElement;
     setInput(search, '甲苯');
-    expect(host.textContent).toContain('Toluene'); // 具体分子直出（非"小分子"大类）
+    const names = texts('.mp-card .mp-name');
+    expect(names).toContain('甲苯');
+    expect(names.length).toBeLessThanOrEqual(3);
     setInput(search, 'zzz');
-    expect(host.textContent).toContain('未找到内置参考素材');
+    expect(host.textContent).toContain('未找到匹配的素材');
   });
 
-  it('切到模板 Tab：ModulePanel 挂载（我的模板 + 种子模板注入统一库）', async () => {
-    render(<LibraryPanel />);
-    click(qa('.side-tab').find((t) => t.textContent === '模板')!);
-    // 种子模板经 ensureSeededTemplates 异步注入统一库——轮询等待
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 300));
+  it('收藏：卡片 ☆ 点击 → 收藏态持久；收藏视图同步；取消后消失', () => {
+    render(<ModelPanel mode="all" />);
+    const star = qa('.mp-card .mp-fav')[0] as HTMLButtonElement;
+    click(star);
+    expect(star.className).toContain('on');
+    // 收藏视图（同一 store 单源）
+    render(<ModelPanel mode="fav" />);
+    expect(qa('.mp-card').length).toBe(1);
+    // 取消收藏 → 收藏视图空
+    click(qa('.mp-card .mp-fav')[0]);
+    render(<ModelPanel mode="fav" />);
+    expect(host.textContent).toContain('还没有收藏');
+  });
+
+  it('点击卡片 = 原 Direct Add 路径（组件 +1 且选中）', () => {
+    render(<ModelPanel mode="all" />);
+    const before = sceneStore.getState().components.length;
+    click(qa('.mp-card')[0]);
+    expect(sceneStore.getState().components.length).toBe(before + 1);
+    expect(sceneStore.getState().selectionId).toBeTruthy();
+  });
+
+  it('分类筛选：选「模块库」→ 素材网格隐藏（渲染层验证分类×搜索叠加的数据分流）', () => {
+    render(<ModelPanel mode="all" />);
+    const cat = q('.mp-cat') as HTMLSelectElement;
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!;
+    act(() => {
+      setter.call(cat, '模块库');
+      cat.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    expect(host.textContent).toContain('我的模板');
-    expect(host.textContent).toContain('界面反应三步版式'); // 种子模板卡片（真实矢量缩略图 + 名称）
+    expect(texts('.mp-card .mp-name').join('|')).not.toContain('埃洛石纳米管');
   });
+});
 
-  it('保存为模板：缩略图走真实整景管线（snapshotTemplate，非占位）', async () => {
-    // 场景：片层组件 + 文本图元 + 自定义相机
+describe('保存为模板（真实缩略图管线，2026-09-17）', () => {
+  it('缩略图走真实整景管线（snapshotTemplate，非占位）', async () => {
     const id = sceneStore.getState().addComponent('kaolinite_sheet');
     const shapeId = sceneStore.getState().addShape({ type: 'text', x: 10, y: 10, w: 60, h: 24, text: 'A' } as never);
     const { rendererRef } = await import('../state/rendererRef');
@@ -147,10 +192,8 @@ describe('LibraryPanel Tabs 与搜索（Phase3；2026-09-17 统一模板库）',
       const { listModules } = await import('../state/moduleLibrary');
       const saved = (await listModules()).find((m) => m.type === 'template' && m.name.startsWith('我的模板'));
       expect(saved).toBeTruthy();
-      // 缩略图 = 渲染服务真实管线输出透传（组合模块同款 jpeg dataURL），非占位
       expect(saved!.thumb).toBe('data:image/jpeg;base64,/9j/4AAQSkZJRg==');
       expect(saved!.thumb).not.toContain('data-ph');
-      // 快照完整性：图元 + 相机 + 形态
       const tpl = saved as { shapes?: unknown[]; camera?: unknown; mode?: string };
       expect(tpl.shapes).toHaveLength(1);
       expect(tpl.camera).toEqual({ position: [11, 22, 33], target: [1, 2, 3] });

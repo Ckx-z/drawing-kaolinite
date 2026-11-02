@@ -17,6 +17,16 @@ import { loadPresetScene } from './preset';
 import { dataUrlToBlob, saveBlob, saveBlobs, saveText } from './saveFile';
 import { DropdownMenu, MenuItem, MenuSep, MenuBlock, SegmentedControl } from './primitives';
 import { resolveExportSize } from '../export/tiff';
+import { importByExtension } from './importAssets';
+import {
+  IconClear,
+  IconExitFullscreen,
+  IconFullscreen,
+  IconImport,
+  IconRedo,
+  IconSave,
+  IconUndo,
+} from './icons';
 
 /** T-11.2 图元工具组（激活态随 store.tool；快捷键 V/R/O/A/L/T 同源） */
 const TOOL_LABELS: Record<ShapeTool, string> = {
@@ -88,6 +98,24 @@ export default function TopBar() {
   // 后退/前进按钮禁用态：订阅历史栈变化（入栈/撤销/重做/清空都触发）
   const [, bumpHistory] = useState(0);
   useEffect(() => sceneHistory.subscribe(() => bumpHistory((v) => v + 1)), []);
+  // 全屏（UI 重构 2026-10-22）：标准 Fullscreen API + webkit 回退（WKWebView）；
+  // 全屏仅改视口，不触碰场景/编辑状态；Esc 为浏览器原生退出
+  const [fullscreen, setFullscreen] = useState(false);
+  useEffect(() => {
+    const sync = (): void =>
+      setFullscreen(
+        Boolean(
+          document.fullscreenElement ??
+            (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement,
+        ),
+      );
+    document.addEventListener('fullscreenchange', sync);
+    document.addEventListener('webkitfullscreenchange', sync);
+    return () => {
+      document.removeEventListener('fullscreenchange', sync);
+      document.removeEventListener('webkitfullscreenchange', sync);
+    };
+  }, []);
 
   const flash = (msg: string): void => {
     setToast(msg);
@@ -130,19 +158,27 @@ export default function TopBar() {
   const onFile = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const f = e.target.files?.[0];
     if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        clearAdsorption(); // 场景文件载入清旧预览
-        const restored = sceneStore.getState().loadScene(String(reader.result));
-        if (!restored) rendererRef.current?.frameAll(); // 旧场景无视角快照 → 回退取景
-        flash('场景已载入，所有参数均可继续修改');
-      } catch (err) {
-        alert(`场景文件解析失败：${(err as Error).message}`);
-      }
-    };
-    reader.readAsText(f);
+    importByExtension(f, flash); // .mol/.sdf → 分子构象；其余 → 场景文件（原有两路）
     e.target.value = '';
+  };
+
+  const toggleFullscreen = (): void => {
+    const doc = document as Document & { webkitFullscreenElement?: Element; webkitExitFullscreen?: () => void };
+    const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
+    try {
+      if (doc.fullscreenElement ?? doc.webkitFullscreenElement) {
+        if (doc.exitFullscreen) void doc.exitFullscreen();
+        else doc.webkitExitFullscreen?.();
+      } else if (el.requestFullscreen) {
+        el.requestFullscreen().catch(() => flash('进入全屏失败'));
+      } else if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen();
+      } else {
+        flash('当前环境不支持全屏显示');
+      }
+    } catch {
+      flash('当前环境不支持全屏显示');
+    }
   };
 
   const onExportPNG = async (): Promise<void> => {
@@ -276,50 +312,57 @@ export default function TopBar() {
   return (
     <header className="topbar">
       <div className="brand">
-        <span className="logo">◈</span> Kaolin-Assets
+        <span className="logo">◈</span>
+        <span className="brand-name">Kaolin-Assets</span>
         <em>高岭土机理图绘制软件 · v0.2.0</em>
       </div>
-      {/* ── 工程区：保存 / 打开（下拉含示例场景）/ 清空场景（危险操作常驻入口） ── */}
-      <div className="tb-group" title="场景文件：保存为 .kaolin-scene.json（含视角快照），双击可直接打开">
-        <button onClick={onSaveScene}>保存场景</button>
-        <DropdownMenu
-          label="打开"
-          title="打开场景文件（.kaolin-scene.json）；下拉含示例场景"
-          onMainClick={onOpenScene}
-        >
-          <MenuItem onClick={onOpenScene} title="打开 .kaolin-scene.json（含视角快照，原样恢复）">
-            打开场景…
-          </MenuItem>
-          <MenuItem onClick={loadPresetScene} title="一键组合：埃洛石@CeO₂ 复合材料场景">
-            示例场景
-          </MenuItem>
-        </DropdownMenu>
-        <button className="tb-clear" onClick={onClearScene} title="清空当前画布（不可撤销，建议先保存场景）">
-          清空场景
+      {/* ── 核心工具区（UI 重构 2026-10-22，参考截图：线性图标 + 深色 Tooltip，
+          顺序固定为 导入→保存→后退→前进→清空→全屏；功能全部绑定原有实现） ── */}
+      <div className="tb-group tb-core" role="toolbar" aria-label="文件与编辑工具">
+        <button className="tbi" data-tip="导入" aria-label="导入" onClick={onOpenScene}>
+          <IconImport />
         </button>
-        <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={onFile} />
-      </div>
-      {/* ── 撤销 / 重做 ── */}
-      <div className="tb-group" title="撤销/重做（快捷键 ⌘Z / ⇧⌘Z）——覆盖组件、参数、图元、标注、色板的全部编辑">
         <button
+          className="tbi"
+          data-tip="保存"
+          aria-label="保存"
+          onClick={() => {
+            void onSaveScene();
+          }}
+        >
+          <IconSave />
+        </button>
+        <button
+          className="tbi"
+          data-tip="后退"
+          aria-label="后退"
           disabled={!sceneHistory.canUndo()}
           onClick={() => {
             sceneHistory.undo();
           }}
-          title="撤回上一步编辑（⌘Z）"
         >
-          ↶ 后退
+          <IconUndo />
         </button>
         <button
+          className="tbi"
+          data-tip="前进"
+          aria-label="前进"
           disabled={!sceneHistory.canRedo()}
           onClick={() => {
             sceneHistory.redo();
           }}
-          title="重做被撤回的一步（⇧⌘Z）"
         >
-          ↷ 前进
+          <IconRedo />
         </button>
+        <button className="tbi" data-tip="清空" aria-label="清空" onClick={onClearScene}>
+          <IconClear />
+        </button>
+        <button className="tbi" data-tip="全屏" aria-label="全屏" onClick={toggleFullscreen}>
+          {fullscreen ? <IconExitFullscreen /> : <IconFullscreen />}
+        </button>
+        <input ref={fileRef} type="file" accept=".json,application/json,.mol,.sdf" hidden onChange={onFile} />
       </div>
+      <span className="tb-div" />
       {/* ── 编辑工具 ── */}
       <ShapeToolGroup />
       {/* ── 工作模式 ── */}
@@ -336,6 +379,9 @@ export default function TopBar() {
           </button>
         ))}
         <DropdownMenu label="视图" title="视角与渲染选项">
+          <MenuItem onClick={loadPresetScene} title="一键组合：埃洛石@CeO₂ 复合材料示例场景">
+            示例场景
+          </MenuItem>
           <MenuItem onClick={() => rendererRef.current?.snapHorizon()} title="水平线吸附：视线降到水平（地平线水平）">
             水平吸附
           </MenuItem>
@@ -368,7 +414,7 @@ export default function TopBar() {
         </DropdownMenu>
       </div>
       <div className="tb-spacer" />
-      {/* ── 保存为模板（2026-09-17 统一模板库：唯一保存入口，完整画面快照） ── */}
+      {/* ── 右侧工具组：保存为模板（2026-09-17 统一模板库：唯一保存入口） ── */}
       <div className="tb-group">
         <button
           className="primary"

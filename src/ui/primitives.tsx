@@ -1,6 +1,6 @@
 /**
  * 轻量 UI primitives（2026-09-16 UI 信息架构重构）
- * 零第三方依赖：DropdownMenu / SegmentedControl / AccordionSection / SidebarTabs
+ * 零第三方依赖：DropdownMenu / SegmentedControl / AccordionSection
  * 全部复用 index.css 变量（--acc/--panel2/--line 等）与现有暗色风格；
  * UI 状态（开合/选中段）均为组件本地，不写 store / 场景文档。
  */
@@ -137,24 +137,3 @@ export function AccordionSection(props: { title: string; open: boolean; onToggle
   );
 }
 
-/** 侧栏 Tabs（基础素材/我的模块/模板） */
-export function SidebarTabs<T extends string>(props: {
-  tabs: readonly { value: T; label: string }[];
-  value: T;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="side-tabs">
-      {props.tabs.map((t) => (
-        <button
-          key={t.value}
-          type="button"
-          className={`side-tab${props.value === t.value ? ' on' : ''}`}
-          onClick={() => props.onChange(t.value)}
-        >
-          {t.label}
-        </button>
-      ))}
-    </div>
-  );
-}

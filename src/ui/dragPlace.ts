@@ -12,6 +12,7 @@ import { mineralOf } from '../core/minerals';
 import { defaultTransformFor } from '../core/schema';
 import type { ComponentType } from '../core/types';
 import type { GeometryRequest } from '../core/worker';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
 
@@ -154,6 +155,48 @@ export function finishAssetDrag(): string | null {
 export function cancelAssetDrag(): void {
   session = null;
   rendererRef.current?.clearPlacementPreview();
+}
+
+/**
+ * 资产卡拖放会话（V2 交互升级，模型面板卡片共用）：pointerdown 记起点，
+ * 位移 >4px 进入拖放（半透明预览跟随，几何仅构建一次）；画布内松手放置、
+ * 画布外/pointercancel 取消。未移动即松手 = 普通点击（Direct Add 原路径不变；
+ * 拖放结束后由 consumeDraggedFlag 抑制尾随点击）。
+ */
+export function wireCardDrag(
+  e: ReactPointerEvent,
+  resolveSpec: () => DragSpec | null,
+): void {
+  if (e.button !== 0) return;
+  const startX = e.clientX;
+  const startY = e.clientY;
+  let dragging = false;
+  const onMove = (ev: PointerEvent): void => {
+    if (!dragging) {
+      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) <= 4) return;
+      dragging = true;
+      const spec = resolveSpec();
+      if (spec) beginSpecDrag(spec);
+      return;
+    }
+    updateAssetDrag(ev.clientX, ev.clientY);
+  };
+  const cleanup = (): void => {
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onCancel);
+  };
+  const onUp = (): void => {
+    cleanup();
+    if (dragging) void finishAssetDrag(); // 画布内 → 放置（一条 Undo）；否则内部静默取消
+  };
+  const onCancel = (): void => {
+    cleanup();
+    if (dragging) cancelAssetDrag();
+  };
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onCancel);
 }
 
 /** Esc 取消入口：拖放会话存在时消费事件（返回 true = 已处理，调用方停止传播） */

@@ -167,6 +167,11 @@ export function createAssetComponent(assetId: string): { componentType: Componen
   return { componentType: a.componentType, params: {}, name: a.nameZh };
 }
 
+/** 全量素材清单（模型面板数据驱动渲染用；索引只读拷贝） */
+export function listAssets(): SearchableAsset[] {
+  return [...ASSET_INDEX];
+}
+
 export function assetIndexStats(): { molecules: number; ions: number; minerals: number; basic: number; total: number } {
   const molecules = ASSET_INDEX.filter((a) => a.typeBadge === '分子').length;
   const ions = ASSET_INDEX.filter((a) => a.typeBadge === '离子').length;

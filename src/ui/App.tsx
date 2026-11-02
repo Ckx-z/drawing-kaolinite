@@ -11,7 +11,9 @@ import { rendererRef } from '../state/rendererRef';
 import { sceneHistory, sceneStore } from '../state/sceneStore';
 import { deleteSelectedShapes, nudgeSelectedShapes } from './shapes/interaction';
 import LayerPanel from './LayerPanel';
-import LibraryPanel from './LibraryPanel';
+import ModelPanel from './ModelPanel';
+import ModulePanel from './ModulePanel';
+import RailNav, { type RailEntry } from './RailNav';
 import ParamPanel from './ParamPanel';
 import { clearAutosave, installAutosave, readAutosave } from '../state/autosave';
 import type { SceneDocument } from '../core/types';
@@ -55,6 +57,8 @@ export default function App() {
   const mode = useStore(sceneStore, (s) => s.mode);
   // 右侧参数面板折叠（2026-09-16，保留功能）；左侧素材库恒显（2026-09-17 按用户要求删除收起功能）
   const [rightOpen, setRightOpen] = useState(true);
+  // 左侧导航选中项（UI 重构 2026-10-22）：模型（默认）/收藏/模板——会话态不持久化
+  const [rail, setRail] = useState<RailEntry>('model');
 
   useEffect(() => {
     trace('app-mount');
@@ -188,9 +192,12 @@ export default function App() {
       <TopBar />
       <main
         className="layout"
-        style={{ gridTemplateColumns: `216px 1fr ${rightOpen ? '300px' : '0px'}` }}
+        style={{ gridTemplateColumns: `56px 292px 1fr ${rightOpen ? '300px' : '0px'}` }}
       >
-        <LibraryPanel />
+        <RailNav active={rail} onChange={setRail} />
+        <aside className="panel mpanel">
+          {rail === 'tpl' ? <ModulePanel /> : <ModelPanel mode={rail === 'fav' ? 'fav' : 'all'} />}
+        </aside>
         <section className="canvas">
           <SceneCanvas />
           <ViewportToolbar />
