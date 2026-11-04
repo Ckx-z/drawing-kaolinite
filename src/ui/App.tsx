@@ -10,11 +10,10 @@ import { trace } from '../crashTrace';
 import { rendererRef } from '../state/rendererRef';
 import { sceneHistory, sceneStore } from '../state/sceneStore';
 import { deleteSelectedShapes, nudgeSelectedShapes } from './shapes/interaction';
-import LayerPanel from './LayerPanel';
+import InspectorPanel from './InspectorPanel';
 import ModelPanel from './ModelPanel';
 import ModulePanel from './ModulePanel';
 import RailNav, { type RailEntry } from './RailNav';
-import ParamPanel from './ParamPanel';
 import { clearAutosave, installAutosave, readAutosave } from '../state/autosave';
 import type { SceneDocument } from '../core/types';
 import { loadPresetScene } from './preset';
@@ -212,10 +211,7 @@ export default function App() {
           </button>
         </section>
         {rightOpen ? (
-          <aside className="panel right">
-            <ParamPanel />
-            <LayerPanel />
-          </aside>
+          <InspectorPanel />
         ) : null}
       </main>
       <footer className="statusbar">

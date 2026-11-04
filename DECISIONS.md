@@ -321,3 +321,15 @@
 **处置**：临时修复 = 清 quarantine + 全量物化（68MB）。
 
 **落地（2026-10-22 用户拍板「移出同步范围」）**：项目已迁移至 **`/Users/zuoqingyu/Projects/高岭土demo - 副本`**（非 iCloud 目录）。过程记录：直接 `mv` 被 fileproviderd 拦截阻塞（rename 卡死、fileproviderd 85% CPU）→ 改「物化 300 个残余占位文件（315s）→ cp -R 复制 → 验证（20939 文件零差异 + git 完整 + 632 tests 5.5s 全绿）→ 删除桌面源」；删除后桌面已无该项目。注意：全系统所有指向旧桌面路径的引用（终端 cwd/快捷方式/编辑器最近项目）需各自重开一次。
+
+## D13 — 三维工作台升级：网格/ViewCube/编辑辅助隔离/检查器（2026-11-03）
+
+**背景**：科图网 3D 编辑器录屏驱动的工作台升级任务书（P0 网格+ViewCube+导出隔离、P1 场景/材质/对象检查器）。
+
+**决策**：
+1. 透视网格 = 单面片 + fwidth 抗锯齿 shader（非每帧 Line 重建），世界空间 XZ 平面（Y-up 与 shadowGround 同向），高度 = 缓存包围盒最低点 −1.05Å（阴影地板再下 0.25Å 防 z-fight）；间距随视距 10^n 阶梯自适应（纯视觉参考，不改科学单位）；raycast 全禁、不计包围盒/统计。
+2. 编辑辅助隔离：`withEditorHelpersHidden`/`collectEditorHelpers` 单一清单（gizmo/网格/高亮外壳/双预览组），七条导出·快照路径统一走此隔离；顺带修复既有缺口（此前选中态导出会带 gizmo 与高亮外壳）。
+3. ViewCube = CSS 3D DOM 覆盖层（零第二 WebGLRenderer），姿态 rAF 直写 DOM（零 React 重绘）；矩阵 = F·V·F（F=diag(1,−1,1)，V=q⁻¹）——六轴+斜 45° 数值实证选定；点击导航 = 球面弧线插值保 target/视距，用户 pointerdown/滚轮即接管取消。
+4. 材质 Tab = 会话级对象外观（P2 再持久化，任务书允许分阶段）：组件级材质克隆，绝不改全局共享 atomMaterial；预设标注「视觉近似，非科学物性」；元素色板默认保留（整体着色为显式开关）。
+
+**影响**：RendererService（网格生命周期/隔离重构/appearance API/背景色）、新 ViewportGrid/cameraNavigation/ViewCube/InspectorPanel/appearance、SceneCanvas+App 接线；科学几何/场景 schema 零改动。

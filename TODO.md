@@ -514,3 +514,12 @@ T-2.1 / T-2.3 / T-9.1–T-9.2 可在 T-1.7 后立即并行
 - [x] **V2-M3 闭环测试**（检索→拖放→变换→吸附→Undo→模板 roundtrip，interactionClosure.test）✅
 - [ ] **V2-实机验收 + tauri build 重打包**（浏览器/打包版走查 + 16k 原子帧率体感）⬜
 - [ ] **V2-P2 备选**（视角罗盘/正交相机/双击聚焦/原子信息卡——按需启动）⬜
+
+## 三维工作台升级（2026-11-03 交付；科图网录屏校正版任务书）
+
+- [x] **WB-P0-A 透视网格**（ViewportGrid shader：fwidth AA/距离渐隐/10^n 自适应/掠射角渐隐；raycast 全禁；不计包围盒统计）✅
+- [x] **WB-P0-A 导出隔离**（withEditorHelpersHidden 单一清单：gizmo/网格/外壳/预览组；七路径统一；修复选中态导出带 gizmo 的既有缺口）✅
+- [x] **WB-P0-B ViewCube**（CSS3D DOM 层；camera.quaternion 每帧直写 DOM 零重绘；M=F·V·F 数值实证；六面点击弧线导航保 target/视距；用户接管即取消）✅
+- [x] **WB-P0-C 回归**（16k 原子 autoRotate 实测 60.4fps；顶/底/侧视角 gizmo·拾取正常；旋转不产生 Undo）✅
+- [x] **WB-P1 检查器**（InspectorPanel：LayerPanel 对象列表 + 场景/材质/对象三 Tab；场景 Tab 网格样式/背景/阴影/视角；材质 Tab 会话级外观预设；对象 Tab 原 ParamPanel 全功能）✅
+- [ ] **WB-P2 对象级外观持久化**（ComponentAppearance 进 schema + 保存/撤销/模板一致；含透明排序验证）⬜

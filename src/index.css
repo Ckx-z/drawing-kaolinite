@@ -1235,3 +1235,180 @@ input[type='checkbox'] {
     padding: 3px 7px;
   }
 }
+
+/* ================= 三维工作台升级（P0 网格/ViewCube + P1 检查器，2026-11-03） ================= */
+
+/* ViewCube：画布右下角 CSS 3D 立方体（DOM 覆盖层，天然不进导出） */
+.viewcube {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 76px;
+  height: 76px;
+  z-index: 7;
+  user-select: none;
+}
+.viewcube-perspective {
+  width: 100%;
+  height: 100%;
+  perspective: 220px;
+  perspective-origin: 50% 50%;
+}
+.viewcube-cube {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  left: 50%;
+  top: 50%;
+  margin: -20px 0 0 -20px;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.viewcube-face {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #9fb0bf;
+  border-radius: 4px;
+  color: #3d454d;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  backface-visibility: visible;
+  box-sizing: border-box;
+}
+.viewcube-face:hover {
+  background: #e6f7f8;
+  border-color: #18b1b9;
+  color: #0d8f97;
+}
+
+/* 右侧检查器：对象列表（LayerPanel 原样）+ 场景/材质/对象三 Tab */
+.insp {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.insp-tabs {
+  flex: none;
+  display: flex;
+  border-bottom: 1px solid var(--line);
+}
+.insp-tab {
+  flex: 1;
+  padding: 9px 0;
+  text-align: center;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--dim);
+  font-size: 13px;
+  cursor: pointer;
+}
+.insp-tab:hover {
+  color: var(--txt);
+}
+.insp-tab.on {
+  color: #18b1b9;
+  border-bottom-color: #18b1b9;
+  font-weight: 600;
+}
+.insp-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.insp-content > * {
+  flex: 1;
+  min-height: 0;
+}
+.insp-content > .insp-body {
+  flex: 1;
+  overflow-y: auto;
+}
+.insp-body {
+  padding: 12px 14px;
+}
+.insp-sec {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--txt);
+  padding: 8px 0 6px;
+}
+.insp-tip {
+  color: var(--dim);
+  font-weight: 400;
+  font-size: 11px;
+}
+.insp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12.5px;
+  color: var(--txt);
+}
+.insp-row > span:first-child {
+  color: var(--dim);
+}
+.insp-row input[type='range'] {
+  flex: 1;
+  max-width: 150px;
+  accent-color: #18b1b9;
+}
+.insp-row input[type='color'] {
+  width: 34px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+}
+.insp-row input[type='checkbox'] {
+  accent-color: #18b1b9;
+}
+.insp-btnrow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+}
+.insp-presets {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  padding: 2px 0 6px;
+}
+.insp-preset {
+  padding: 6px 0;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--dim);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.insp-preset:hover {
+  color: var(--txt);
+  border-color: var(--dim);
+}
+.insp-preset.on {
+  background: rgba(24, 177, 185, 0.16);
+  border-color: #18b1b9;
+  color: #18b1b9;
+  font-weight: 600;
+}
+.insp-note {
+  font-size: 11px;
+  color: var(--dim);
+  line-height: 1.6;
+  margin: 8px 0 0;
+}

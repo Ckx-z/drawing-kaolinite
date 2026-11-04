@@ -29,6 +29,7 @@ import {
   snapModifiers,
 } from '../state/dragSnap';
 import { surfaceSiteKey } from '../core/builders';
+import ViewCube from './ViewCube';
 
 /** 叠加 canvas：随渲染画布同尺寸；rAF 重绘标注 + 图元（与渲染同步即可） */
 function AnnotationOverlay(): React.ReactElement {
@@ -346,6 +347,7 @@ export default function SceneCanvas() {
   return (
     <div ref={hostRef} className="canvas-host">
       <AnnotationOverlay />
+      <ViewCube />
     </div>
   );
 }

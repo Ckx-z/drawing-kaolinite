@@ -49,10 +49,12 @@ import { activeColorFor } from './palette';
 import { addAtoms, addBonds, recolorAtomMesh } from './instanced';
 import { BALL_STICK_BOND_RADIUS, displayRadius } from './visualScale';
 import { setActivePalette, type PaletteSetting } from './palette';
-import { substrateMaterial } from './materials';
+import { srgb, substrateMaterial } from './materials';
 import { buildSubstrateGeometry } from './substrate';
 import { materialFor, outlineMaterial, type RenderMode } from './toon';
 import { createHighlightShell, findShell, type HighlightState } from './highlight';
+import { ViewportGrid, type ViewportGridStyle } from './ViewportGrid';
+import { applyAppearanceToMaterial, resolveAppearance, type AppearanceParams } from './appearance';
 import type { SubstrateParams } from '../core/types';
 
 interface ComponentRecord {
@@ -114,10 +116,11 @@ export class RendererService {
   private adsorptionPreviewGroup: THREE.Group | null = null;
   /** 素材拖放位置预览组（V2 交互升级）：同上隔离——不进 store/Undo/模板/拾取/导出 */
   private placementPreviewGroup: THREE.Group | null = null;
-  /** 全部临时预览组（导出统一隐藏的单一清单；新增预览组必须加入此处） */
-  private get previewGroups(): Array<THREE.Group | null> {
-    return [this.adsorptionPreviewGroup, this.placementPreviewGroup];
-  }
+  /** 三维透视网格（三维工作台升级 P0-A）：编辑辅助元素，导出统一隐藏 */
+  private readonly viewportGrid = new ViewportGrid();
+  private gridStyleVisible = true;
+  /** 会话级对象外观（P1 材质 Tab；不写入场景文件——P2 再持久化） */
+  private readonly sessionAppearance = new Map<string, AppearanceParams>();
   /** 测量模式（V2 ViewportToolbar）：true 时无需按 Alt，点击原子即走 onAtomClick 拾取 */
   atomPickNoAlt = false;
 
@@ -193,6 +196,74 @@ export class RendererService {
     this.tc.setRotationSnap(opts.angleDeg != null ? (opts.angleDeg * Math.PI) / 180 : null);
   }
 
+  /** 视口网格样式（场景 Tab：显隐/主次线颜色/不透明度） */
+  setViewportGridStyle(style: ViewportGridStyle): void {
+    if (style.visible !== undefined) this.gridStyleVisible = style.visible;
+    this.viewportGrid.setStyle(style);
+    this.viewportGrid.mesh.visible = this.sceneVisible && this.gridStyleVisible;
+  }
+
+  getViewportGridStyle(): Required<Pick<ViewportGridStyle, 'visible' | 'opacity'>> & { minorColor: string; majorColor: string } {
+    const st = this.viewportGrid.getStyle();
+    return {
+      visible: this.gridStyleVisible,
+      opacity: st.opacity ?? 0.75,
+      minorColor: '#c7ced8',
+      majorColor: '#a8b2c0',
+    };
+  }
+
+  /** 画布背景色（场景 Tab；sRGB 线性化与既有约定一致） */
+  setBackgroundColor(hex: string): void {
+    this.scene.background = new THREE.Color(hex).convertSRGBToLinear();
+  }
+
+  getBackground(): string {
+    const bg = this.scene.background;
+    if (bg instanceof THREE.Color) return '#' + bg.getHexString();
+    return '#f4f5f7';
+  }
+
+  /**
+   * 会话级组件外观（材质 Tab）：对组件的原子/键网格克隆独立材质后套用预设；
+   * appearance=null 恢复共享科研材质（元素色板完整还原）。重建（applyGeometry）
+   * 后自动重放；组件删除即清除。不改全局共享材质、不进 Undo/场景文件。
+   */
+  setComponentAppearance(id: string, appearance: AppearanceParams | null): void {
+    const rec = this.records.get(id);
+    if (!rec) return;
+    if (appearance === null || appearance.preset === 'default') {
+      this.sessionAppearance.delete(id);
+      this.applyMode(rec); // 恢复共享材质（含线稿档着装）
+      return;
+    }
+    this.sessionAppearance.set(id, appearance);
+    this.applySessionAppearance(rec);
+  }
+
+  private applySessionAppearance(rec: ComponentRecord): void {
+    const params = this.sessionAppearance.get(rec.comp.id);
+    if (!params) return;
+    const resolved = resolveAppearance(params);
+    for (const child of rec.group.children) {
+      const mesh = child as THREE.Mesh;
+      const kind = (mesh.userData?.matKind as string | undefined) ?? '';
+      if (kind !== 'atom' && kind !== 'bond' && kind !== 'substrate') continue;
+      // 克隆独立材质（每组件一份，缓存复用；重建时 dispose 由 clearGroup 处理）
+      const mat = (mesh.material as THREE.MeshPhysicalMaterial).clone();
+      applyAppearanceToMaterial(
+        mat as unknown as import('./appearance').MaterialLike,
+        resolved,
+      );
+      if (resolved.colorOverride) mat.color = srgb(new THREE.Color(resolved.colorOverride).getHex());
+      mesh.material = mat;
+    }
+  }
+
+  getComponentAppearance(id: string): AppearanceParams | null {
+    return this.sessionAppearance.get(id) ?? null;
+  }
+
   constructor(private container: HTMLElement, opts?: { engine?: GeometryEngine }) {
     // T-2.9：默认引擎外包缓存层（内容寻址，命中即免 Worker 重建）
     this.engine = opts?.engine ?? createCachedEngine(createGeometryEngine());
@@ -217,6 +288,7 @@ export class RendererService {
     this.tc = new TransformControls(this.camera, this.renderer.domElement);
     this.tc.setSize(0.85);
     this.scene.add(this.tc);
+    this.scene.add(this.viewportGrid.mesh);
     this.tc.addEventListener('dragging-changed', (e) => {
       const v = (e as unknown as { value: boolean }).value;
       this.orbit.enabled = !v;
@@ -308,6 +380,7 @@ export class RendererService {
     this.scene.remove(rec.group);
     this.records.delete(id);
     this.lastRotationRead.delete(id);
+    this.sessionAppearance.delete(id);
     if (this.selectedId === id) this.setSelection(null);
   }
 
@@ -325,6 +398,7 @@ export class RendererService {
     for (const rec of this.records.values()) {
       rec.group.visible = rec.comp.visible && visible;
     }
+    this.viewportGrid.mesh.visible = visible && this.gridStyleVisible;
     this.orbit.enabled = visible;
     this.scene.background = visible
       ? new THREE.Color(0xf4f5f7).convertSRGBToLinear()
@@ -552,7 +626,7 @@ export class RendererService {
    * 临时隐藏其他组件与 gizmo → 渲染一帧 → 离屏画布缩放绘制 → 恢复现场。
    */
   snapshotComponent(id: string, width = 150, height = 110): string {
-    return this.withPreviewHidden(() => {
+    return this.withEditorHelpersHidden(() => {
     const rec = this.records.get(id);
     if (!rec) return '';
     const prevVisibility: Array<[string, boolean]> = [];
@@ -586,7 +660,7 @@ export class RendererService {
    * 只隐藏 gizmo，保留所有组件当前可见性 → 渲染一帧 → 离屏画布缩放绘制。
    */
   snapshotScene(width = 150, height = 110): string {
-    return this.withPreviewHidden(() => {
+    return this.withEditorHelpersHidden(() => {
     const tcVisible = this.tc.visible;
     this.tc.visible = false;
     this.renderer.render(this.scene, this.camera);
@@ -611,7 +685,7 @@ export class RendererService {
    */
   snapshotTemplate(width = 150, height = 110, shapes?: SceneShape[], annotations?: Annotation[]): string {
     // 模板缩略图不含未 Apply 吸附候选：隐藏预览渲一帧后再合成
-    return this.withPreviewHidden(() => {
+    return this.withEditorHelpersHidden(() => {
       this.renderer.render(this.scene, this.camera);
       return this.snapshotWithOverlay(width, height, annotations ?? [], shapes).toDataURL('image/jpeg', 0.8);
     });
@@ -746,16 +820,19 @@ export class RendererService {
     this.adsorptionPreviewGroup = null;
   }
 
-  /** 导出快照期间隐藏全部预览组（吸附候选/拖放置换预览；PNG/TIFF/PDF/模板缩略图不含临时态） */
-  private withPreviewHidden<T>(fn: () => T): T {
-    const prev = this.previewGroups.map((g) => (g ? g.visible : null));
-    for (const g of this.previewGroups) if (g) g.visible = false;
+  /**
+   * 编辑辅助元素统一隔离（三维工作台升级 P0-A）：
+   * gizmo / 透视网格 / 选中·悬停高亮外壳 / 吸附候选 / 拖放置换预览——
+   * 全部不进正式科研导出与缩略图；try/finally 恢复前后场景状态逐位一致。
+   * 测量标注/科研图元/原子键不在此列（按用户选择正常导出）。
+   */
+  private withEditorHelpersHidden<T>(fn: () => T): T {
+    const saved = this.collectEditorHelpers();
+    for (const h of saved) h.o.visible = false;
     try {
       return fn();
     } finally {
-      this.previewGroups.forEach((g, i) => {
-        if (g && prev[i] !== null) g.visible = prev[i] as boolean;
-      });
+      for (let i = saved.length - 1; i >= 0; i--) saved[i]!.o.visible = saved[i]!.v;
     }
   }
 
@@ -924,6 +1001,7 @@ export class RendererService {
     this.orbit.dispose();
     this.tc.dispose();
     this.clearPlacementPreview();
+    this.viewportGrid.dispose();
     for (const rec of this.records.values()) this.clearGroup(rec.group);
     this.records.clear();
     this.renderer.dispose();
@@ -1066,21 +1144,18 @@ export class RendererService {
       this.container.clientHeight,
       this.renderer.capabilities.maxTextureSize,
     );
-    // 隐藏其他组件与 gizmo（在 beginOffscreen 渲染前生效）
+    // 隐藏其他组件（编辑辅助由 beginOffscreen 统一隔离）
     const prevVis: Array<[string, boolean]> = [];
     for (const [k, r] of this.records) {
       prevVis.push([k, r.group.visible]);
       r.group.visible = k === id && r.comp.visible;
     }
-    const tcVisible = this.tc.visible;
-    this.tc.visible = false;
     const st = this.beginOffscreen(plan.w, plan.h, true); // 透明底
     try {
       const dataUrl = this.renderer.domElement.toDataURL('image/png');
       return { dataUrl, width: plan.w, height: plan.h };
     } finally {
       this.endOffscreen(st);
-      this.tc.visible = tcVisible;
       for (const [k, v] of prevVis) {
         const r = this.records.get(k);
         if (r) r.group.visible = v;
@@ -1272,35 +1347,54 @@ export class RendererService {
     w: number,
     h: number,
     alpha: boolean,
-  ): { prevSize: THREE.Vector2; prevPR: number; prevBg: THREE.Color | THREE.Texture | null; prevPreviewVis: Array<boolean | null> } {
+  ): {
+    prevSize: THREE.Vector2;
+    prevPR: number;
+    prevBg: THREE.Color | THREE.Texture | null;
+    helpers: Array<{ o: THREE.Object3D; v: boolean }>;
+  } {
     const prevSize = this.renderer.getSize(new THREE.Vector2());
     const prevPR = this.renderer.getPixelRatio();
     const prevBg = this.scene.background;
-    const prevPreviewVis = this.previewGroups.map((g) => (g ? g.visible : null));
-    for (const g of this.previewGroups) if (g) g.visible = false;
+    const helpers = this.collectEditorHelpers();
+    for (const h of helpers) h.o.visible = false;
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     if (alpha) this.scene.background = null;
     this.renderer.render(this.scene, this.camera);
-    return { prevSize, prevPR, prevBg, prevPreviewVis };
+    return { prevSize, prevPR, prevBg, helpers };
   }
 
   private endOffscreen(st: {
     prevSize: THREE.Vector2;
     prevPR: number;
     prevBg: THREE.Color | THREE.Texture | null;
-    prevPreviewVis: Array<boolean | null>;
+    helpers: Array<{ o: THREE.Object3D; v: boolean }>;
   }): void {
-    this.previewGroups.forEach((g, i) => {
-      if (g && st.prevPreviewVis[i] !== null) g.visible = st.prevPreviewVis[i] as boolean;
-    });
+    for (let i = st.helpers.length - 1; i >= 0; i--) st.helpers[i]!.o.visible = st.helpers[i]!.v;
     this.scene.background = st.prevBg;
     this.renderer.setPixelRatio(st.prevPR);
     this.renderer.setSize(st.prevSize.x, st.prevSize.y, false);
     this.camera.aspect = st.prevSize.x / Math.max(1, st.prevSize.y);
     this.camera.updateProjectionMatrix();
+  }
+
+  /** 收集编辑辅助节点快照（与 withEditorHelpersHidden 同一清单——单一事实源） */
+  private collectEditorHelpers(): Array<{ o: THREE.Object3D; v: boolean }> {
+    const saved: Array<{ o: THREE.Object3D; v: boolean }> = [];
+    const push = (o: THREE.Object3D | null | undefined): void => {
+      if (o) saved.push({ o, v: o.visible });
+    };
+    push(this.tc);
+    push(this.viewportGrid.mesh);
+    push(this.adsorptionPreviewGroup);
+    push(this.placementPreviewGroup);
+    for (const rec of this.records.values()) {
+      for (const c of rec.group.children) if (c.userData.highlight) push(c);
+    }
+    return saved;
   }
 
   /**
@@ -1365,6 +1459,7 @@ export class RendererService {
     }
     rec.box = null; // 几何已变，包围盒缓存失效（T-7.1）
     this.applyMode(rec); // T-4.1：新几何按当前档位着装（含描边外壳重建）
+    if (this.sessionAppearance.has(comp.id)) this.applySessionAppearance(rec); // 会话外观重放
     // T-7.1：重建后恢复高亮状态（选中优先于悬停）
     if (this.selectedId === comp.id) this.setShellState(rec, 'selected');
     else if (this.hoverId === comp.id) this.setShellState(rec, 'hover');
@@ -1445,9 +1540,26 @@ export class RendererService {
     this.camera.updateProjectionMatrix();
   }
 
+  /** 编辑地面高度：可见组件缓存包围盒最低点（无组件 = 0）；网格再低 0.25Å 防 z-fight */
+  private editorGroundY(): number {
+    let min = Infinity;
+    const box = new THREE.Box3();
+    for (const rec of this.records.values()) {
+      if (!rec.comp.visible) continue;
+      if (!rec.box) rec.box = this.compBox(rec, new THREE.Box3());
+      box.union(rec.box);
+    }
+    if (!box.isEmpty()) min = box.min.y;
+    return (Number.isFinite(min) ? min : 0) - 1.05;
+  }
+
   private startLoop(): void {
     const loop = (): void => {
       this.raf = requestAnimationFrame(loop);
+      if (this.sceneVisible && this.gridStyleVisible) {
+        this.viewportGrid.setHeight(this.editorGroundY());
+        this.viewportGrid.update(this.camera);
+      }
       this.orbit.update();
       this.renderer.render(this.scene, this.camera);
     };

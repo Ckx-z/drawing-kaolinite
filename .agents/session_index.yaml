@@ -633,3 +633,12 @@ sessions:
       - src/ui/App.tsx / ParamPanel.tsx / LibraryPanel.tsx / shortcuts.ts / index.css
       - src/render/atomPickIndex.test.ts（新4）/ src/ui/dragPlace.test.ts（新5）/ src/ui/interactionClosure.test.ts（新4）
       - docs/research/SCIVIS_ASSESSMENT.md + 截图6 / docs/ui-mockups/（v0.4 效果图两版）
+  - id: "2026-11-03-53"
+    date: "2026-11-03"
+    title: "三维工作台升级：透视网格+ViewCube+编辑辅助隔离+场景/材质/对象检查器"
+    summary: "科图网录屏校正版任务书 P0+P1：ViewportGrid shader 网格（fwidth AA/10^n 阶梯/径向+掠射角渐隐/XZ 世界平面/raycast 全禁/高度随缓存包围盒）；withEditorHelpersHidden 单一清单统一七导出路径（修复选中态导出带 gizmo 既有缺口）；ViewCube CSS3D（M=F·V·F 六轴数值实证、rAF 直写 DOM 零重绘、六面弧线导航保 target/视距、用户接管即取消）；InspectorPanel 三 Tab（场景=网格样式/背景/阴影/视角，材质=会话级视觉预设五档+微调+整体着色开关、元素色板保留，对象=ParamPanel 原样）；回放验收 8 项实机全过（16k 原子 autoRotate 60.4fps、顶视角导航、弧线中断、空场景导出 7308 采样零差异、2D 隐藏、Tab 切换旋转连续）。660 tests 全绿（+17 纯数学）。P2 外观持久化留待下轮。"
+    files:
+      - src/render/ViewportGrid.ts（新）/ cameraNavigation.ts(+test)（新）/ appearance.ts（新）
+      - src/ui/ViewCube.tsx（新）/ InspectorPanel.tsx（新）/ SceneCanvas.tsx / App.tsx / index.css
+      - src/render/RendererService.ts（隔离重构/网格生命周期/appearance API/背景色）
+      - DECISIONS.md D13 / TODO.md WB 段 / PROJECT_STATE.md

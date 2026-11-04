@@ -44,7 +44,8 @@
 
 ## 三、下一步（按优先级，2026-10-22 V2 交互升级后重建）
 
-1. **V2 实机验收 + 重打包**：浏览器/打包版实机走查任务书验收链（搜索拖入甲苯→预览→放置→G/E/S 变换→贴近 CeO₂ 吸附→Undo→存模板→重开复现）+ 16k 原子场景 60fps 体感；通过后 `npx tauri build` 发新安装包。
+1. **WB-P2 对象级外观持久化**（材质 Tab 当前会话级：ComponentAppearance 进 schema + 保存/撤销/模板一致 + 透明排序验证）。
+2. **重打包**：三维工作台 + V2 + UI 重构三轮改动已实机验收，`npx tauri build` 发新安装包（版本号可一并升 0.3.0）。
 2. ~~iCloud 桌面同步风险~~ **已解决（2026-10-22）**：项目迁移至 `/Users/zuoqingyu/Projects/高岭土demo - 副本`（D12）；迁移后全量测试 5.5s（此前 60s，iCloud 拖速实证消除）。
 3. **实战压测与缺陷修复**（持续项）：用户以真实课题在打包版画图，随到随修。
 4. **图元级对齐/分布工具**（1–2d）：多选图元对齐/等距（复用组件级既有算法）；对应 v0.4 UI 提案清单。
@@ -121,6 +122,7 @@
 | Surface Defects v1（氧空位） | schema surfaceDefectSchema + applySurfaceDefects/surfaceSiteKey + sceneStore 拾取/创建 + ParamPanel 缺陷区 + Vacancy site | 2026-09-22c：CeO₂(111) 表面 O 删除（未弛豫，siteKey 确定性身份，键重判无悬空，composition 联动，invalidDefects 如实计数）；吸附引擎同一几何（Gate3）；Vacancy 吸附位点；576 tests |
 | 水滑石（第九矿物 LDH） | `minerals.ts` hydrotalcite + `hydrotalcite.test.ts` + `data/hydrotalcite.cif` + `tubable` 标志 | 2026-09-24：ICSD 86655（R-3m 3R 多型，a=3.05 c=22.70，d001=7.567=c/3）；层板 Mg/Al 无序共占（occ 0.67/0.33）；层间 CO3+H2O 经 interlayer 开关；layered=true + tubable=false（天然无管状变体）；cif 解析层两处修复（tag 行防御+symop 变体）；619 tests |
 | 拖拽吸附误触审计与 v1 冻结 | dragSnap 白名单 + dragSnapAudit.test + StatusHint bypass 提示 + Benchmark §五 | 2026-09-22b：基底类型白名单（crystal_surface/sheet/tube/particle/substrate/packed_layers；molecule 永不为基底）；大小不定义角色；远距 5Å 不触/贴面触发/Alt·Shift bypass/旋转保持/穿插带/Undo/删目标不崩/清空清理全测；候选构型 vs 拖拽贴合科学边界文案区分；566 tests |
+| **三维工作台升级（网格/ViewCube/检查器）** | `render/ViewportGrid.ts`+`cameraNavigation.ts`+`appearance.ts`+`ui/ViewCube.tsx`+`InspectorPanel.tsx`（新）/ RendererService（withEditorHelpersHidden 隔离重构+appearance API）/ SceneCanvas+App 接线 | 2026-11-03：世界空间透视网格（fwidth AA/10^n 自适应/渐隐，raycast 全禁，纯视觉不改科学单位）；ViewCube CSS3D 实时联动+六面弧线导航（用户接管即取消）；编辑辅助单一清单隔离七导出路径（顺带修复选中态导出带 gizmo 既有缺口）；右栏三 Tab 检查器（场景/材质/对象，材质=会话级视觉预设）；16k 原子实测 60.4fps；660 tests |
 | **V2 交互升级（直接操作工作流）** | `ui/ViewportToolbar.tsx`+`ui/dragPlace.ts`（新）/ RendererService（原子索引修复·预览组统一·scale 档·放置预览 API）/ SceneCanvas（Esc 取消·吸附事件驱动重接·会话态同步）/ sceneStore gizmoMode·measureMode / shortcuts G·E·S·F | 2026-10-22：素材拖放画布（射线表面/工作平面放置点、缓存预建半透明预览、取消全路径安全、一条 Undo）；画布悬浮工具栏（移动/旋转/等比缩放/测量免Alt/聚焦/适配）；DragSnap 恢复接线（objectChange 事件驱动 10Hz，Alt/Shift bypass 不变）；**P0 修复**：原子拾取桶内索引→全局索引（多元素晶体测量/空位不再错位）、五条导出路径统一隐藏预览组（修复泄漏+导出后预览消失）；Esc 取消 gizmo 拖拽；632 tests |
 | 拖拽吸附（分子贴附基底表面） | `core/surface/snap.ts`+`state/dragSnap.ts`（新）+ SceneCanvas rAF 检测/释放拦截 | 2026-09-22：重叠判定（盒交∪原子级）/邻域平面拟合法向/vdW 接触+clash 推出/朝向保持；拖拽中仅高亮预览、释放一次 setTransform=一条 Undo；Alt/Shift 自由放置；AdsorptionRecord 内存态+detachLastSnap；557 tests |
 | 分子显示模型统一 | schema molecule.style + Renderer 两处判定 + paramDefs 显示模型 | 2026-09-21c：type===molecule 即可切球棍/空间填充（与来源无关；旧数据 default 球棍；几何零影响）；551 tests |
