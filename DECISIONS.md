@@ -333,3 +333,9 @@
 4. 材质 Tab = 会话级对象外观（P2 再持久化，任务书允许分阶段）：组件级材质克隆，绝不改全局共享 atomMaterial；预设标注「视觉近似，非科学物性」；元素色板默认保留（整体着色为显式开关）。
 
 **影响**：RendererService（网格生命周期/隔离重构/appearance API/背景色）、新 ViewportGrid/cameraNavigation/ViewCube/InspectorPanel/appearance、SceneCanvas+App 接线；科学几何/场景 schema 零改动。
+
+## D14 — 右栏科图网式高保真改造（2026-11-04）
+
+**决策**：白色双区（对象树 34% 可拖 + 三 Tab 常驻）；浅色经**局部 CSS 变量域**实现（`.panel.right` 重定义 --panel/--txt/--acc 等为白底+品牌青 #18b1b9，LayerPanel/ParamPanel 零改动继承，左栏/顶栏/画布不受影响）；材质 Tab 四圆形 CSS 渐变缩略图（金属/玻璃/液体/凝胶，不借外部素材）；「高光强度」语义映射 clearcoat（不把 metalness 硬称反射率）；线框=材质渲染开关（随导出呈现，属用户材质选择）、坐标轴=AxesHelper 编辑辅助、描边线=选中对象轮廓外壳（复用高亮外壳管线，样式可配：颜色/厚度/发光）——三者为真实渲染联动而非装饰；**外观持久化（P2）**：appearanceSchema 入 componentCommon+moduleCommon，sceneStore.setAppearance 入撤销栈（TRACKED），binding diff 直连 svc（无几何重建），剪贴板/复制/模板全链保留，旧场景缺省安全默认。滑块拖动=svc 实时预览、释放=一次 store 提交（合并窗口历史）。
+
+**影响**：schema/types（appearanceSchema+ComponentAppearance）、sceneStore（setAppearance/duplicateComponent）、history TRACKED +2、rendererBinding（appearance diff）、RendererService（外观单源组件字段/wireframeAll/axesHelper/outlineStyle）、highlight.ts（SelectionOutlineConfig）、InspectorPanel 重写、LayerPanel（聚焦/复制）、shortcuts（剪贴板外观）、App（右宽 320 可拖）。

@@ -52,9 +52,10 @@ import { setActivePalette, type PaletteSetting } from './palette';
 import { srgb, substrateMaterial } from './materials';
 import { buildSubstrateGeometry } from './substrate';
 import { materialFor, outlineMaterial, type RenderMode } from './toon';
-import { createHighlightShell, findShell, type HighlightState } from './highlight';
+import { createHighlightShell, findShell, setSelectionOutlineConfig, type HighlightState } from './highlight';
 import { ViewportGrid, type ViewportGridStyle } from './ViewportGrid';
-import { applyAppearanceToMaterial, resolveAppearance, type AppearanceParams } from './appearance';
+import { applyAppearanceToMaterial, resolveAppearance } from './appearance';
+import type { ComponentAppearance } from '../core/types';
 import type { SubstrateParams } from '../core/types';
 
 interface ComponentRecord {
@@ -119,8 +120,19 @@ export class RendererService {
   /** 三维透视网格（三维工作台升级 P0-A）：编辑辅助元素，导出统一隐藏 */
   private readonly viewportGrid = new ViewportGrid();
   private gridStyleVisible = true;
-  /** 会话级对象外观（P1 材质 Tab；不写入场景文件——P2 再持久化） */
-  private readonly sessionAppearance = new Map<string, AppearanceParams>();
+  /** 场景配置·线框（视觉材质开关，作用于全部可见组件的渲染材质） */
+  private wireframeAll = false;
+  /** 场景配置·坐标轴（世界原点 AxesHelper；编辑辅助，导出隔离） */
+  private readonly axesHelper: THREE.AxesHelper;
+  private axesVisible = false;
+  /** 场景配置·描边线（选中对象轮廓外壳的外观配置；复用高亮外壳管线） */
+  private outlineStyle: { enabled: boolean; color: string; scale: number; glow: number } = {
+    enabled: true,
+    color: '#e59a20',
+    scale: 1.15,
+    glow: 0.85,
+  };
+
   /** 测量模式（V2 ViewportToolbar）：true 时无需按 Alt，点击原子即走 onAtomClick 拾取 */
   atomPickNoAlt = false;
 
@@ -225,43 +237,101 @@ export class RendererService {
   }
 
   /**
-   * 会话级组件外观（材质 Tab）：对组件的原子/键网格克隆独立材质后套用预设；
-   * appearance=null 恢复共享科研材质（元素色板完整还原）。重建（applyGeometry）
-   * 后自动重放；组件删除即清除。不改全局共享材质、不进 Undo/场景文件。
+   * 场景配置·线框：切换全部可见组件渲染材质的 wireframe（含外观克隆材质，
+   * applyComponentAppearance/applyGeometry 重放时保持）。线框是渲染风格开关，
+   * 不影响任何科学几何；按用户选择会随导出呈现（属材质外观而非编辑辅助）。
    */
-  setComponentAppearance(id: string, appearance: AppearanceParams | null): void {
+  setWireframeAll(on: boolean): void {
+    this.wireframeAll = on;
+    for (const rec of this.records.values()) {
+      for (const child of rec.group.children) {
+        const mesh = child as THREE.Mesh;
+        const kind = (mesh.userData?.matKind as string | undefined) ?? '';
+        if (kind === 'atom' || kind === 'bond' || kind === 'substrate') {
+          (mesh.material as THREE.Material & { wireframe?: boolean }).wireframe = on;
+        }
+      }
+    }
+  }
+
+  getWireframeAll(): boolean {
+    return this.wireframeAll;
+  }
+
+  /** 场景配置·坐标轴（世界原点 AxesHelper；编辑辅助 → 导出隔离清单） */
+  setAxesVisible(visible: boolean): void {
+    this.axesVisible = visible;
+    this.axesHelper.visible = visible;
+  }
+
+  getAxesVisible(): boolean {
+    return this.axesVisible;
+  }
+
+  /**
+   * 场景配置·描边线：配置选中对象轮廓外壳（复用高亮外壳管线——InstancedMesh
+   * 反转法线外壳，性能与 16k 原子兼容）。enabled=false 隐藏选中描边；
+   * 样式变化时重建既有外壳（廉价：仅选中组件一次）。
+   */
+  setSelectionOutlineStyle(style: Partial<{ enabled: boolean; color: string; scale: number; glow: number }>): void {
+    this.outlineStyle = { ...this.outlineStyle, ...style };
+    setSelectionOutlineConfig(this.outlineStyle);
+    // 重建全部已创建的选中外壳（外壳矩阵在创建时定格 scale）
+    for (const rec of this.records.values()) {
+      if (!rec.group.userData.highlightsReady) continue;
+      const stale = rec.group.children.filter((c) => c.userData.highlight === 'selected');
+      for (const c of stale) {
+        rec.group.remove(c);
+        (c as THREE.InstancedMesh).dispose();
+      }
+      if (this.selectedId === rec.comp.id) this.setShellState(rec, 'selected');
+      else rec.group.userData.highlightsReady = rec.group.children.some((c) => c.userData.highlight);
+    }
+  }
+
+  getSelectionOutlineStyle() {
+    return { ...this.outlineStyle };
+  }
+
+  /**
+   * 组件外观（材质 Tab）：把 appearance 写入组件记录并对原子/键网格克隆独立材质
+   * 套用预设；null / default 恢复共享科研材质（元素色板完整还原）。几何重建
+   * （applyGeometry）自动重放；撤销/重做/载入经 binding 同步到同一入口。
+   * 不改全局共享 atomMaterial/bondMaterial——组件间外观互相隔离。
+   */
+  setComponentAppearance(id: string, appearance: ComponentAppearance | null): void {
     const rec = this.records.get(id);
     if (!rec) return;
+    rec.comp = { ...rec.comp, appearance: appearance ?? undefined } as RenderComponent;
     if (appearance === null || appearance.preset === 'default') {
-      this.sessionAppearance.delete(id);
       this.applyMode(rec); // 恢复共享材质（含线稿档着装）
       return;
     }
-    this.sessionAppearance.set(id, appearance);
-    this.applySessionAppearance(rec);
+    this.applyComponentAppearance(rec);
   }
 
-  private applySessionAppearance(rec: ComponentRecord): void {
-    const params = this.sessionAppearance.get(rec.comp.id);
+  private applyComponentAppearance(rec: ComponentRecord): void {
+    const params = rec.comp.appearance;
     if (!params) return;
     const resolved = resolveAppearance(params);
     for (const child of rec.group.children) {
       const mesh = child as THREE.Mesh;
       const kind = (mesh.userData?.matKind as string | undefined) ?? '';
       if (kind !== 'atom' && kind !== 'bond' && kind !== 'substrate') continue;
-      // 克隆独立材质（每组件一份，缓存复用；重建时 dispose 由 clearGroup 处理）
+      // 克隆独立材质（每组件一份；重建时 dispose 由 clearGroup 处理）
       const mat = (mesh.material as THREE.MeshPhysicalMaterial).clone();
       applyAppearanceToMaterial(
         mat as unknown as import('./appearance').MaterialLike,
         resolved,
       );
       if (resolved.colorOverride) mat.color = srgb(new THREE.Color(resolved.colorOverride).getHex());
+      mat.wireframe = this.wireframeAll;
       mesh.material = mat;
     }
   }
 
-  getComponentAppearance(id: string): AppearanceParams | null {
-    return this.sessionAppearance.get(id) ?? null;
+  getComponentAppearance(id: string): ComponentAppearance | null {
+    return this.records.get(id)?.comp.appearance ?? null;
   }
 
   constructor(private container: HTMLElement, opts?: { engine?: GeometryEngine }) {
@@ -289,6 +359,10 @@ export class RendererService {
     this.tc.setSize(0.85);
     this.scene.add(this.tc);
     this.scene.add(this.viewportGrid.mesh);
+    this.axesHelper = new THREE.AxesHelper(24);
+    this.axesHelper.raycast = () => undefined;
+    this.axesHelper.visible = false;
+    this.scene.add(this.axesHelper);
     this.tc.addEventListener('dragging-changed', (e) => {
       const v = (e as unknown as { value: boolean }).value;
       this.orbit.enabled = !v;
@@ -380,7 +454,6 @@ export class RendererService {
     this.scene.remove(rec.group);
     this.records.delete(id);
     this.lastRotationRead.delete(id);
-    this.sessionAppearance.delete(id);
     if (this.selectedId === id) this.setSelection(null);
   }
 
@@ -533,7 +606,8 @@ export class RendererService {
     const hover = findShell(rec.group, 'hover');
     const select = findShell(rec.group, 'selected');
     if (hover) hover.visible = state === 'hover';
-    if (select) select.visible = state === 'selected';
+    // 场景配置·描边线关闭时，选中外壳一并隐藏（仅剩 gizmo 反馈）
+    if (select) select.visible = state === 'selected' && this.outlineStyle.enabled;
   }
 
   private ensureHighlightShells(rec: ComponentRecord): void {
@@ -1002,6 +1076,7 @@ export class RendererService {
     this.tc.dispose();
     this.clearPlacementPreview();
     this.viewportGrid.dispose();
+    this.axesHelper.dispose();
     for (const rec of this.records.values()) this.clearGroup(rec.group);
     this.records.clear();
     this.renderer.dispose();
@@ -1389,6 +1464,7 @@ export class RendererService {
     };
     push(this.tc);
     push(this.viewportGrid.mesh);
+    push(this.axesHelper);
     push(this.adsorptionPreviewGroup);
     push(this.placementPreviewGroup);
     for (const rec of this.records.values()) {
@@ -1459,7 +1535,7 @@ export class RendererService {
     }
     rec.box = null; // 几何已变，包围盒缓存失效（T-7.1）
     this.applyMode(rec); // T-4.1：新几何按当前档位着装（含描边外壳重建）
-    if (this.sessionAppearance.has(comp.id)) this.applySessionAppearance(rec); // 会话外观重放
+    if (comp.appearance) this.applyComponentAppearance(rec); // 外观重放（P2 持久化）
     // T-7.1：重建后恢复高亮状态（选中优先于悬停）
     if (this.selectedId === comp.id) this.setShellState(rec, 'selected');
     else if (this.hoverId === comp.id) this.setShellState(rec, 'hover');

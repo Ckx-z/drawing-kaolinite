@@ -53,6 +53,8 @@ interface ComponentClip {
     rotation: [number, number, number];
     scale: number;
   };
+  /** 对象外观（P2 持久化）：复制/粘贴保留 */
+  appearance?: import('../core/types').ComponentAppearance;
 }
 
 interface ShapeClip {
@@ -99,6 +101,7 @@ function copySelected(host: ShortcutHost): void {
     name: sel.name,
     params: structuredClone(sel.params),
     transform: structuredClone(sel.transform as ComponentClip['transform']),
+    appearance: structuredClone((sel as { appearance?: import('../core/types').ComponentAppearance }).appearance ?? undefined),
   };
   pasteCount = 0;
 }
@@ -126,6 +129,7 @@ function pasteClipboard(host: ShortcutHost, offset: boolean): void {
     params: structuredClone(clip.params) as never,
     transform: { position: pos, rotation: [...t.rotation] as [number, number, number], scale: t.scale },
   });
+  if (clip.appearance) s.setAppearance(newId, clip.appearance);
   s.select(newId);
 }
 

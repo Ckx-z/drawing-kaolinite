@@ -191,7 +191,22 @@ export const packedLayerParamsSchema = z.strictObject({
 
 /* ---------- 组件（type 判别联合） ---------- */
 
+/**
+ * 对象级视觉外观（右栏高保真改造 P2，2026-11-04）：
+ * 与科学参数（CIF/晶胞/键长）彻底分离的可选字段——外观调整不重新生成几何；
+ * 旧场景缺省 = 安全默认（元素色板科研材质）。preset 为渲染质感近似（非科学物性）。
+ */
+export const appearanceSchema = z.strictObject({
+  preset: z.enum(['default', 'metal', 'glass', 'liquid', 'gel']),
+  colorOverride: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+  roughness: z.number().min(0).max(1).optional(),
+  metalness: z.number().min(0).max(1).optional(),
+  opacity: z.number().min(0.05).max(1).optional(),
+  clearcoat: z.number().min(0).max(1).optional(),
+});
+
 const componentCommon = {
+  appearance: appearanceSchema.optional(),
   name: z.string().min(1),
   id: z.string().min(1).optional(),
   transform: transformSchema,
@@ -323,6 +338,7 @@ export const sceneDocumentSchema = z.strictObject({
 /* ---------- 模块库条目（单组件模块 + 组合模块 T-3.1） ---------- */
 
 const moduleCommon = {
+  appearance: appearanceSchema.optional(),
   id: z.string().min(1),
   name: z.string().min(1),
   transform: transformSchema,

@@ -142,6 +142,26 @@ export default function LayerPanel() {
                 <span className="cnt">{rendererRef.current?.atomCountOf(c.id) ?? 0} 原子</span>
                 <button
                   className="op"
+                  title="聚焦（取景到该对象，Shift+F 适配全场景）"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    rendererRef.current?.frameComponent(c.id);
+                  }}
+                >
+                  🎯
+                </button>
+                <button
+                  className="op"
+                  title="原地复制（含参数与外观，一条撤销）"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    sceneStore.getState().duplicateComponent(c.id);
+                  }}
+                >
+                  ⧉
+                </button>
+                <button
+                  className="op"
                   title={locked ? '解锁（允许选中与变换）' : '锁定（点击不选中、gizmo 不吸附）'}
                   onClick={(e) => {
                     e.stopPropagation();

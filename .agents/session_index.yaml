@@ -642,3 +642,13 @@ sessions:
       - src/ui/ViewCube.tsx（新）/ InspectorPanel.tsx（新）/ SceneCanvas.tsx / App.tsx / index.css
       - src/render/RendererService.ts（隔离重构/网格生命周期/appearance API/背景色）
       - DECISIONS.md D13 / TODO.md WB 段 / PROJECT_STATE.md
+  - id: "2026-11-04-54"
+    date: "2026-11-04"
+    title: "右栏科图网式高保真改造：白色双区+四图标材质+场景真联动+外观持久化(P2)"
+    summary: "任务书《右栏检查器高保真改造》P0-P3 全交付：局部 CSS 变量域白色化（左/顶/画布零影响）；双区布局（对象树可拖高度+三 Tab 青蓝线+独立滚动）；材质四圆 CSS 渐变缩略图+基础属性（整体着色开关/高光强度=clearcoat/粗糙度）+高级折叠；场景 Tab 线框/坐标轴/描边线真实渲染联动（描边=选中轮廓外壳可配颜色/强度/发光，复用高亮管线）；P2 持久化：appearanceSchema 入 componentCommon+moduleCommon、setAppearance/duplicateComponent 入撤销 TRACKED、binding diff 直连、剪贴板/模板全链保留、旧场景安全默认；滑块实时预览+释放单条提交。修复：材质 Tab useState 残值（任务书预判命中）+ 外观绕过撤销栈。662 tests 全绿（+9），浏览器 11 项验收实拍全过。"
+    files:
+      - src/core/schema.ts / types.ts（appearanceSchema+ComponentAppearance）
+      - src/state/sceneStore.ts（setAppearance/duplicateComponent）/ history.ts（TRACKED+2）/ rendererBinding.ts（appearance diff）
+      - src/render/RendererService.ts（外观组件字段单源/wireframe/axes/outline）/ highlight.ts（SelectionOutlineConfig）
+      - src/ui/InspectorPanel.tsx（重写）/ LayerPanel.tsx（聚焦/复制）/ shortcuts.ts（剪贴板外观）/ App.tsx（右宽拖拽）/ index.css
+      - src/state/appearancePersistence.test.ts（新 9 条）/ DAILY_LOG/2026-11-04.md / DECISIONS.md D14

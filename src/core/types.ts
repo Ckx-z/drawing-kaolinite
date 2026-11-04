@@ -20,6 +20,7 @@ import type {
   substrateParamsSchema,
   transformSchema,
   tubeParamsSchema,
+  appearanceSchema,
 } from './schema';
 
 export type ComponentType = z.infer<typeof componentTypeEnum>;
@@ -52,6 +53,9 @@ export type Annotation = z.infer<typeof annotationSchema>;
 
 /** 模块库条目（单组件模块；组合模块 T-3.1 扩展） */
 export type ModuleEntry = z.infer<typeof moduleSchema>;
+
+/** 对象级视觉外观（材质 Tab；会话/持久化统一走组件字段） */
+export type ComponentAppearance = z.infer<typeof appearanceSchema>;
 
 /** 任意类型 params 的并集（ DEFAULT_PARAMS 索引用） */
 export type AnyParams = SheetParams | TubeParams | ParticleParams | MoleculeParams | SubstrateParams | PackedLayerParams | CrystalSurfaceParams;

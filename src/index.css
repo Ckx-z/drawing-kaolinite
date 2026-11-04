@@ -1412,3 +1412,299 @@ input[type='checkbox'] {
   line-height: 1.6;
   margin: 8px 0 0;
 }
+
+/* ================= 右栏科图网式高保真改造（2026-11-04） ================= */
+/* 白色双区：顶部对象树（可拖高度）+ 三 Tab 内容区；局部变量浅色化——
+   LayerPanel/ParamPanel 全部经 var() 继承，不影响左侧/顶栏/画布 */
+
+.panel.right,
+.panel.right.insp {
+  --panel: #ffffff;
+  --panel2: #f3f6f9;
+  --line: #e5e9f2;
+  --txt: #2b3138;
+  --dim: #8a95a1;
+  --acc: #18b1b9;
+  --acc-soft: rgba(24, 177, 185, 0.13);
+  background: #ffffff;
+  border-left: 1px solid #e5e9f2;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+.panel.right input[type='range'] {
+  accent-color: #18b1b9;
+}
+.panel.right input[type='checkbox'] {
+  accent-color: #18b1b9;
+}
+.panel.right ::-webkit-scrollbar {
+  width: 8px;
+}
+.panel.right ::-webkit-scrollbar-thumb {
+  background: #d4dce4;
+  border-radius: 4px;
+}
+
+/* 宽度拖拽手柄（画布与右栏交界） */
+.insp-width-drag {
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  flex: none;
+}
+.insp-width-drag:hover {
+  background: rgba(24, 177, 185, 0.25);
+}
+
+/* 顶部对象树区（独立滚动） */
+.insp-tree {
+  flex: none;
+  min-height: 120px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef1f5;
+}
+.insp-vdrag {
+  flex: none;
+  height: 5px;
+  cursor: row-resize;
+  background: transparent;
+}
+.insp-vdrag:hover {
+  background: rgba(24, 177, 185, 0.25);
+}
+
+/* 底部：Tab 常驻 + 内容独立滚动 */
+.insp-bottom {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.insp-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+.insp-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.insp-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.insp-body {
+  padding: 12px 14px;
+}
+.insp-group {
+  border-bottom: 1px solid #eef1f5;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+.insp-group-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #2b3138;
+  padding: 6px 0;
+}
+.insp-tip {
+  color: #97a1ac;
+  font-weight: 400;
+  font-size: 11px;
+}
+.insp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 12.5px;
+  color: #3d454d;
+}
+.insp-row > span:first-child {
+  color: #5b6570;
+}
+.insp-row input[type='color'] {
+  width: 34px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #dfe5ec;
+  border-radius: 5px;
+  background: #fff;
+  cursor: pointer;
+}
+.insp-slider {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  max-width: 190px;
+}
+.insp-slider input[type='range'] {
+  flex: 1;
+  min-width: 0;
+}
+.insp-num {
+  width: 46px;
+  height: 24px;
+  flex: none;
+  background: #f3f6f9;
+  border: 1px solid #e3e9ef;
+  border-radius: 5px;
+  color: #2b3138;
+  font-size: 11.5px;
+  text-align: center;
+  outline: none;
+}
+.insp-num:focus {
+  border-color: #18b1b9;
+}
+.insp-rgb {
+  font-size: 11px;
+  color: #5b6570;
+  background: #f3f6f9;
+  border: 1px solid #e3e9ef;
+  border-radius: 5px;
+  padding: 2px 8px;
+  margin-right: 8px;
+}
+.insp-colorset {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.insp-btnrow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+}
+.insp-note {
+  font-size: 11px;
+  color: #97a1ac;
+  line-height: 1.6;
+  margin: 10px 0 0;
+}
+.insp-empty {
+  padding: 32px 12px;
+  text-align: center;
+  color: #97a1ac;
+  font-size: 12px;
+}
+
+/* 开关（青蓝 Toggle，参考截图） */
+.insp-toggle {
+  width: 38px;
+  height: 21px;
+  border-radius: 999px;
+  border: none;
+  background: #cdd6df;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+  padding: 0;
+}
+.insp-toggle .knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: left 0.15s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.insp-toggle.on {
+  background: #18b1b9;
+}
+.insp-toggle.on .knob {
+  left: 19px;
+}
+
+/* 材质一键设置：4 圆形视觉预设缩略图（纯 CSS 渐变，不借用外部素材） */
+.insp-presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 4px 0;
+}
+.insp-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 2px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.insp-preset:hover {
+  background: #f3f6f9;
+}
+.insp-preset.on {
+  background: #e6f7f8;
+  border-color: #59c2c7;
+}
+.insp-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: block;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+.preset-thumb-metal {
+  background: radial-gradient(circle at 32% 30%, #f5f7fa 0%, #b9c4cf 35%, #6f7d8c 70%, #3e4a56 100%);
+}
+.preset-thumb-glass {
+  background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.95) 0%, rgba(210, 235, 240, 0.55) 45%, rgba(150, 200, 210, 0.35) 75%, rgba(110, 165, 180, 0.5) 100%);
+}
+.preset-thumb-liquid {
+  background: radial-gradient(circle at 30% 28%, #dff3f7 0%, #7fc6d4 45%, #3d97ab 80%, #2b7c90 100%);
+}
+.preset-thumb-gel {
+  background: radial-gradient(circle at 35% 32%, #d8f0e2 0%, #9fd4bd 50%, #6fb59a 85%, #579c81 100%);
+}
+.insp-preset-label {
+  font-size: 11.5px;
+  color: #5b6570;
+}
+.insp-preset.on .insp-preset-label {
+  color: #0d8f97;
+  font-weight: 600;
+}
+.insp-adv {
+  border-bottom: 1px solid #eef1f5;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+.insp-adv > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.insp-adv > summary::before {
+  content: '▾ ';
+  color: #97a1ac;
+}
+
+/* 右栏容器（宽度拖拽手柄 + 检查器并排；grid 单一子项） */
+.right-col {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+.right-col .insp-width-drag {
+  flex: none;
+}
+.right-col .insp {
+  flex: 1;
+  min-width: 0;
+}

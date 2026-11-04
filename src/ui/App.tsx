@@ -58,6 +58,23 @@ export default function App() {
   const [rightOpen, setRightOpen] = useState(true);
   // 左侧导航选中项（UI 重构 2026-10-22）：模型（默认）/收藏/模板——会话态不持久化
   const [rail, setRail] = useState<RailEntry>('model');
+  // 右栏宽度（高保真改造 2026-11-04）：默认 320px，左缘拖拽 280–460px；画布经
+  // ResizeObserver 自动适配
+  const [rightW, setRightW] = useState(320);
+  const startRightDrag = (e: React.PointerEvent): void => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = rightW;
+    const onMove = (ev: PointerEvent): void => {
+      setRightW(Math.min(460, Math.max(280, startW - (ev.clientX - startX))));
+    };
+    const onUp = (): void => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
 
   useEffect(() => {
     trace('app-mount');
@@ -191,7 +208,7 @@ export default function App() {
       <TopBar />
       <main
         className="layout"
-        style={{ gridTemplateColumns: `56px 292px 1fr ${rightOpen ? '300px' : '0px'}` }}
+        style={{ gridTemplateColumns: `56px 292px 1fr ${rightOpen ? `${rightW}px` : '0px'}` }}
       >
         <RailNav active={rail} onChange={setRail} />
         <aside className="panel mpanel">
@@ -211,7 +228,10 @@ export default function App() {
           </button>
         </section>
         {rightOpen ? (
-          <InspectorPanel />
+          <div className="right-col">
+            <div className="insp-width-drag" onPointerDown={startRightDrag} title="拖拽调整右栏宽度" />
+            <InspectorPanel />
+          </div>
         ) : null}
       </main>
       <footer className="statusbar">

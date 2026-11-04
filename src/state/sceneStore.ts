@@ -40,6 +40,7 @@ import type {
   SceneComponent,
   SceneDocument,
   Transform,
+  ComponentAppearance,
 } from '../core/types';
 
 /** store 中的组件条目：合法组件 + 必需 id（与渲染层 RenderComponent 同构） */
@@ -117,6 +118,10 @@ export interface SceneState {
    */
   setTransform: (id: string, transform: Transform) => void;
   renameComponent: (id: string, name: string) => void;
+  /** 对象级外观（材质 Tab；P2 持久化）：写组件 appearance 字段，一条撤销；null = 恢复科研材质 */
+  setAppearance: (id: string, appearance: ComponentAppearance | null) => void;
+  /** 原地完整复制组件（含参数/变换/外观），返回新 id（一条撤销） */
+  duplicateComponent: (id: string) => string | null;
   /** 导出为合法场景文档（kaolin-scene/v1） */
   toSceneDocument: () => SceneDocument;
   /** 载入场景（对象或 JSON 文本均可；经校验 + normalizeScene 补 id）并清空选择 */
@@ -466,6 +471,32 @@ export function createSceneStore(): SceneStore {
           return c;
         }),
       });
+    },
+
+    setAppearance: (id, appearance) => {
+      const comp = get().components.find((c) => c.id === id);
+      if (!comp) return;
+      const merged = { ...comp, appearance: appearance ?? undefined };
+      const parsed = componentSchema.parse(merged) as SceneEntry; // 非法外观在此拦截，状态不变
+      set({ components: get().components.map((c) => (c.id === id ? parsed : c)) });
+    },
+
+    duplicateComponent: (id) => {
+      const comp = get().components.find((c) => c.id === id);
+      if (!comp) return null;
+      const newId = get().addComponent(comp.type, {
+        name: `${comp.name} 副本`,
+        params: structuredClone(comp.params) as never,
+        transform: {
+          position: [...comp.transform.position] as Transform['position'],
+          rotation: [...comp.transform.rotation] as Transform['rotation'],
+          scale: comp.transform.scale,
+        },
+        visible: comp.visible,
+      });
+      if (comp.appearance) get().setAppearance(newId, comp.appearance);
+      get().select(newId);
+      return newId;
     },
 
     renameComponent: (id, name) => {

@@ -523,3 +523,13 @@ T-2.1 / T-2.3 / T-9.1–T-9.2 可在 T-1.7 后立即并行
 - [x] **WB-P0-C 回归**（16k 原子 autoRotate 实测 60.4fps；顶/底/侧视角 gizmo·拾取正常；旋转不产生 Undo）✅
 - [x] **WB-P1 检查器**（InspectorPanel：LayerPanel 对象列表 + 场景/材质/对象三 Tab；场景 Tab 网格样式/背景/阴影/视角；材质 Tab 会话级外观预设；对象 Tab 原 ParamPanel 全功能）✅
 - [ ] **WB-P2 对象级外观持久化**（ComponentAppearance 进 schema + 保存/撤销/模板一致；含透明排序验证）⬜
+
+## 右栏科图网式高保真改造（2026-11-04 交付）
+
+- [x] **R-P0 白色双区+三 Tab**（局部变量浅色域；对象树可拖高度/右栏可拖宽度；Tab 青蓝激活线；内容独立滚动 Tab 常驻）✅
+- [x] **R-P0 材质四图标**（CSS 渐变圆形缩略图 金属/玻璃/液体/凝胶；点击即改选中对象真实渲染；无选中空状态）✅
+- [x] **R-P1 对象树行内真操作**（聚焦 frameComponent/复制 duplicateComponent 新增；原有显隐/锁定/成组/删除保留；hover 双向联动原有）✅
+- [x] **R-P1 场景 Tab 真实联动**（线框=全组件材质 wireframe；坐标轴=AxesHelper 编辑辅助；描边线=选中轮廓外壳可配颜色/强度/发光——复用高亮外壳管线；网格/背景/阴影/视角保留）✅
+- [x] **R-P2 外观持久化**（appearanceSchema→componentCommon+moduleCommon；setAppearance 入撤销；binding diff 直连；剪贴板/复制/模板保留；旧场景缺省安全；非法值拦截）✅
+- [x] **R-P3 测试**（appearancePersistence 9 条：兼容/roundtrip/undo/隔离/剪贴板/模块；highlight 缩放断言同步 1.15）✅
+- [x] **R-P3 浏览器验收**（白色双区实拍 vs 参考对照；三开关实测；跨对象回显实测；导出隔离延续）✅

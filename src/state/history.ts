@@ -57,6 +57,8 @@ const TRACKED = [
   'updateParams',
   'setTransform',
   'renameComponent',
+  'setAppearance',
+  'duplicateComponent',
   'loadScene',
   'clear',
   // T-11.4：图元层写操作 + 标注/色板（偿还"标注不可撤销"欠债）

@@ -27,7 +27,7 @@ function atomMesh(count = 3): THREE.InstancedMesh {
 }
 
 describe('高亮外壳', () => {
-  it('创建 hover/selected 双外壳：实例数一致、矩阵放大 1.10/1.14、BackSide 纯色', () => {
+  it('创建 hover/selected 双外壳：实例数一致、矩阵放大 1.10/1.15（描边线默认）、BackSide 纯色', () => {
     const src = atomMesh(3);
     const hover = createHighlightShell(src, 'hover');
     const select = createHighlightShell(src, 'selected');
@@ -51,7 +51,7 @@ describe('高亮外壳', () => {
     expect(pos.x).toBe(0); // 平移分量不被缩放
     select.getMatrixAt(0, mtx);
     mtx.decompose(pos, quat, scl);
-    expect(scl.x).toBeCloseTo(2.28, 5);
+    expect(scl.x).toBeCloseTo(2.30, 5);
     expect(hover.userData.highlight).toBe('hover');
     expect(select.userData.highlight).toBe('selected');
   });

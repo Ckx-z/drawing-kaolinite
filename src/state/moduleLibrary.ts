@@ -77,6 +77,7 @@ export function moduleEntryFromComponent(
     type: comp.type,
     params: comp.params,
     transform: comp.transform,
+    appearance: comp.appearance, // 对象外观随模块/模板保留（P2）
     thumb,
     // 2026-09-12：矿物组件自动带中文名/英文名/化学式标签 → 模块库搜索框中文可检索
     tags: mineralTagsOf(comp),

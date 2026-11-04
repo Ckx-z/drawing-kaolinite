@@ -35,13 +35,46 @@ export const hoverShellMaterial = new THREE.MeshBasicMaterial({
 });
 
 export const selectShellMaterial = new THREE.MeshBasicMaterial({
-  color: 0xff8a3d, // 强调橙
+  color: 0xe59a20, // 描边线默认色（场景配置可改，参考科图网 rgb(229,154,32)）
   side: THREE.BackSide,
+  transparent: true,
+  opacity: 0.85,
 });
+
+/**
+ * 选中描边线外观配置（场景 Tab·描边线区，2026-11-04）：
+ * enabled=false 时选中外壳隐藏；scale=轮廓厚度系数；glow=外壳不透明度。
+ * 由 RendererService.setSelectionOutlineStyle 写入并触发外壳重建。
+ */
+export interface SelectionOutlineConfig {
+  enabled: boolean;
+  color: string;
+  scale: number;
+  glow: number;
+}
+
+let selectionOutline: SelectionOutlineConfig = {
+  enabled: true,
+  color: '#e59a20',
+  scale: 1.15,
+  glow: 0.85,
+};
+
+export function setSelectionOutlineConfig(cfg: Partial<SelectionOutlineConfig>): void {
+  selectionOutline = { ...selectionOutline, ...cfg };
+  if (cfg.color) selectShellMaterial.color.set(cfg.color).convertSRGBToLinear();
+  selectShellMaterial.opacity = selectionOutline.glow;
+  selectShellMaterial.transparent = selectionOutline.glow < 0.999;
+  selectShellMaterial.needsUpdate = true;
+}
+
+export function getSelectionOutlineConfig(): SelectionOutlineConfig {
+  return { ...selectionOutline };
+}
 
 const SHELL_SCALE: Record<Exclude<HighlightState, 'none'>, number> = {
   hover: 1.1,
-  selected: 1.14,
+  selected: 1.15, // 初始值；实际创建时按 selectionOutline.scale
 };
 
 /**
@@ -53,6 +86,7 @@ export function createHighlightShell(
   state: Exclude<HighlightState, 'none'>,
 ): THREE.InstancedMesh {
   const material = state === 'selected' ? selectShellMaterial : hoverShellMaterial;
+  const scale = state === 'selected' ? selectionOutline.scale : SHELL_SCALE.hover;
   const shell = new THREE.InstancedMesh(src.geometry, material, src.count);
   shell.userData.highlight = state;
   shell.raycast = () => undefined;
@@ -63,7 +97,7 @@ export function createHighlightShell(
   for (let k = 0; k < src.count; k++) {
     src.getMatrixAt(k, mtx);
     mtx.decompose(pos, quat, scl);
-    scl.multiplyScalar(SHELL_SCALE[state]);
+    scl.multiplyScalar(scale);
     mtx.compose(pos, quat, scl);
     shell.setMatrixAt(k, mtx);
   }

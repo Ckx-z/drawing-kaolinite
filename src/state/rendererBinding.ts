@@ -20,6 +20,8 @@ export interface RendererLike {
   setSelection: (id: string | null) => void;
   /** T-4.2 色板同步（可选：旧测试替身未实现时跳过） */
   setPalette?: (p: PaletteSetting) => void;
+  /** 对象外观（材质 Tab P2 持久化；可选：旧测试替身未实现时跳过） */
+  setComponentAppearance?: (id: string, appearance: import('../core/types').ComponentAppearance | null) => void;
 }
 
 export interface BindOptions {
@@ -75,6 +77,10 @@ export function bindRenderer(
       if (!same(p.params, comp.params)) dirty.add(id);
       if (p.visible !== comp.visible) svc.setComponentVisible(id, comp.visible);
       if (!same(p.transform, comp.transform)) svc.setComponentTransform(id, comp.transform);
+      // 对象外观变化（材质 Tab）：直连外观应用（无几何重建）
+      if (!same(p.appearance, comp.appearance)) {
+        svc.setComponentAppearance?.(id, (comp.appearance as import('../core/types').ComponentAppearance | undefined) ?? null);
+      }
     }
     if (state.selectionId !== prevSelection) {
       svc.setSelection(state.selectionId);
