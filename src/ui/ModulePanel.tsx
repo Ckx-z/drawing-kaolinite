@@ -23,7 +23,6 @@ import {
 } from '../state/moduleLibrary';
 import { rendererRef } from '../state/rendererRef';
 import { clearAdsorption } from '../state/adsorptionStore';
-import { pendingClear } from '../state/dragSnap';
 import { sceneStore } from '../state/sceneStore';
 import type { TemplateEntry } from '../state/templateLibrary';
 import type { ModuleEntry } from '../core/types';
@@ -73,8 +72,7 @@ export default function ModulePanel() {
    * 不调用「清空场景」UI handler，无确认弹窗（点击即表达打开意图）。
    */
   const openTemplate = (m: ModuleEntry): void => {
-    clearAdsorption(); // 模板切换清吸附预览（任务书四十七）
-    pendingClear(); // 拖拽吸附临时态同清（2026-09-22b）
+    clearAdsorption(); // 模板切换清吸附候选预览（手动吸附构型流程）
     try {
       const restored = sceneStore.getState().loadScene(moduleToSceneDocument(m));
       if (!restored) rendererRef.current?.frameAll();

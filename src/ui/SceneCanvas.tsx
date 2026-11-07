@@ -20,16 +20,9 @@ import { bindRenderer } from '../state/rendererBinding';
 import { rendererRef } from '../state/rendererRef';
 import { sceneStore } from '../state/sceneStore';
 import { useAdsorptionStore, worldCandidateAtoms } from '../state/adsorptionStore';
-import {
-  applySnapOnRelease,
-  detectSnapOnDrag,
-  getPendingSnap,
-  modifierState,
-  pendingClear,
-  snapModifiers,
-} from '../state/dragSnap';
 import { surfaceSiteKey } from '../core/builders';
 import ViewCube from './ViewCube';
+import { commitGizmoTransform } from './transformRelease';
 
 /** 叠加 canvas：随渲染画布同尺寸；rAF 重绘标注 + 图元（与渲染同步即可） */
 function AnnotationOverlay(): React.ReactElement {
@@ -180,15 +173,11 @@ export default function SceneCanvas() {
       // Esc 取消拖拽（V2 P0-3）：store 从未在拖拽中变更，reset 已把渲染组归位——跳过回写
       if (dragCancelled) {
         dragCancelled = false;
-        pendingClear();
         return;
       }
-      const t = svc.getComponentTransform(id);
-      if (!t) return;
-      // 拖拽吸附（2026-09-22，V2 恢复接线）：松手时与基底重叠且未按 Alt/Shift → 吸附 transform
-      //（一次 setTransform = 一条 Undo，即"解除吸附"恢复路径）
-      const snapped = applySnapOnRelease(id, t as never);
-      sceneStore.getState().setTransform(id, (snapped as never) ?? t);
+      // 松手一次提交：渲染器读回用户变换原样写 store（D15：无自动贴附，
+      // 分子靠近/重叠其他组件不再改变 position/rotation/scale）
+      commitGizmoTransform(svc, id, sceneStore);
     };
     // Esc 取消 gizmo 拖拽（V2 P0-3）：拖拽中 Esc → 回到拖拽起点；用户继续拖动则撤销取消意图
     let dragCancelled = false;
@@ -196,7 +185,6 @@ export default function SceneCanvas() {
       if (e.key !== 'Escape' || !svc.tc.dragging) return;
       svc.tc.reset(); // TransformControls 内置：恢复本次拖拽会话起点的变换
       dragCancelled = true;
-      pendingClear();
       e.stopPropagation(); // 拖拽取消 ≠ 清空选择（不触发 Escape 的常规分发）
     };
     window.addEventListener('keydown', onEscDrag, true);
@@ -259,39 +247,6 @@ export default function SceneCanvas() {
     };
     applySessionTools();
     const unbindTools = sceneStore.subscribe(applySessionTools);
-
-    // 拖拽吸附检测（2026-09-22，V2 事件驱动恢复）：gizmo 拖拽中的 objectChange 节流
-    // 检测 + 基底 hover 反馈（吸附变换仍在释放时执行——性能约束不变）；
-    // Alt/Shift = 本轮自由放置（修饰键状态由窗口键盘监听维护）
-    const onKeyMods = (e: KeyboardEvent): void => {
-      modifierState.alt = e.altKey;
-      modifierState.shift = e.shiftKey;
-    };
-    window.addEventListener('keydown', onKeyMods);
-    window.addEventListener('keyup', onKeyMods);
-    let lastDetect = 0;
-    const onSnapDetect = (): void => {
-      const now = performance.now();
-      if (now - lastDetect < 100) return; // 10Hz 足够反馈、远低于帧率
-      lastDetect = now;
-      snapModifiers.alt = modifierState.alt;
-      snapModifiers.shift = modifierState.shift;
-      if (!svc.tc.dragging) {
-        if (getPendingSnap()) {
-          pendingClear();
-          hoverStore.getState().setHover(null); // 清除吸附目标的 hover 高亮（订阅联动渲染外壳）
-        }
-        return;
-      }
-      const selId = svc.getSelectedId();
-      const pend = selId ? detectSnapOnDrag(selId) : false;
-      // 高亮：将吸附目标设为 hover 态（既有描边反馈；不覆盖选中态颜色）
-      if (pend) {
-        const p = getPendingSnap();
-        if (p) svc.setHover(p.substrateId);
-      }
-    };
-    svc.tc.addEventListener('objectChange', onSnapDetect);
     // T-11.2 图元交互：capture 阶段挂在 3D canvas 上（命中即拦截，空白透传 3D）
     const disposeShapes = createShapeInteraction(dom);
     // 图层面板悬停 → 渲染外壳（双向联动的另一半；面板自身样式由 hoverStore 驱动）
@@ -331,10 +286,7 @@ export default function SceneCanvas() {
       svc.clearAdsorptionPreview();
       svc.clearPlacementPreview();
       window.removeEventListener('keydown', onEscDrag, true);
-      window.removeEventListener('keydown', onKeyMods);
-      window.removeEventListener('keyup', onKeyMods);
       svc.tc.removeEventListener('objectChange', onTcObjectChange);
-      svc.tc.removeEventListener('objectChange', onSnapDetect);
       unhover();
       disposeShapes();
       dom.removeEventListener('pointermove', onMove);

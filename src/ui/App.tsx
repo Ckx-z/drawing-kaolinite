@@ -18,7 +18,6 @@ import { clearAutosave, installAutosave, readAutosave } from '../state/autosave'
 import type { SceneDocument } from '../core/types';
 import { loadPresetScene } from './preset';
 import { statusHint } from './statusHints';
-import { getPendingSnap } from '../state/dragSnap';
 import { handleEscapeDuringDrag } from './dragPlace';
 import SceneCanvas from './SceneCanvas';
 import ViewportToolbar from './ViewportToolbar';
@@ -27,12 +26,6 @@ import TopBar from './TopBar';
 
 /** 上下文状态提示（2026-09-16）：订阅 tool/mode/选择态，复用 statusHint 纯函数 */
 function StatusHint() {
-  // 拖拽吸附提示（V2 恢复接线）：pending 为模块态非 zustand——500ms 轮询低干扰提示
-  const [snapHint, setSnapHint] = useState('');
-  useEffect(() => {
-    const t = setInterval(() => setSnapHint(getPendingSnap()?.substrateName ?? ''), 500);
-    return () => clearInterval(t);
-  }, []);
   const tool = useStore(sceneStore, (s) => s.tool);
   const mode = useStore(sceneStore, (s) => s.mode);
   const hasSel = useStore(
@@ -40,13 +33,7 @@ function StatusHint() {
     (s) => Boolean(s.selectionId) || s.shapeSelectionIds.length > 0,
   );
   const multiN = useStore(sceneStore, (s) => s.componentSelectionIds.length);
-  return (
-    <span>
-      {snapHint
-        ? `松手自动贴合「${snapHint}」表面 · 按住 Alt/Shift 自由放置（Esc 取消拖动，Ctrl+Z 可撤销）`
-        : statusHint({ tool, mode, hasSelection: hasSel, multiCount: multiN })}
-    </span>
-  );
+  return <span>{statusHint({ tool, mode, hasSelection: hasSel, multiCount: multiN })}</span>;
 }
 
 export default function App() {

@@ -306,7 +306,7 @@
 
 **验证**：directAdd.test 11 条（Co₃O₄/莫来石 schema 通过+真值 d001、CeO₂ 双资产不同 Component、四分子 kind 正确无 formula fallback、别名几何一致、重复添加独立 ID、invalid null、全索引零缺口 smoke）；vitest 592 → 603。
 
-## D11 — 拖拽吸附恢复接线（2026-10-22）
+## D11 — 拖拽吸附恢复接线（2026-10-22）【已被 D15 替代（2026-11-05）：删除分子拖动自动贴附，默认自由摆放】
 
 **背景**：2026-09-24 用户要求撤销"分子靠近自动吸附"（commit 709bddb，保留引擎仅撤 UI 接线）；《V2 交互升级任务书》第三部分 3.5 明确要求恢复该工作流并给出语义边界。
 
@@ -339,3 +339,11 @@
 **决策**：白色双区（对象树 34% 可拖 + 三 Tab 常驻）；浅色经**局部 CSS 变量域**实现（`.panel.right` 重定义 --panel/--txt/--acc 等为白底+品牌青 #18b1b9，LayerPanel/ParamPanel 零改动继承，左栏/顶栏/画布不受影响）；材质 Tab 四圆形 CSS 渐变缩略图（金属/玻璃/液体/凝胶，不借外部素材）；「高光强度」语义映射 clearcoat（不把 metalness 硬称反射率）；线框=材质渲染开关（随导出呈现，属用户材质选择）、坐标轴=AxesHelper 编辑辅助、描边线=选中对象轮廓外壳（复用高亮外壳管线，样式可配：颜色/厚度/发光）——三者为真实渲染联动而非装饰；**外观持久化（P2）**：appearanceSchema 入 componentCommon+moduleCommon，sceneStore.setAppearance 入撤销栈（TRACKED），binding diff 直连 svc（无几何重建），剪贴板/复制/模板全链保留，旧场景缺省安全默认。滑块拖动=svc 实时预览、释放=一次 store 提交（合并窗口历史）。
 
 **影响**：schema/types（appearanceSchema+ComponentAppearance）、sceneStore（setAppearance/duplicateComponent）、history TRACKED +2、rendererBinding（appearance diff）、RendererService（外观单源组件字段/wireframeAll/axesHelper/outlineStyle）、highlight.ts（SelectionOutlineConfig）、InspectorPanel 重写、LayerPanel（聚焦/复制）、shortcuts（剪贴板外观）、App（右宽 320 可拖）。
+
+## D15 — 删除分子拖动自动贴附（2026-11-05）
+
+**背景**：用户要求删除"小分子靠近或重叠基底后，松手自动吸附到表面"的功能，替代 D11 的产品方向。
+
+**决策**：删除分子拖动时的自动贴附；**默认自由摆放**（无需 Alt/Shift）；松手提交 = 渲染器读回的用户变换原样写 store（新提取 `ui/transformRelease.ts` 提交入口，回归测试锁定"重叠场景下逐位一致"）。完整移除专用链路：`state/dragSnap.ts`、`core/surface/snap.ts` 及其测试删除（snap.ts 无其他消费方）；SceneCanvas 检测循环/修饰键监听/基底高亮、App 状态栏"松手自动贴合"提示、ModulePanel pendingClear 一并清理。**保留**：用户主动触发的吸附构型生成与应用（adsorptionStore/adsorb.ts/AdsorptionSection）、ParamPanel 网格与角度吸附（setSnap）、2D 图元磁吸与锚定、相机水平吸附、素材拖放、手动吸附候选预览。Esc 取消拖动/一次拖动一条撤销语义不变。
+
+**影响**：无 schema/场景数据变更；已保存场景中的分子变换不需迁移（本就存的是最终值）。

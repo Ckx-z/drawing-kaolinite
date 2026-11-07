@@ -189,9 +189,9 @@
 ### T-2.17 ✅ [P1] Surface/Adsorption v1 稳定化与冻结审计 —— 完成 2026-09-22b
 - Surface Transform Consistency：translation ✓ / rotation 主分支 ✓ / 深组合第二分支 KNOWN ISSUE（2026-09-21b 记录）
 - Substrate Type Detection：白名单制（类型定角色，体积仅显示；molecule-molecule 不互吸；大小不反转）
-- Snap Bypass：Alt/Shift 双键 + 状态栏低干扰提示「松手自动贴合…按住 Alt/Shift 自由放置」
+- Snap Bypass：Alt/Shift 双键 + 状态栏提示（**2026-11-05 D15：本功能整体删除，默认自由摆放**）
 - Transform Benchmarks：STRUCTURE_BENCHMARK §五 Software Geometry Consistency（14 项）
-- 误触审计：远距/贴面/分子-分子/大小反转/旋转保持/穿插带/Undo/删目标/清空清理（dragSnapAudit.test 9 条）
+- 误触审计：远距/贴面/分子-分子/大小反转/旋转保持/穿插带/Undo/删目标/清空清理（dragSnapAudit.test 9 条；**已随 D15 删除**）
 - 科学边界：Candidate Builder=「候选吸附初始构型（未优化）」；Drag Snap=「快速表面贴合」——文案与语义分离
 - vitest 557 → 566；评估结论：Surface/Adsorption v1 可冻结（除深组合欧拉一项，见报告）
 
@@ -510,7 +510,7 @@ T-2.1 / T-2.3 / T-9.1–T-9.2 可在 T-1.7 后立即并行
 - [x] **V2-P0 Esc 取消 gizmo 拖拽**（tc.reset + dragCancelled + objectChange 复活）✅
 - [x] **V2-P1 画布悬浮工具栏**（ViewportToolbar + gizmoMode/measureMode 会话态 + G/E/S/F）✅
 - [x] **V2-P1 素材拖放三维画布**（dragPlace 会话机 + RendererService 放置预览/拾取点 + 双卡接线）✅
-- [x] **V2-P1 拖拽吸附恢复接线**（objectChange 事件驱动 + 状态栏提示；引擎/审计测试零改动）✅
+- [x] **V2-P1 拖拽吸附恢复接线** ✅ → **2026-11-05 D15 撤销：拖动默认自由摆放，松手提交用户变换（transformRelease），引擎与提示已删除**
 - [x] **V2-M3 闭环测试**（检索→拖放→变换→吸附→Undo→模板 roundtrip，interactionClosure.test）✅
 - [ ] **V2-实机验收 + tauri build 重打包**（浏览器/打包版走查 + 16k 原子帧率体感）⬜
 - [ ] **V2-P2 备选**（视角罗盘/正交相机/双击聚焦/原子信息卡——按需启动）⬜

@@ -59,7 +59,7 @@
 | Template roundtrip | transform 逐值复现 | save/load position/rotation/scale 保持 | 精确 | PASS |
 | Drag Snap · 贴附 | minAtomDistance ∈ [1.9, 4.5]Å | plane 基底 2.1–2.4Å | 带 | PASS |
 | Drag Snap · 旋转保持 | rotationBefore == rotationAfter | [25,-40,65]° 恒等 | 精确 | PASS |
-| Drag Snap · Undo | Ctrl+Z 恢复吸附前 transform | 一条 setTransform | 精确 | PASS |
+| ~~Drag Snap · Undo~~（功能已删除，D15 2026-11-05：拖动默认自由摆放） | — | — | — | REMOVED |
 | Drag Snap · 基底角色 | molecule 永不为 substrate | 四类型白名单 / molecule-molecule 拒绝 | — | PASS |
 | Drag Snap · 大小不反转 | 大 molecule + 小基底 → 角色恒定 | scale 8 甲苯 vs 0.5 片层 | — | PASS |
 | Drag Snap · 远距不触 | 5Å 分离不触发 | [0,0,5] false | — | PASS |
